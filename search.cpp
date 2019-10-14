@@ -140,10 +140,9 @@ int do_search(BD bd, cmd_arguments & args)
 
         for(unsigned j = 0; j < counter.size(); j++)
         {
-            if ( (counter[j] >= minimizer_length/2)) //( ((double) counter[j] * 2.0/minimizer_length) + 0.05 >= expression[i]) ||
+            if ( (counter[j] >= minimizer_length/2)) 
                 results[j] = results[j] + 1;
         }
-        //debug_stream << "Test "<< counter << " " << minimizer_length << "\n";
         counter.clear();
         counter.assign(bd.get_bins(), 0);
     }
