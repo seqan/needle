@@ -62,13 +62,12 @@ void initialize_argument_parser(argument_parser & parser, cmd_arguments & args)
 {
     parser.info.author = "Mitra Darvish";
     parser.info.short_description = "Constructs IBF on Minimizer.";
-    parser.add_positional_option(args.fasta_files, "Please provide at least one fasta file. Every file is threated as a "
-                                 "result of one RNA sequence experiment.", input_file_validator{{"fa","fasta"}});
+    parser.add_positional_option(args.fasta_files, "Please provide at least one sequence file.");
     parser.add_option(args.bits, 'l', "size", "List of sizes in bits for IBF per expression rate.");
     parser.add_option(args.num_hash, 'n', "hash", "Number of hash functions used.");
     parser.add_option(args.path_out, 'o', "out", "Directory where output files should be saved.");
-    parser.add_option(args.expression, 'e', "expression_list", "Which expression levels should be used for constructing "
-                      "an IBF.");
+    parser.add_option(args.expression, 'e', "expression_list", "Which expression levels should be used for constructing"
+                      " an IBF.");
     parser.add_option(args.k, 'k', "kmer", "Define kmer size.");
     parser.add_option(args.window_size, 'w', "window", "Define window size.");
     parser.add_option(args.shape, 'p', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
@@ -76,19 +75,19 @@ void initialize_argument_parser(argument_parser & parser, cmd_arguments & args)
     parser.add_option(args.seed, 's', "seed", "Define seed.");
     //parser.add_option(args.gene_file, 'g', "gene", "Gene files");
     parser.add_option(args.genome_file, 'g', "genom", "Genom file used as a mask.");
-    parser.add_option(args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be equal "
-                      "to number of fasta files. Default: Every fasta file is one sample from one experiment.");
-    parser.add_option(args.aggregate_by, 'a', "aggregate-by", "Choose your method of aggregation: mean, median or random."
-                      " Default: median.");
+    parser.add_option(args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be equal"
+                      " to number of fasta files. Default: Every fasta file is one sample from one experiment.");
+    parser.add_option(args.aggregate_by, 'a', "aggregate-by", "Choose your method of aggregation: mean, median or "
+                      "random. Default: median.");
     parser.add_option(args.random, 'r', "random-samples", "Choose the number of random sequences to pick from when "
                       "using method random. Default: 1000.");
-    parser.add_flag(args.compressed, 'c', "compressed", "If set imbf is compressed. Default: Not compressed.");
+    parser.add_flag(args.compressed, 'c', "compressed", "If set ibf is compressed. Default: Not compressed.");
 }
 
 int main(int const argc, char const ** argv)
 {
 
-    argument_parser parser("IMBF", argc, argv);
+    argument_parser parser("needle-IBF", argc, argv);
     cmd_arguments args{};
     initialize_argument_parser(parser, args);
 
@@ -117,14 +116,11 @@ int main(int const argc, char const ** argv)
     std::vector<uint32_t> counts;
     uint32_t file_seen{0};
     std::unordered_map<uint64_t, float> hash_table{}; // Storage for minimizers
-    size_t mean;
+    double mean;
     std::vector<uint32_t> medians;
     concatenated_sequences<dna4_vector> genome_sequences;
     concatenated_sequences<dna4_vector> sequences; // Storage for sequences in experiment files
-    //TODO: Delete, just for analysis
-    std::vector<uint32_t> means_list;
-    size_t seq_minimizer = 0;
-    std::vector<uint64_t> elem_saved_exp = {0,0,0,0,0,0};
+    concatenated_sequences<dna4_vector> *sequences_ptr;
 
     // Sort given expression rates
     sort(args.expression.begin(), args.expression.end());
@@ -154,7 +150,8 @@ int main(int const argc, char const ** argv)
     if (args.genome_file != "")
     {
         sequence_file_input<my_traits> input_file{args.genome_file};
-        genome_sequences.insert(genome_sequences.end(), get<field::SEQ>(input_file).begin(), get<field::SEQ>(input_file).end());
+        genome_sequences.insert(genome_sequences.end(), get<field::SEQ>(input_file).begin(),
+        get<field::SEQ>(input_file).end());
         // Count minimizer in fasta file
         for (auto seq : genome_sequences)
         {
@@ -172,7 +169,6 @@ int main(int const argc, char const ** argv)
     // Add minimizers to binning_directory
     for (unsigned i = 0; i < args.samples.size(); i++)
     {
-        auto start = std::chrono::steady_clock::now();
         //Loads all reads from all samples of one experiment to sequences
         //TODO: If not enough memory or too many samples in one experiment, read one file record by record
         for (unsigned ii = 0; ii < args.samples[i]; ii++)
@@ -181,7 +177,6 @@ int main(int const argc, char const ** argv)
             sequences.insert(sequences.end(), get<field::SEQ>(input_file).begin(), get<field::SEQ>(input_file).end());
             file_seen++;
         }
-
         // Count minimizer in fasta file
         for (auto seq : sequences)
         {
@@ -193,48 +188,37 @@ int main(int const argc, char const ** argv)
             }
         }
 
-        auto end = std::chrono::steady_clock::now();
-        std::cerr << "Time, Minimizer created: " << std::chrono::duration_cast<std::chrono::seconds>(end-start).count() << "s" << std::endl << std::endl;
-
-        //TODO: Delete, just for analysis
-        for (auto & elem : hash_table)
-        {
-            if (elem.second > 0)
-            {
-                seq_minimizer++;
-            }
-        }
-
-        debug_stream << "Seq minimizer: " << seq_minimizer << "\n";
-        seq_minimizer = 0;
-
         // Calculate mean expression in one experiment
-        start = std::chrono::steady_clock::now();
-        if (args.genome_file != "")
+        if ((args.genome_file != "") & (i==0))
         {
             sequences.clear();
-            sequences = genome_sequences;
+            //sequences = genome_sequences;
+            sequences_ptr = &genome_sequences;
         }
-        else
+        else if (i==0)
         {
             genome_sequences.clear();
+            sequences_ptr = &sequences;
         }
 
         // Calculate mean expression by taking median of medians of all reads of one experiment, Default
         if (args.aggregate_by == "median")
         {
-            for (auto seq : sequences)
+            for (auto seq : *sequences_ptr)
             {
                 for (auto minHash : compute_minimizer(seq, args.k, args.window_size, args.shape, args.seed))
                 {
                     counts.push_back(hash_table[minHash]);
                 }
                 std::nth_element(counts.begin(), counts.begin() + counts.size()/2, counts.end());
-                medians.push_back(counts[counts.size()/2]);
+		// Do not consider expression values of 0
+                if (counts[counts.size()/2] > 0)
+                    medians.push_back(counts[counts.size()/2]);
                 counts.clear();
             }
+
             std::nth_element(medians.begin(), medians.begin() + medians.size()/2, medians.end());
-            mean = medians[medians.size()/2];
+            mean =  medians[medians.size()/2]; 
             medians.clear();
         }
         // Calculate mean expression by dividing the sum of all squares by the sum of all elements in hash table
@@ -257,12 +241,12 @@ int main(int const argc, char const ** argv)
         else if (args.aggregate_by == "random")
         {
             // How many sequences should be looked at
-            uint64_t random_n = 1000; //{(sequences.size()/100) * args.random};
+            uint64_t random_n = (sequences.size()/100) * args.random;
             std::vector<int> randomPos(random_n);
-            std::generate(randomPos.begin(), randomPos.end(), RandomGenerator(sequences.size()));
+            std::generate(randomPos.begin(), randomPos.end(), RandomGenerator(sequences_ptr->size()));
             for (auto pos : randomPos)
             {
-                for (auto minHash : compute_minimizer(sequences[pos], args.k, args.window_size, args.shape, args.seed))
+                for (auto minHash : compute_minimizer(sequences_ptr->at(pos), args.k, args.window_size, args.shape, args.seed))
                 {
                     counts.push_back(hash_table[minHash]);
                 }
@@ -274,35 +258,27 @@ int main(int const argc, char const ** argv)
             mean = medians[medians.size()/2];
             medians.clear();
         }
-        end = std::chrono::steady_clock::now();
-        std::cerr << "Time, Mean expression calculated: " << std::chrono::duration_cast<std::chrono::seconds>(end-start).count() << "s" << std::endl << std::endl;
         sequences.clear();
-        means_list.push_back(end-start);
-
+       
         // Every minimizer is stored in IBF, if it occurence divided by the mean is greater or equal expression level
         for (auto & elem : hash_table)
         {
             for (unsigned j = 0; j < args.expression.size(); j++)
             {
-                if ((((double) elem.second/mean) + 0.05) >= args.expression[j])
-                {
-                    if ( bds[j].get(elem.first)[i] == 0)
-                        elem_saved_exp[j]++;
+                if ((((double) elem.second/mean)) >= args.expression[j])
                     bds[j].set(elem.first,i);
-                }
                 else //If elem is not expressed at this level, it won't be expressed at a higher level
                     break;
             }
         }
-
-
         hash_table.clear();
     }
+
 
     // Store binning_directories
     for (unsigned i = 0; i < args.expression.size(); i++)
     {
-        std::filesystem::path filename{args.path_out.string() + "IMBF_" + std::to_string(args.expression[i])};
+        std::filesystem::path filename{args.path_out.string() + "IBF_" + std::to_string(args.expression[i])};
         std::ofstream os{filename, std::ios::binary};
         cereal::BinaryOutputArchive oarchive{os};
         if (args.compressed)
@@ -310,63 +286,5 @@ int main(int const argc, char const ** argv)
         else
             oarchive(binning_directory(bds[i]));
     }
-
-    // Just for testing, TODO: delete later
-    double sum = std::accumulate(means_list.begin(), means_list.end(), 0.0);
-    double meani = sum / means_list.size();
-    debug_stream << "Mean: "<< meani << "\n";
-    double sq_sum = std::inner_product(means_list.begin(),means_list.end(), means_list.begin(), 0.0);
-    double stdev = std::sqrt(sq_sum / means_list.size() - meani * meani);
-    debug_stream << "Std: "<< stdev<< "\n";
-    debug_stream << "Seq minimizer: " << seq_minimizer << "\n";
-    debug_stream << "Elements per expression rate: "<<elem_saved_exp << "\n";
-    debug_stream << "Built IBF\n";
-    debug_stream << args.fasta_files.size() << "\n";
-    debug_stream << args.expression.size() << "\n";
-    debug_stream << args.expression << "\n";
-/*
-    std::vector<dna4_vector> genes;
-    sequence_file_input input_file{args.genome_file};
-    std::vector<int> counter_help;
-    for (unsigned i = 0; i < args.samples.size(); i++)
-        counter_help.push_back(0);
-    std::vector<std::vector<int>> count_genes;
-    for (unsigned i = 0; i < args.expression.size(); i++)
-        count_genes.push_back(counter_help);
-
-    for (auto & rec : input_file)
-        genes.push_back(get<field::SEQ>(rec));
-
-    for (auto & seq : genes)
-    {
-        std::vector<std::vector<int>> counter;
-        int s{0};
-        for (unsigned i = 0; i < args.expression.size(); i++)
-            counter.push_back(counter_help);
-        for (auto & minHash : compute_minimizer(seq, args.k, args.window_size, args.seed))
-        {
-            for (unsigned i = 0; i < args.expression.size(); i++)
-            {
-                for (unsigned j = 0; j < args.samples.size(); j++)
-                {
-                        if (bds[i].get(minHash)[j])
-                            counter[i][j]++;
-                }
-            }
-            s++;
-        }
-
-        for (unsigned i = 0; i < args.expression.size(); i++)
-        {
-            for (unsigned j = 0; j < args.samples.size(); j++)
-            {
-                if (counter[i][j] > s/2)
-                    count_genes[i][j]++;
-                debug_stream << i<< j<<" "<< counter[i][j]<<" "<< s << "\n";
-            }
-        }
-        counter.clear();
-    }
-    debug_stream << count_genes << "\n";*/
 
 }
