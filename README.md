@@ -22,7 +22,7 @@ Use -h/--help for more information and to see further parameters.
 The following example creates an IBF for two experiments for the expression rate 0.5. Both experiments had two replicates, therefore m is used to specify this. With c a compressed IBF is created.
 
 ```
-./needle-ibf ../../needle/example/exp_*.fasta -m 2 -m 2 -e 0.5 -l 1559922 -c
+./needle-ibf ../needle/example/exp_*.fasta -m 2 -m 2 -e 0.5 -l 1559922 -c
 ```
 
 ## Search
@@ -31,7 +31,7 @@ Use -h/--help for more information and to see further parameters.
 The following example searches for one gene, which is expressed in the first experiment at expression rate 0.25 and in the second at expression rate 1. Therefore, it should be found only in the second experiment but not the first.
 
 ```
-./needle-search ../../needle/example/gene.fasta -e 0.5 -c
+./needle-search ../needle/example/gene.fasta -e 0.5 -c
 ```
 This results in:
 ```
