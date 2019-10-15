@@ -4,10 +4,10 @@ set(SeqAn3_DIR "${CMAKE_SOURCE_DIR}/../seqan3/build_system")
 find_package (SeqAn3 REQUIRED)
 add_executable (count
                 count.cpp)
-add_executable (ibf
+add_executable (needle-ibf
                 ibf.cpp)
-add_executable (search
+add_executable (needle-search
                 search.cpp)
 target_link_libraries (count seqan3::seqan3)
-target_link_libraries (ibf seqan3::seqan3)
-target_link_libraries (search seqan3::seqan3)
+target_link_libraries (needle-ibf seqan3::seqan3)
+target_link_libraries (needle-search seqan3::seqan3)

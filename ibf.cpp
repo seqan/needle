@@ -25,7 +25,6 @@ using namespace seqan3;
 struct cmd_arguments
 {
     std::vector<std::filesystem::path> fasta_files;
-    //std::filesystem::path gene_file;
     std::filesystem::path genome_file;
     std::vector<size_t> bits{};
     size_t num_hash{1};
@@ -73,7 +72,6 @@ void initialize_argument_parser(argument_parser & parser, cmd_arguments & args)
     parser.add_option(args.shape, 'p', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
                       "position to be ignored, 1 a position considered. Default: ungapped.");
     parser.add_option(args.seed, 's', "seed", "Define seed.");
-    //parser.add_option(args.gene_file, 'g', "gene", "Gene files");
     parser.add_option(args.genome_file, 'g', "genom", "Genom file used as a mask.");
     parser.add_option(args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be equal"
                       " to number of fasta files. Default: Every fasta file is one sample from one experiment.");
