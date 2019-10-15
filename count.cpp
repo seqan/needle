@@ -5,7 +5,7 @@
 
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 #include <seqan3/argument_parser/all.hpp>
-#include <seqan3/io/stream/debug_stream.hpp>
+#include <seqan3/core/debug_stream.hpp>
 #include <seqan3/io/sequence_file/all.hpp>
 #include <seqan3/std/filesystem>
 #include <seqan3/std/ranges>
