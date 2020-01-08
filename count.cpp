@@ -21,11 +21,10 @@ uint8_t k;
 size_t window_size;
 uint64_t seed;
 
-using namespace seqan3;
 // Change default traits from sequence_file
-struct my_traits : sequence_file_input_default_traits_dna
+struct my_traits : seqan3::sequence_file_input_default_traits_dna
 {
-    using sequence_alphabet = dna4;               // instead of dna5
+    using sequence_alphabet = seqan3::dna4;               // instead of dna5
 };
 
 struct cmd_arguments
@@ -39,7 +38,7 @@ struct cmd_arguments
     uint64_t seed{0x8F3F73B5CF1C9ADE};
 };
 
-void initialize_argument_parser(argument_parser & parser, cmd_arguments & args)
+void initialize_argument_parser(seqan3::argument_parser & parser, cmd_arguments & args)
 {
     parser.info.author = "Mitra Darvish";
     parser.info.short_description = "Calculates Minimizer.";
@@ -56,7 +55,7 @@ void initialize_argument_parser(argument_parser & parser, cmd_arguments & args)
 int main(int const argc, char const ** argv)
 {
 
-    argument_parser miniparser("Minimizer", argc, argv);
+    seqan3::argument_parser miniparser("Minimizer", argc, argv);
     cmd_arguments args{};
     initialize_argument_parser(miniparser, args);
 
@@ -64,7 +63,7 @@ int main(int const argc, char const ** argv)
     {
         miniparser.parse();
     }
-    catch (parser_invalid_argument const & ext)                     // catch user errors
+    catch (seqan3::parser_invalid_argument const & ext)                     // catch user errors
     {
         return -1;
     }
@@ -77,20 +76,21 @@ int main(int const argc, char const ** argv)
     outfile.open(args.file_path_out);
 
     std::vector<std::string> ids;
-    std::vector<dna4_vector> seqs;
+    std::vector<seqan3::dna4_vector> seqs;
 
     std::cerr << args.file_path_fasta << std::endl;
     std::cerr << "Reading in sequences." << std::endl;
     auto start = std::chrono::steady_clock::now();
-    sequence_file_input<my_traits> input_file{args.file_path_fasta};
+    seqan3::sequence_file_input<my_traits> input_file{args.file_path_fasta};
     for (auto & rec : input_file)
     {
-        ids.push_back(get<field::ID>(rec));
-        seqs.push_back(get<field::SEQ>(rec));
+        ids.push_back(seqan3::get<seqan3::field::ID>(rec));
+        seqs.push_back(seqan3::get<seqan3::field::SEQ>(rec));
     }
     // TODO. one can cluster at a per read basis! without reading every read into memory
     auto end = std::chrono::steady_clock::now();
-    std::cerr << "Time: " << std::chrono::duration_cast<std::chrono::seconds>(end-start).count() << "s" << std::endl << std::endl;
+    std::cerr << "Time: " << std::chrono::duration_cast<std::chrono::seconds>(end-start).count() << "s" << std::endl
+              << std::endl;
 
     std::cerr << "Window size used for this set: " << args.window_size << std::endl;
 
@@ -99,7 +99,8 @@ int main(int const argc, char const ** argv)
     start = std::chrono::steady_clock::now();
     auto hash_table = compute_occurrences(seqs, k, window_size, args.shape, seed);
     end = std::chrono::steady_clock::now();
-    std::cerr << "Time: " << std::chrono::duration_cast<std::chrono::seconds>(end-start).count() << "s" << std::endl << std::endl;
+    std::cerr << "Time: " << std::chrono::duration_cast<std::chrono::seconds>(end-start).count() << "s" << std::endl
+              << std::endl;
 
     // Compute and print the median occurence for each read
     std::vector<uint32_t> counts;
@@ -119,13 +120,13 @@ int main(int const argc, char const ** argv)
     {
         // assume a gene fasta file was given
         std::vector<std::string> gene_ids;
-        std::vector<dna4_vector> gene_seqs;
+        std::vector<seqan3::dna4_vector> gene_seqs;
 
-        sequence_file_input<my_traits> gene_file{args.file_path_gene};
+        seqan3::sequence_file_input<my_traits> gene_file{args.file_path_gene};
         for (auto & rec : gene_file)
         {
-          gene_ids.push_back(get<field::ID>(rec));
-          gene_seqs.push_back(get<field::SEQ>(rec));
+          gene_ids.push_back(seqan3::get<seqan3::field::ID>(rec));
+          gene_seqs.push_back(seqan3::get<seqan3::field::SEQ>(rec));
         }
 
         for (size_t idx = 0; idx < gene_ids.size(); ++idx)
@@ -138,7 +139,7 @@ int main(int const argc, char const ** argv)
             }
             outfile << "]\n";
             std::nth_element(counts.begin(), counts.begin() + counts.size()/2, counts.end());
-            debug_stream << gene_ids[idx] << sep << counts[counts.size()/2] << sep << counts << "\n";
+            seqan3::debug_stream << gene_ids[idx] << sep << counts[counts.size()/2] << sep << counts << "\n";
 
             counts.clear();
         }

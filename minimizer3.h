@@ -5,7 +5,6 @@
 #include <seqan3/range/view/kmer_hash.hpp>
 #include <seqan3/search/kmer_index/shape.hpp>
 #include <seqan3/std/ranges>
-using namespace seqan3;
 
 // k-mer size
 uint8_t p_k{20};
@@ -46,13 +45,13 @@ public:
         seed = newSeed;
     }
 
-    std::vector<uint64_t> getMinimizer(dna4_vector const & text)
+    std::vector<uint64_t> getMinimizer(seqan3::dna4_vector const & text)
     {
         if (k > text.size())
             return std::vector<uint64_t> {};
 
         // Reverse complement without copying/modifying the original string
-        dna4_vector revComp = text | std::view::reverse | view::complement;
+        seqan3::dna4_vector revComp = text | std::view::reverse | seqan3::view::complement;
 
         uint64_t possible = text.size() > w ? text.size() - w + 1 : 1;
         uint32_t windowKmers = w - k + 1;
@@ -64,14 +63,14 @@ public:
         // Stores hash, begin and end for all k-mers in the window
         std::deque<uint64_t> windowValues;
 
-        auto kmerHashing = text | view::kmer_hash(shape);
-        auto revcHashing = revComp | view::kmer_hash(shape) | std::view::reverse;
+        auto kmerHashing = text | seqan3::view::kmer_hash(shape);
+        auto revcHashing = revComp | seqan3::view::kmer_hash(shape) | std::view::reverse;
 
         uint32_t i = 0;
 
         // Initialisation. We need to compute all hashes for the first window.
-        for ( auto && [hf, hr] : std::ranges::view::zip(kmerHashing | view::take_exactly(windowKmers),
-             revcHashing | view::take_exactly(windowKmers)) )
+        for ( auto && [hf, hr] : std::ranges::view::zip(kmerHashing | seqan3::view::take_exactly(windowKmers),
+             revcHashing | seqan3::view::take_exactly(windowKmers)) )
         {
             // Get smallest canonical k-mer
             uint64_t kmerHash = hf ^ seed;
@@ -93,8 +92,8 @@ public:
         // For the following windows, we remove the first window k-mer (is now not in window) and add the new k-mer
         // that results from the window shifting
         bool minimizer_changed{false};
-        for ( auto && [hf, hr] : std::ranges::view::zip(kmerHashing | view::drop(windowKmers),
-             revcHashing | view::drop(windowKmers)))
+        for ( auto && [hf, hr] : std::ranges::view::zip(kmerHashing | seqan3::view::drop(windowKmers),
+             revcHashing | seqan3::view::drop(windowKmers)))
         {
             if (min == std::begin(windowValues))
             {
@@ -129,7 +128,7 @@ public:
     }
 };
 
-std::vector<uint64_t> compute_minimizer(const dna4_vector & seq, uint8_t k = p_k, uint16_t window_size = p_w,
+std::vector<uint64_t> compute_minimizer(const seqan3::dna4_vector & seq, uint8_t k = p_k, uint16_t window_size = p_w,
                                         uint64_t shape = p_shape, uint64_t seed = p_seed)
 {
 //  size_t const window_size = ((length(seq) - k) / LeastNumMinimizers) + k; // ensure at least 3 minimizer
@@ -142,7 +141,7 @@ std::vector<uint64_t> compute_minimizer(const dna4_vector & seq, uint8_t k = p_k
     return minimizer.getMinimizer(seq);
 }
 
-auto compute_occurrences(const std::vector<dna4_vector> & seqs, uint8_t k = p_k, uint16_t window_size = p_w,
+auto compute_occurrences(const std::vector<seqan3::dna4_vector> & seqs, uint8_t k = p_k, uint16_t window_size = p_w,
                                         uint64_t shape = p_shape, uint64_t seed = p_seed)
 {
     std::unordered_map<uint64_t, uint32_t> occurring_kmers{};

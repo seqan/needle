@@ -20,8 +20,6 @@
 
 #include "minimizer3.h"
 
-using namespace seqan3;
-
 struct cmd_arguments
 {
     std::vector<std::filesystem::path> sequence_files;
@@ -41,9 +39,9 @@ struct cmd_arguments
 };
 
 // Change default traits from sequence_file
-struct my_traits : sequence_file_input_default_traits_dna
+struct my_traits : seqan3::sequence_file_input_default_traits_dna
 {
-    using sequence_alphabet = dna4;               // instead of dna5
+    using sequence_alphabet = seqan3::dna4;               // instead of dna5
 };
 
 struct RandomGenerator {
@@ -57,7 +55,7 @@ struct RandomGenerator {
 	}
 };
 
-void initialize_argument_parser(argument_parser & parser, cmd_arguments & args)
+void initialize_argument_parser(seqan3::argument_parser & parser, cmd_arguments & args)
 {
     parser.info.author = "Mitra Darvish";
     parser.info.short_description = "Constructs IBF on Minimizer.";
@@ -87,7 +85,7 @@ void initialize_argument_parser(argument_parser & parser, cmd_arguments & args)
 int main(int const argc, char const ** argv)
 {
 
-    argument_parser parser("needle-IBF", argc, argv);
+    seqan3::argument_parser parser("needle-IBF", argc, argv);
     cmd_arguments args{};
     initialize_argument_parser(parser, args);
 
@@ -95,9 +93,9 @@ int main(int const argc, char const ** argv)
     {
         parser.parse();
     }
-    catch (parser_invalid_argument const & ext)                     // catch user errors
+    catch (seqan3::parser_invalid_argument const & ext)                     // catch user errors
     {
-        debug_stream << "Error. Incorrect command line input for IBF construct." << ext.what() << "\n";
+        seqan3::debug_stream << "Error. Incorrect command line input for IBF construct." << ext.what() << "\n";
         return -1;
     }
 
@@ -108,9 +106,11 @@ int main(int const argc, char const ** argv)
     // If sum of args.samples is not equal to number of files
     else if (std::accumulate(args.samples.rbegin(), args.samples.rend(), 0) != args.sequence_files.size())
     {
-        debug_stream << "Error. Incorrect command line input for multiple-samples." << "\n";
+        seqan3::debug_stream << "Error. Incorrect command line input for multiple-samples." << "\n";
         return -1;
     }
+
+    using seqan3::get;
 
     // Declarations
     std::vector<uint32_t> counts;
@@ -118,9 +118,9 @@ int main(int const argc, char const ** argv)
     std::unordered_map<uint64_t, float> hash_table{}; // Storage for minimizers
     double mean;
     std::vector<uint32_t> medians;
-    concatenated_sequences<dna4_vector> genome_sequences;
-    concatenated_sequences<dna4_vector> sequences; // Storage for sequences in experiment files
-    concatenated_sequences<dna4_vector> *sequences_ptr;
+    seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences;
+    seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
+    seqan3::concatenated_sequences<seqan3::dna4_vector> *sequences_ptr;
 
     // Sort given expression rates
     sort(args.expression_levels.begin(), args.expression_levels.end());
@@ -132,7 +132,7 @@ int main(int const argc, char const ** argv)
     // If no size in bits is given or not the right amount, throw error.
     if (args.bits.empty())
     {
-        debug_stream << "Error. Please give a size for the IBFs in bit." << "\n";
+        seqan3::debug_stream << "Error. Please give a size for the IBFs in bit." << "\n";
         return -1;
     }
     else if (args.bits.size() == 1)
@@ -141,7 +141,8 @@ int main(int const argc, char const ** argv)
     }
     else if (args.bits.size() != args.expression_levels.size())
     {
-        debug_stream << "Error. Length of sizes for IBFs in bits is not equal to length of expression levels. " << "\n";
+        seqan3::debug_stream << "Error. Length of sizes for IBFs in bits is not equal to length of expression levels."
+        << "\n";
         return -1;
     }
 
@@ -149,9 +150,10 @@ int main(int const argc, char const ** argv)
     std::unordered_set<uint64_t> genome_set_table{};
     if (args.genome_file != "")
     {
-        sequence_file_input<my_traits> input_file{args.genome_file};
-        genome_sequences.insert(genome_sequences.end(), get<field::SEQ>(input_file).begin(),
-        get<field::SEQ>(input_file).end());
+        seqan3::sequence_file_input<my_traits> input_file{args.genome_file};
+
+        genome_sequences.insert(genome_sequences.end(),get<seqan3::field::SEQ>(input_file).begin(),
+                                get<seqan3::field::SEQ>(input_file).end());
         // Count minimizer in fasta file
         for (auto seq : genome_sequences)
         {
@@ -159,12 +161,12 @@ int main(int const argc, char const ** argv)
                 genome_set_table.insert(minHash);
         }
     }
-    debug_stream << "Kmers in Genome: " << genome_set_table.size() << "\n";
+    seqan3::debug_stream << "Kmers in Genome: " << genome_set_table.size() << "\n";
 
     // Create binning_directory
-    std::vector<binning_directory> bds;
+    std::vector<seqan3::binning_directory> bds;
     for (unsigned i = 0; i < args.expression_levels.size(); i++)
-        bds.push_back(binning_directory(args.samples.size(), args.bits[i], args.num_hash));
+        bds.push_back(seqan3::binning_directory(args.samples.size(), args.bits[i], args.num_hash));
 
     // Add minimizers to binning_directory
     for (unsigned i = 0; i < args.samples.size(); i++)
@@ -173,8 +175,9 @@ int main(int const argc, char const ** argv)
         //TODO: If not enough memory or too many samples in one experiment, read one file record by record
         for (unsigned ii = 0; ii < args.samples[i]; ii++)
         {
-            sequence_file_input<my_traits> input_file{args.sequence_files[file_seen]};
-            sequences.insert(sequences.end(), get<field::SEQ>(input_file).begin(), get<field::SEQ>(input_file).end());
+            seqan3::sequence_file_input<my_traits> input_file{args.sequence_files[file_seen]};
+            sequences.insert(sequences.end(), get<seqan3::field::SEQ>(input_file).begin(),
+                             get<seqan3::field::SEQ>(input_file).end());
             file_seen++;
         }
         // Count minimizer in fasta file
@@ -246,7 +249,8 @@ int main(int const argc, char const ** argv)
             std::generate(randomPos.begin(), randomPos.end(), RandomGenerator(sequences_ptr->size()));
             for (auto pos : randomPos)
             {
-                for (auto minHash : compute_minimizer(sequences_ptr->at(pos), args.k, args.window_size, args.shape, args.seed))
+                for (auto minHash : compute_minimizer(sequences_ptr->at(pos), args.k, args.window_size, args.shape,
+                     args.seed))
                 {
                     counts.push_back(hash_table[minHash]);
                 }
@@ -282,9 +286,9 @@ int main(int const argc, char const ** argv)
         std::ofstream os{filename, std::ios::binary};
         cereal::BinaryOutputArchive oarchive{os};
         if (args.compressed)
-            oarchive(binning_directory_compressed(bds[i]));
+            oarchive(seqan3::binning_directory_compressed(bds[i]));
         else
-            oarchive(binning_directory(bds[i]));
+            oarchive(seqan3::binning_directory(bds[i]));
     }
 
 }
