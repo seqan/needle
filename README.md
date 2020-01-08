@@ -22,7 +22,7 @@ Use -h/--help for more information and to see further parameters.
 The following example creates an IBF for two experiments for the expression rate 0.5. Both experiments had two replicates, therefore m is used to specify this. With c a compressed IBF is created.
 
 ```
-./needle-ibf ../needle/example/exp_*.fasta -m 2 -m 2 -e 0.5 -l 1559922 -c
+./needle-ibf ../needle/example/exp_*.fasta -m 2 -m 2 -e 0.5 -z 1559922 -c
 ```
 
 ## Search

@@ -24,15 +24,15 @@ using namespace seqan3;
 
 struct cmd_arguments
 {
-    std::vector<std::filesystem::path> fasta_files;
+    std::vector<std::filesystem::path> sequence_files;
     std::filesystem::path genome_file;
     std::vector<size_t> bits{};
     size_t num_hash{1};
-    size_t random{10};
     std::filesystem::path path_out{"./"};
-    std::vector<float> expression{}; // 0.5,1,2,4
+    std::vector<float> expression_levels{}; // 0.5,1,2,4
     std::vector<int> samples{};
     std::string aggregate_by{"median"};
+    size_t random{10};
     bool compressed = false;
     uint8_t k{20};
     uint16_t window_size{60};
@@ -61,25 +61,27 @@ void initialize_argument_parser(argument_parser & parser, cmd_arguments & args)
 {
     parser.info.author = "Mitra Darvish";
     parser.info.short_description = "Constructs IBF on Minimizer.";
-    parser.add_positional_option(args.fasta_files, "Please provide at least one sequence file.");
-    parser.add_option(args.bits, 'l', "size", "List of sizes in bits for IBF per expression rate.");
-    parser.add_option(args.num_hash, 'n', "hash", "Number of hash functions used.");
-    parser.add_option(args.path_out, 'o', "out", "Directory where output files should be saved.");
-    parser.add_option(args.expression, 'e', "expression_list", "Which expression levels should be used for constructing"
-                      " an IBF.");
+    parser.add_positional_option(args.sequence_files, "Please provide at least one sequence file.");
+    parser.add_option(args.genome_file, 'g', "genom-mask", "Genom file used as a mask.");
+    parser.add_option(args.bits, 'z', "size", "List of sizes in bits for IBF per expression rate.");
+    parser.add_option(args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
+                      "one IBF.");
+    parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
+    parser.add_option(args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for "
+                      "constructing the IBFs.");
+    parser.add_option(args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be equal"
+                      " to number of sequence files. Default: Every sequence file is one sample from one experiment.");
+    parser.add_option(args.aggregate_by, 'a', "aggregate-by", "Choose your method of aggregation: mean, median or "
+                      "random. Default: median.");
+    parser.add_option(args.random, 'r', "random-samples", "Choose the number of random sequences to pick from when "
+                      "using aggregation method random. Default: 1000.");
+
+    parser.add_flag(args.compressed, 'c', "compressed", "If set ibf is compressed. Default: Not compressed.");
     parser.add_option(args.k, 'k', "kmer", "Define kmer size.");
     parser.add_option(args.window_size, 'w', "window", "Define window size.");
     parser.add_option(args.shape, 'p', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
                       "position to be ignored, 1 a position considered. Default: ungapped.");
     parser.add_option(args.seed, 's', "seed", "Define seed.");
-    parser.add_option(args.genome_file, 'g', "genom", "Genom file used as a mask.");
-    parser.add_option(args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be equal"
-                      " to number of fasta files. Default: Every fasta file is one sample from one experiment.");
-    parser.add_option(args.aggregate_by, 'a', "aggregate-by", "Choose your method of aggregation: mean, median or "
-                      "random. Default: median.");
-    parser.add_option(args.random, 'r', "random-samples", "Choose the number of random sequences to pick from when "
-                      "using method random. Default: 1000.");
-    parser.add_flag(args.compressed, 'c', "compressed", "If set ibf is compressed. Default: Not compressed.");
 }
 
 int main(int const argc, char const ** argv)
@@ -101,10 +103,10 @@ int main(int const argc, char const ** argv)
 
     if (args.samples.empty()) // If no samples are given, every file is seen as on experiment
     {
-        args.samples.assign(args.fasta_files.size(),1);
+        args.samples.assign(args.sequence_files.size(),1);
     }
     // If sum of args.samples is not equal to number of files
-    else if (std::accumulate(args.samples.rbegin(), args.samples.rend(), 0) != args.fasta_files.size())
+    else if (std::accumulate(args.samples.rbegin(), args.samples.rend(), 0) != args.sequence_files.size())
     {
         debug_stream << "Error. Incorrect command line input for multiple-samples." << "\n";
         return -1;
@@ -121,11 +123,11 @@ int main(int const argc, char const ** argv)
     concatenated_sequences<dna4_vector> *sequences_ptr;
 
     // Sort given expression rates
-    sort(args.expression.begin(), args.expression.end());
+    sort(args.expression_levels.begin(), args.expression_levels.end());
 
     //If no expression values given, add default
-    if (args.expression.size() == 0)
-        args.expression = {0.5,1,2,4};
+    if (args.expression_levels.size() == 0)
+        args.expression_levels = {0.5,1,2,4};
 
     // If no size in bits is given or not the right amount, throw error.
     if (args.bits.empty())
@@ -135,9 +137,9 @@ int main(int const argc, char const ** argv)
     }
     else if (args.bits.size() == 1)
     {
-        args.bits.assign(args.expression.size(),args.bits[0]);
+        args.bits.assign(args.expression_levels.size(),args.bits[0]);
     }
-    else if (args.bits.size() != args.expression.size())
+    else if (args.bits.size() != args.expression_levels.size())
     {
         debug_stream << "Error. Length of sizes for IBFs in bits is not equal to length of expression levels. " << "\n";
         return -1;
@@ -161,7 +163,7 @@ int main(int const argc, char const ** argv)
 
     // Create binning_directory
     std::vector<binning_directory> bds;
-    for (unsigned i = 0; i < args.expression.size(); i++)
+    for (unsigned i = 0; i < args.expression_levels.size(); i++)
         bds.push_back(binning_directory(args.samples.size(), args.bits[i], args.num_hash));
 
     // Add minimizers to binning_directory
@@ -171,7 +173,7 @@ int main(int const argc, char const ** argv)
         //TODO: If not enough memory or too many samples in one experiment, read one file record by record
         for (unsigned ii = 0; ii < args.samples[i]; ii++)
         {
-            sequence_file_input<my_traits> input_file{args.fasta_files[file_seen]};
+            sequence_file_input<my_traits> input_file{args.sequence_files[file_seen]};
             sequences.insert(sequences.end(), get<field::SEQ>(input_file).begin(), get<field::SEQ>(input_file).end());
             file_seen++;
         }
@@ -216,7 +218,7 @@ int main(int const argc, char const ** argv)
             }
 
             std::nth_element(medians.begin(), medians.begin() + medians.size()/2, medians.end());
-            mean =  medians[medians.size()/2]; 
+            mean =  medians[medians.size()/2];
             medians.clear();
         }
         // Calculate mean expression by dividing the sum of all squares by the sum of all elements in hash table
@@ -257,13 +259,13 @@ int main(int const argc, char const ** argv)
             medians.clear();
         }
         sequences.clear();
-       
+
         // Every minimizer is stored in IBF, if it occurence divided by the mean is greater or equal expression level
         for (auto & elem : hash_table)
         {
-            for (unsigned j = 0; j < args.expression.size(); j++)
+            for (unsigned j = 0; j < args.expression_levels.size(); j++)
             {
-                if ((((double) elem.second/mean)) >= args.expression[j])
+                if ((((double) elem.second/mean)) >= args.expression_levels[j])
                     bds[j].set(elem.first,i);
                 else //If elem is not expressed at this level, it won't be expressed at a higher level
                     break;
@@ -274,9 +276,9 @@ int main(int const argc, char const ** argv)
 
 
     // Store binning_directories
-    for (unsigned i = 0; i < args.expression.size(); i++)
+    for (unsigned i = 0; i < args.expression_levels.size(); i++)
     {
-        std::filesystem::path filename{args.path_out.string() + "IBF_" + std::to_string(args.expression[i])};
+        std::filesystem::path filename{args.path_out.string() + "IBF_" + std::to_string(args.expression_levels[i])};
         std::ofstream os{filename, std::ios::binary};
         cereal::BinaryOutputArchive oarchive{os};
         if (args.compressed)
