@@ -1,3 +1,5 @@
+#pragma once
+
 #include <deque>
 
 #include <seqan3/alphabet/nucleotide/dna4.hpp>

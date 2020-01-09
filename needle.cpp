@@ -62,7 +62,7 @@ int main(int argc, char const ** argv) //run_needle_ibf(argument_parser & parser
 // =====================================================================================================================
 // search
 // =====================================================================================================================
-int main(int argc, char const ** argv)//int run_needle_search(argument_parser & parser)
+int main(int argc, char const ** argv) //int run_needle_search(argument_parser & parser)
 {
     seqan3::argument_parser parser("needle-search", argc, argv);
     cmd_arguments args{};

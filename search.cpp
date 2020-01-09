@@ -20,24 +20,6 @@
 
 #include "minimizer3.h"
 
-struct my_traits : seqan3::sequence_file_input_default_traits_dna
-{
-    using sequence_alphabet = seqan3::dna4;               // instead of dna5
-};
-
-struct cmd_arguments
-{
-    std::filesystem::path gene_file;
-    std::filesystem::path exp_file;
-    std::filesystem::path path_in{"./"};
-    float expression{1.0};
-    bool compressed = false;
-    uint8_t k{20};
-    uint16_t window_size{60};
-    uint64_t shape;
-    uint64_t seed{0x8F3F73B5CF1C9ADE};
-};
-
 void initialize_argument_parser(seqan3::argument_parser & parser, cmd_arguments & args)
 {
     parser.info.author = "Mitra Darvish";

@@ -20,30 +20,6 @@
 
 #include "minimizer3.h"
 
-struct cmd_arguments
-{
-    std::vector<std::filesystem::path> sequence_files;
-    std::filesystem::path genome_file;
-    std::vector<size_t> bits{};
-    size_t num_hash{1};
-    std::filesystem::path path_out{"./"};
-    std::vector<float> expression_levels{}; // 0.5,1,2,4
-    std::vector<int> samples{};
-    std::string aggregate_by{"median"};
-    size_t random{10};
-    bool compressed = false;
-    uint8_t k{20};
-    uint16_t window_size{60};
-    uint64_t shape;
-    uint64_t seed{0x8F3F73B5CF1C9ADE};
-};
-
-// Change default traits from sequence_file
-struct my_traits : seqan3::sequence_file_input_default_traits_dna
-{
-    using sequence_alphabet = seqan3::dna4;               // instead of dna5
-};
-
 struct RandomGenerator {
 	int maxi;
 	RandomGenerator(int max) :
