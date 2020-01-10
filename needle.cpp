@@ -21,6 +21,9 @@ int main(int argc, char const ** argv) //run_needle_ibf(argument_parser & parser
                       "constructing the IBFs.");
     parser.add_option(args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be equal"
                       " to number of sequence files. Default: Every sequence file is one sample from one experiment.");
+    parser.add_option(args.cutoffs, 'u', "cut-offs", "Define for each sample, what number of found minimizers should be"
+                      " considered the result of a sequencing error and therefore be ignored. Default: Every sample"
+                      " has a cut off of zero.");
     parser.add_option(args.aggregate_by, 'a', "aggregate-by", "Choose your method of aggregation: mean, median or "
                       "random. Default: median.");
     parser.add_option(args.random, 'r', "random-samples", "Choose the number of random sequences to pick from when "

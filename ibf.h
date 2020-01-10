@@ -38,7 +38,6 @@ std::vector<uint32_t> ibf(cmd_arguments & args)
 
     // Declarations
     std::vector<uint32_t> counts;
-    uint32_t file_seen{0};
     std::unordered_map<uint64_t, float> hash_table{}; // Storage for minimizers
     double mean;
     std::vector<uint32_t> medians;
@@ -50,6 +49,10 @@ std::vector<uint32_t> ibf(cmd_arguments & args)
     if (args.samples.empty()) // If no samples are given, every file is seen as one experiment
     {
         args.samples.assign(args.sequence_files.size(),1);
+    }
+    if (args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
+    {
+        args.cutoffs.assign(args.samples.size(),0);
     }
     // If sum of args.samples is not equal to number of files
     else if (std::accumulate(args.samples.rbegin(), args.samples.rend(), 0) != args.sequence_files.size())
@@ -111,10 +114,10 @@ std::vector<uint32_t> ibf(cmd_arguments & args)
         //TODO: If not enough memory or too many samples in one experiment, read one file record by record
         for (unsigned ii = 0; ii < args.samples[i]; ii++)
         {
-            seqan3::sequence_file_input<my_traits> input_file{args.sequence_files[file_seen]};
+            seqan3::sequence_file_input<my_traits> input_file{args.sequence_files[std::accumulate(args.samples.begin(),
+                                                              args.samples.begin()+i, ii)]};
             sequences.insert(sequences.end(), get<seqan3::field::SEQ>(input_file).begin(),
                              get<seqan3::field::SEQ>(input_file).end());
-            file_seen++;
         }
         // Count minimizer in fasta file
         for (auto seq : sequences)
@@ -150,8 +153,8 @@ std::vector<uint32_t> ibf(cmd_arguments & args)
                     counts.push_back(hash_table[minHash]);
                 }
                 std::nth_element(counts.begin(), counts.begin() + counts.size()/2, counts.end());
-		// Do not consider expression values of 0
-                if (counts[counts.size()/2] > 0)
+		        // Do not consider expression values smaller or equal to given cutoff
+                if (counts[counts.size()/2] > args.cutoffs[i])
                     medians.push_back(counts[counts.size()/2]);
                 counts.clear();
             }
@@ -191,7 +194,8 @@ std::vector<uint32_t> ibf(cmd_arguments & args)
                     counts.push_back(hash_table[minHash]);
                 }
                 std::nth_element(counts.begin(), counts.begin() + counts.size()/2, counts.end());
-                medians.push_back(counts[counts.size()/2]);
+                if (counts[counts.size()/2] > args.cutoffs[i])
+                    medians.push_back(counts[counts.size()/2]);
                 counts.clear();
             }
             std::nth_element(medians.begin(), medians.begin() + medians.size()/2, medians.end());
@@ -206,7 +210,9 @@ std::vector<uint32_t> ibf(cmd_arguments & args)
         {
             for (unsigned j = 0; j < args.expression_levels.size(); j++)
             {
-                if ((((double) elem.second/mean)) >= args.expression_levels[j])
+                if ((args.expression_levels[j] == 0) & (elem.second > args.cutoffs[i])) // for comparison with mantis, SBT
+                    bds[j].set(elem.first,i);
+                else if ((((double) elem.second/mean)) >= args.expression_levels[j])
                     bds[j].set(elem.first,i);
                 else //If elem is not expressed at this level, it won't be expressed at a higher level
                     break;

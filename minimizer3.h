@@ -29,6 +29,7 @@ struct cmd_arguments
     std::filesystem::path path_out{"./"};
     std::vector<float> expression_levels{}; // 0.5,1,2,4
     std::vector<int> samples{};
+    std::vector<int> cutoffs{};
     std::string aggregate_by{"median"};
     size_t random{10};
 
@@ -44,6 +45,7 @@ struct cmd_arguments
     uint16_t window_size{60};
     uint64_t shape;
     uint64_t seed{0x8F3F73B5CF1C9ADE};
+    size_t nthreads{1};
 
 };
 

@@ -115,7 +115,7 @@ TEST(ibf, random)
 
     std::vector<uint32_t> medians = ibf(args);
 
-    EXPECT_TRUE((3 >= medians[0]) & (2 <= medians[0]));
+    EXPECT_TRUE((3 == medians[0]));
 }
 
 TEST(ibf, genom_median)
@@ -201,6 +201,33 @@ TEST(search, small_example_gene_not_found)
     ibf(args);
 
     args.gene_file = "./example/mini_gen2.fasta";
+    args.path_in = args.path_out;
+    args.expression = 1;
+
+    seqan3::binning_directory_compressed bd;
+
+    std::vector<uint32_t> results{search(bd, args)};
+
+    EXPECT_EQ(expected, results);
+}
+
+TEST(search, small_example_own_cutoffs)
+{
+    cmd_arguments args{};
+    std::vector<uint32_t> expected{0};
+    args.sequence_files = {"./example/mini_example.fasta"};
+    args.expression_levels = {0};
+    args.cutoffs = {2};
+    args.bits = {1000};
+    args.path_out = "./example/";
+    args.compressed = true;
+    args.k = 4;
+    args.window_size = 4;
+    args.seed = 0;
+
+    ibf(args);
+
+    args.gene_file = "./example/mini_gen3.fasta";
     args.path_in = args.path_out;
     args.expression = 1;
 
