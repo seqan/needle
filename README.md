@@ -14,6 +14,12 @@ cmake ../needle
 make
 ```
 
+Run test to check, if Needle is working as intended. All tests should pass. 
+
+```
+./test
+```
+
 ## Create an IBF
 In order to create an IBF a number of sequence files have to be given. All sequence file formats from seqan3 are accepted as an input (fasta, fastq, embl,... and their compressed forms). With the parameter m can be defined, which of these sequence files belong together, either because they are the result of paired-end sequencing or they are multiple replicates of the same experiment. If no specification with m is given, every sequence file is seen as one experiment.
 Besides, the sequence file a size of the IBF has to be specified with parameter l. Good sizes for Bloom Filters for one experiment can be calculated with this calculator (https://hur.st/bloomfilter/?n=&p=5.0E-2&m=6559922&k=1), which should be then multiplied with the number of given experiments.
