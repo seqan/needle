@@ -37,7 +37,7 @@ number_type to_number(range_type && range)
 }
 
 template <class BD>
-int search(BD bd, cmd_arguments & args)
+std::vector<uint32_t> search(BD bd, cmd_arguments & args)
 {
     std::vector<uint32_t> counter;
     std::vector<uint32_t> results;
@@ -66,7 +66,7 @@ int search(BD bd, cmd_arguments & args)
             if (expression.size() != seqs.size())
             {
                 seqan3::debug_stream << "Error! Number of given expression levels do not match number of sequences.\n";
-                return -1;
+                return results;
             }
         }
     }
@@ -102,13 +102,12 @@ int search(BD bd, cmd_arguments & args)
 
         for(unsigned j = 0; j < counter.size(); j++)
         {
-            if ( (counter[j] >= minimizer_length/2))
+            if (counter[j] >= minimizer_length/2.0)
                 results[j] = results[j] + 1;
         }
         counter.clear();
         counter.assign(bd.get_bins(), 0);
     }
 
-    seqan3::debug_stream << "Results: " << results << "\n";
-    return 0;
+    return results;
 }

@@ -5,7 +5,6 @@
 // =====================================================================================================================
 // ibf
 // =====================================================================================================================
-/*
 int main(int argc, char const ** argv) //run_needle_ibf(argument_parser & parser)
 {
     seqan3::argument_parser parser("needle-ibf", argc, argv);
@@ -44,25 +43,16 @@ int main(int argc, char const ** argv) //run_needle_ibf(argument_parser & parser
         return -1;
     }
 
-    if (args.samples.empty()) // If no samples are given, every file is seen as on experiment
-    {
-        args.samples.assign(args.sequence_files.size(),1);
-    }
-    // If sum of args.samples is not equal to number of files
-    else if (std::accumulate(args.samples.rbegin(), args.samples.rend(), 0) != args.sequence_files.size())
-    {
-        seqan3::debug_stream << "Error. Incorrect command line input for multiple-samples." << "\n";
+    std::vector<uint32_t> medians = ibf(args);
+    if (medians.empty())
         return -1;
-    }
-
-    ibf(args);
 
     return 0;
-}*/
+}
 // =====================================================================================================================
 // search
 // =====================================================================================================================
-int main(int argc, char const ** argv) //int run_needle_search(argument_parser & parser)
+/*int main(int argc, char const ** argv) //int run_needle_search(argument_parser & parser)
 {
     seqan3::argument_parser parser("needle-search", argc, argv);
     cmd_arguments args{};
@@ -92,17 +82,22 @@ int main(int argc, char const ** argv) //int run_needle_search(argument_parser &
         return -1;
     }
 
+    std::vector<uint32_t> results;
     if (args.compressed)
     {
         seqan3::binning_directory_compressed bd;
-        return search(bd, args);
+        results = search(bd, args);
     }
     else
     {
         seqan3::binning_directory bd;
-        return search(bd, args);
+        results = search(bd, args);
     }
 
+    if (results.empty())
+        return -1;
+
+    seqan3::debug_stream << "Results: " << results << "\n";
     return 0;
 }
 // =====================================================================================================================
