@@ -32,7 +32,7 @@ struct RandomGenerator {
 	}
 };
 
-int ibf(cmd_arguments & args)
+std::vector<uint32_t> ibf(cmd_arguments & args)
 {
     using seqan3::get;
 
@@ -42,9 +42,21 @@ int ibf(cmd_arguments & args)
     std::unordered_map<uint64_t, float> hash_table{}; // Storage for minimizers
     double mean;
     std::vector<uint32_t> medians;
+    std::vector<uint32_t> normal_expression_values;
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences;
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
     seqan3::concatenated_sequences<seqan3::dna4_vector> *sequences_ptr;
+
+    if (args.samples.empty()) // If no samples are given, every file is seen as one experiment
+    {
+        args.samples.assign(args.sequence_files.size(),1);
+    }
+    // If sum of args.samples is not equal to number of files
+    else if (std::accumulate(args.samples.rbegin(), args.samples.rend(), 0) != args.sequence_files.size())
+    {
+        seqan3::debug_stream << "Error. Incorrect command line input for multiple-samples." << "\n";
+        return normal_expression_values;
+    }
 
     // Sort given expression rates
     sort(args.expression_levels.begin(), args.expression_levels.end());
@@ -57,7 +69,7 @@ int ibf(cmd_arguments & args)
     if (args.bits.empty())
     {
         seqan3::debug_stream << "Error. Please give a size for the IBFs in bit." << "\n";
-        return -1;
+        return normal_expression_values;
     }
     else if (args.bits.size() == 1)
     {
@@ -67,7 +79,7 @@ int ibf(cmd_arguments & args)
     {
         seqan3::debug_stream << "Error. Length of sizes for IBFs in bits is not equal to length of expression levels."
         << "\n";
-        return -1;
+        return normal_expression_values;
     }
 
     // Generate genome mask
@@ -168,7 +180,7 @@ int ibf(cmd_arguments & args)
         else if (args.aggregate_by == "random")
         {
             // How many sequences should be looked at
-            uint64_t random_n = (sequences.size()/100) * args.random;
+            uint64_t random_n = (sequences.size()/100.0) * args.random;
             std::vector<int> randomPos(random_n);
             std::generate(randomPos.begin(), randomPos.end(), RandomGenerator(sequences_ptr->size()));
             for (auto pos : randomPos)
@@ -186,6 +198,7 @@ int ibf(cmd_arguments & args)
             mean = medians[medians.size()/2];
             medians.clear();
         }
+        normal_expression_values.push_back(mean);
         sequences.clear();
 
         // Every minimizer is stored in IBF, if it occurence divided by the mean is greater or equal expression level
@@ -202,7 +215,6 @@ int ibf(cmd_arguments & args)
         hash_table.clear();
     }
 
-
     // Store binning_directories
     for (unsigned i = 0; i < args.expression_levels.size(); i++)
     {
@@ -214,5 +226,7 @@ int ibf(cmd_arguments & args)
         else
             oarchive(seqan3::binning_directory(bds[i]));
     }
+
+    return normal_expression_values;
 
 }

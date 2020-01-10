@@ -166,9 +166,8 @@ public:
 std::vector<uint64_t> compute_minimizer(const seqan3::dna4_vector & seq, uint8_t k = p_k, uint16_t window_size = p_w,
                                         uint64_t shape = p_shape, uint64_t seed = p_seed)
 {
-//  size_t const window_size = ((length(seq) - k) / LeastNumMinimizers) + k; // ensure at least 3 minimizer
     if (k > window_size)
-        throw std::logic_error("Cannot divide the sequence into the specified window size."); // return std::array<uint64_t, 3> {};
+        throw std::logic_error("Cannot divide the sequence into the specified window size.");
 
     Minimizer minimizer;
     minimizer.resize(k, window_size, shape, seed);
@@ -177,7 +176,7 @@ std::vector<uint64_t> compute_minimizer(const seqan3::dna4_vector & seq, uint8_t
 }
 
 auto compute_occurrences(const std::vector<seqan3::dna4_vector> & seqs, uint8_t k = p_k, uint16_t window_size = p_w,
-                                        uint64_t shape = p_shape, uint64_t seed = p_seed)
+                         uint64_t shape = p_shape, uint64_t seed = p_seed)
 {
     std::unordered_map<uint64_t, uint32_t> occurring_kmers{};
     unsigned total_count{0};
