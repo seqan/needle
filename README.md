@@ -10,7 +10,7 @@ Assuming seqan3 can be found in seqan_dir, Needle can be build following these c
 ```
 git clone https://github.com/MitraDarja/needle.git
 mkdir build-needle && cd build-needle
-cmake ../needle DSEQAN_DIR=seqan_dir
+cmake ../needle -DSEQAN_DIR=seqan_dir
 make
 ```
 
