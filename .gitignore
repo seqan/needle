@@ -1,3 +1,11 @@
 IBF_*
-# ignore objects and archives, anywhere in the tree.
-*.[oa]
+googletest-build/
+googletest-download/
+googletest-src/
+lib/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+needle-ibf
+needle-search
