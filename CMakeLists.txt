@@ -32,8 +32,11 @@ if (CMAKE_VERSION VERSION_LESS 2.8.11)
   include_directories("${gtest_SOURCE_DIR}/include")
 endif()
 
+set (EXECUTABLE_OUTPUT_PATH ${OUTPUT_PATH})
+set (LIBRARY_OUTPUT_PATH ${OUTPUT_PATH})
 project (seqan3_tutorial CXX)
 set(SeqAn3_DIR "${SEQAN_DIR}/build_system")
+set(CMAKE_BUILD_TYPE Release)
 find_package (SeqAn3 REQUIRED)
 add_executable (count
                 count.cpp)
