@@ -14,12 +14,11 @@
 #include <seqan3/core/concept/cereal.hpp>
 #include <seqan3/core/debug_stream.hpp>
 #include <seqan3/io/sequence_file/all.hpp>
-#include <seqan3/search/dream_index/binning_directory.hpp>
-#include <seqan3/search/dream_index/concept.hpp>
+#include <seqan3/search/dream_index/interleaved_bloom_filter.hpp>
 #include <seqan3/std/filesystem>
 #include <seqan3/std/ranges>
 
-#include "minimizer3.h"
+#include "minimizer.h"
 
 template <typename number_type, typename range_type>
 number_type to_number(range_type && range)
@@ -36,23 +35,23 @@ number_type to_number(range_type && range)
     return num;
 }
 
-template <class BD>
-std::vector<uint32_t> search(BD bd, cmd_arguments & args)
+std::vector<uint32_t> search(arguments const & args, search_arguments const & search_args)
 {
     std::vector<uint32_t> counter;
     std::vector<uint32_t> results;
     std::vector<float> expression;
     std::vector<seqan3::dna4_vector> seqs;
 
-    seqan3::sequence_file_input<my_traits> input_file{args.gene_file};
-    for (auto & rec : input_file)
+    seqan3::sequence_file_input<my_traits> fin{search_args.gene_file};
+    for (auto & [seq, id, qual] : fin)
     {
-        seqs.push_back(seqan3::get<seqan3::field::SEQ>(rec));
+        seqs.push_back(seq);
     }
 
-    if (args.exp_file != "")
+    if (search_args.exp_file != "")
     {
-        std::ifstream file{args.exp_file.string()};
+        throw std::invalid_argument{"Error! Number of given expression levels do not match number of sequences."};
+    /*    std::ifstream file{search_args.exp_file.string()};
         if (file.is_open())
         {
             std::string line;
@@ -64,39 +63,44 @@ std::vector<uint32_t> search(BD bd, cmd_arguments & args)
             }
 
             if (expression.size() != seqs.size())
-            {
-                seqan3::debug_stream << "Error! Number of given expression levels do not match number of sequences.\n";
-                return results;
-            }
-        }
+                throw std::invalid_argument{"Error! Number of given expression levels do not match number of sequences."};
+        }*/
     }
     else
     {
-        expression.assign(seqs.size(),args.expression);
+        expression.assign(seqs.size(),search_args.expression);
     }
 
-    std::ifstream is{args.path_in.string() + "IBF_" + std::to_string(expression[0]), std::ios::binary};
-    seqan3::debug_stream << "IBF_" + std::to_string(expression[0])<< "\n";
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
+    if (args.compressed)
+        seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+
+    std::ifstream is{search_args.path_in.string() + "IBF_" + std::to_string(expression[0]), std::ios::binary};
+    //seqan3::debug_stream << "IBF_" + std::to_string(expression[0])<< "\n";
     cereal::BinaryInputArchive iarchive{is};
-    iarchive(bd);
+    iarchive(ibf);
 
     uint32_t minimizer_length;
-    counter.resize(bd.get_bins(), 0);
-    results.resize(bd.get_bins(), 0);
+    counter.resize(ibf.bin_count(), 0);
+    results.resize(ibf.bin_count(), 0);
     for (unsigned i = 0; i < expression.size(); i++)
     {
+        // If the expression level changes a different ibf needs to be loaded.
+        // In order to keep the number of changes low, it is adviseable to perform all searches in one ibf and then
+        // move on to the next expression level.
         if ((i > 0) && (expression[i] != expression[i-1]))
         {
             std::ifstream is{"IBF_" + std::to_string(expression[i]), std::ios::binary};
-            seqan3::debug_stream << "IBF_" + std::to_string(expression[i])<< "\n";
+            //seqan3::debug_stream << "IBF_" + std::to_string(expression[i])<< "\n";
             cereal::BinaryInputArchive iarchive{is};
-            iarchive(bd);
+            iarchive(ibf);
         }
 
         minimizer_length = 0;
         for (auto & minHash : compute_minimizer(seqs[i], args.k, args.window_size, args.shape, args.seed))
         {
-            std::transform (counter.begin(), counter.end(), bd.get(minHash).begin(), counter.begin(), std::plus<int>());
+            std::transform (counter.begin(), counter.end(), ibf.bulk_contains(minHash).begin(), counter.begin(),
+                            std::plus<int>());
             ++minimizer_length;
         }
 
@@ -106,7 +110,7 @@ std::vector<uint32_t> search(BD bd, cmd_arguments & args)
                 results[j] = results[j] + 1;
         }
         counter.clear();
-        counter.assign(bd.get_bins(), 0);
+        counter.assign(ibf.bin_count(), 0);
     }
 
     return results;

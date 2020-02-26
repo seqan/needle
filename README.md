@@ -4,7 +4,7 @@ Due to the space-efficiency of one index, it is affordable to create multiple in
 
 ## Build
 
-Needle is depending on the seqan3 library (https://github.com/seqan/seqan3), at the moment it is necessary to use Enrico Seiler's branch "feature/binning_directory" (https://github.com/eseiler/seqan3/tree/feature/binning_directory), where the IBF is implemented. Soon, this branch should be included in the seqan3 library.
+Needle is depending on the seqan3 library (https://github.com/seqan/seqan3).
 Assuming seqan3 can be found in seqan_dir, Needle can be built by following these commands:
 
 ```
@@ -14,7 +14,7 @@ cmake ../needle -DSEQAN_DIR=seqan_dir -DOUTPUT_PATH=./
 make
 ```
 
-Run test to check, if Needle is working as intended. All tests should pass. 
+Run test to check, if Needle is working as intended. All tests should pass.
 
 ```
 ./test

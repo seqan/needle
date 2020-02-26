@@ -2,31 +2,30 @@
 #include "ibf.h"
 #include "search.h"
 
-// =====================================================================================================================
-// ibf
-// =====================================================================================================================
-int main(int argc, char const ** argv) //run_needle_ibf(argument_parser & parser)
+int run_needle_ibf(seqan3::argument_parser & parser)
 {
-    seqan3::argument_parser parser("needle-ibf", argc, argv);
-    cmd_arguments args{};
+    arguments args{};
+    ibf_arguments ibf_args{};
+    parser.info.short_description = "Constructs an IBF.";
+    parser.info.version = "1.0.0";
     parser.info.author = "Mitra Darvish";
-    parser.info.short_description = "Constructs IBF on Minimizer.";
-    parser.add_positional_option(args.sequence_files, "Please provide at least one sequence file.");
-    parser.add_option(args.genome_file, 'g', "genom-mask", "Genom file used as a mask.");
-    parser.add_option(args.bits, 'z', "size", "List of sizes in bits for IBF per expression rate.");
-    parser.add_option(args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
+
+    parser.add_positional_option(ibf_args.sequence_files, "Please provide at least one sequence file.");
+    parser.add_option(ibf_args.genome_file, 'g', "genom-mask", "Genom file used as a mask.");
+    parser.add_option(ibf_args.bits, 'z', "size", "List of sizes in bits for IBF per expression rate.");
+    parser.add_option(ibf_args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
                       "one IBF.");
-    parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
-    parser.add_option(args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for "
+    parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
+    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for "
                       "constructing the IBFs.");
-    parser.add_option(args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be equal"
+    parser.add_option(ibf_args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be equal"
                       " to number of sequence files. Default: Every sequence file is one sample from one experiment.");
-    parser.add_option(args.cutoffs, 'u', "cut-offs", "Define for each sample, what number of found minimizers should be"
+    parser.add_option(ibf_args.cutoffs, 'u', "cut-offs", "Define for each sample, what number of found minimizers should be"
                       " considered the result of a sequencing error and therefore be ignored. Default: Every sample"
                       " has a cut off of zero.");
-    parser.add_option(args.aggregate_by, 'a', "aggregate-by", "Choose your method of aggregation: mean, median or "
+    parser.add_option(ibf_args.aggregate_by, 'a', "aggregate-by", "Choose your method of aggregation: mean, median or "
                       "random. Default: median.");
-    parser.add_option(args.random, 'r', "random-samples", "Choose the number of random sequences to pick from when "
+    parser.add_option(ibf_args.random, 'r', "random-samples", "Choose the number of random sequences to pick from when "
                       "using aggregation method random. Default: 1000.");
 
     parser.add_flag(args.compressed, 'c', "compressed", "If set ibf is compressed. Default: Not compressed.");
@@ -40,34 +39,40 @@ int main(int argc, char const ** argv) //run_needle_ibf(argument_parser & parser
     {
         parser.parse();
     }
-    catch (seqan3::parser_invalid_argument const & ext)
+    catch (seqan3::argument_parser_error const & ext)
     {
         seqan3::debug_stream << "Error. Incorrect command line input for IBF construct." << ext.what() << "\n";
         return -1;
     }
-
-    std::vector<uint32_t> medians = ibf(args);
-    if (medians.empty())
+    try
+    {
+        ibf(args, ibf_args);
+    }
+    catch (const std::invalid_argument & e)
+    {
+        std::cerr << e.what() << std::endl;
         return -1;
+    }
 
     return 0;
 }
-// =====================================================================================================================
-// search
-// =====================================================================================================================
-/*int main(int argc, char const ** argv) //int run_needle_search(argument_parser & parser)
+
+int run_needle_search(seqan3::argument_parser & parser)
 {
-    seqan3::argument_parser parser("needle-search", argc, argv);
-    cmd_arguments args{};
-    parser.info.author = "Mitra Darvish";
+    arguments args{};
+    search_arguments search_args{};
     parser.info.short_description = "Search through an IBF.";
-    parser.add_positional_option(args.gene_file, "Please provide a sequence file.");
-    parser.add_option(args.exp_file, 'x', "expression_file", "A tab seperated file containing expression information "
+    parser.info.version = "1.0.0";
+    parser.info.author = "Mitra Darvish";
+
+    parser.add_positional_option(search_args.gene_file, "Please provide a sequence file.");
+    parser.add_option(search_args.exp_file, 'x', "expression_file", "A tab seperated file containing expression information "
                       "per transcript given. By Default: Search for Existence in experiments",
                       seqan3::option_spec::DEFAULT, seqan3::input_file_validator{{"tsv"}});
-    parser.add_option(args.path_in, 'i', "in", "Directory where input files can be found.");
-    parser.add_option(args.expression, 'e', "expression", "Which expression level should be considered during a "
+    parser.add_option(search_args.path_in, 'i', "in", "Directory where input files can be found.");
+    parser.add_option(search_args.expression, 'e', "expression", "Which expression level should be considered during a "
                       "search.");
+
     parser.add_option(args.k, 'k', "kmer", "Define kmer size.");
     parser.add_option(args.window_size, 'w', "window", "Define window size.");
     parser.add_option(args.shape, 'p', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
@@ -79,59 +84,52 @@ int main(int argc, char const ** argv) //run_needle_ibf(argument_parser & parser
     {
         parser.parse();
     }
-    catch (seqan3::parser_invalid_argument const & ext)                     // catch user errors
+    catch (seqan3::argument_parser_error const & ext)                     // catch user errors
     {
         seqan3::debug_stream << "Error. Incorrect command line input for IBF construct." << ext.what() << "\n";
         return -1;
     }
 
     std::vector<uint32_t> results;
-    if (args.compressed)
-    {
-        seqan3::binning_directory_compressed bd;
-        results = search(bd, args);
-    }
-    else
-    {
-        seqan3::binning_directory bd;
-        results = search(bd, args);
-    }
-
-    if (results.empty())
-        return -1;
-
-    seqan3::debug_stream << "Results: " << results << "\n";
-    return 0;
-}
-// =====================================================================================================================
-// main
-// =====================================================================================================================
-/*int main(int argc, char const ** argv)
-{
-    seqan3::argument_parser ibf_parser("needle-IBF", argc, argv);
-    seqan3::argument_parser search_parser("needle-search", argc, argv);
-    cmd_arguments args{};
-
-    argument_parser top_level_parser{"needle", argc, argv, true};
-    // Add information and flags to your top-level parser just as you would do with a normal one.
-    // Note that all flags directed at the top-level parser must be specified BEFORE the subcommand key word.
-    // Because of ambiguity, we do not allow any (positional) options for the top-level parser.
-    top_level_parser.info.description.push_back("You can create an ibf and search in an ibf.");
     try
     {
-        top_level_parser.parse(); // trigger command line parsing
+        results = search(args, search_args);
     }
-    catch (parser_invalid_argument const & ext) // catch user errors
+    catch (const std::invalid_argument & e)
     {
-        debug_stream << "Error. Incorrect command. Use either needle ibf or needle search." << ext.what() << "\n";
+        std::cerr << e.what() << std::endl;
         return -1;
     }
-    argument_parser & sub_parser = top_level_parser.get_sub_parser(); // hold a reference to the sub_parser
-    std::cout << "Proceed to sub parser." << std::endl;
+
+    std::cout << "Results:\n";
+    for( auto & elem : results)
+        std::cout << elem;
+    std::cout << "\n";
+    return 0;
+}
+
+int main(int argc, char const ** argv)
+{
+    seqan3::argument_parser needle_parser{"needle", argc, argv, true, {"ibf", "search"}};
+    needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
+                                             "command ibf or search an IBF with the search command.");
+    needle_parser.info.version = "1.0.0";
+    needle_parser.info.author = "Mitra Darvish";
+
+    try
+    {
+        needle_parser.parse(); // trigger command line parsing
+    }
+    catch (seqan3::argument_parser_error const & ext) // catch user errors
+    {
+        seqan3::debug_stream << "Error. Incorrect command. See needle help for more information." << ext.what() << "\n";
+        return -1;
+    }
+    seqan3::argument_parser & sub_parser = needle_parser.get_sub_parser(); // hold a reference to the sub_parser
     if (sub_parser.info.app_name == std::string_view{"needle-ibf"})
         run_needle_ibf(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-search"})
         run_needle_search(sub_parser);
     else
-        throw std::logic_error{"I do not know sub parser " + sub_parser.info.app_name};
-}*/
+        throw std::logic_error{"The used sub parser is not known: " + sub_parser.info.app_name};
+}
