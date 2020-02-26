@@ -1,12 +1,19 @@
 #pragma once
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 #include <deque>
+#include <sstream>
 
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
-#include <seqan3/range/view/all.hpp>
-#include <seqan3/range/view/kmer_hash.hpp>
+#include <seqan3/core/platform.hpp>
+#include <seqan3/io/sequence_file/input.hpp>
+#include <seqan3/range/container/bitcompressed_vector.hpp>
+#include <seqan3/range/views/all.hpp>
+#include <seqan3/range/views/kmer_hash.hpp>
 #include <seqan3/search/kmer_index/shape.hpp>
 #include <seqan3/std/ranges>
+
+#include <range/v3/view/zip.hpp>
 
 // k-mer size
 uint8_t p_k{20};
@@ -19,9 +26,21 @@ uint64_t p_shape = 0;
 // Setting seed to 0, will lead to lexicographically smallest k-mer
 uint64_t p_seed{0x8F3F73B5CF1C9ADE};
 
-struct cmd_arguments
+// arguments used for construction of the IBF as well as the search
+struct arguments
 {
-    // ibf specific arguments
+    bool compressed = false;
+    uint8_t k{20};
+    uint16_t window_size{60};
+    uint64_t shape;
+    uint64_t seed{0x8F3F73B5CF1C9ADE};
+    size_t nthreads{1};
+
+};
+
+// specific arguments needed for constructing an IBF
+struct ibf_arguments
+{
     std::vector<std::filesystem::path> sequence_files;
     std::filesystem::path genome_file;
     std::vector<size_t> bits{};
@@ -32,26 +51,25 @@ struct cmd_arguments
     std::vector<int> cutoffs{};
     std::string aggregate_by{"median"};
     size_t random{10};
+};
 
-    // search specific arguments
+// specific arguments needed for the search
+struct search_arguments
+{
     std::filesystem::path gene_file;
     std::filesystem::path exp_file;
     std::filesystem::path path_in{"./"};
     float expression{1.0};
 
-    // Arguments used for ibf and search
-    bool compressed = false;
-    uint8_t k{20};
-    uint16_t window_size{60};
-    uint64_t shape;
-    uint64_t seed{0x8F3F73B5CF1C9ADE};
-    size_t nthreads{1};
-
 };
 
+// Use dna4 instead of default dna5
 struct my_traits : seqan3::sequence_file_input_default_traits_dna
 {
-    using sequence_alphabet = seqan3::dna4;               // instead of dna5
+    using sequence_alphabet = seqan3::dna4;
+    //TODO: Should I use a bitcompressed_vector to save memory but with the disadvantage of losing speed?
+    //template <typename alph>
+    //using sequence_container = seqan3::bitcompressed_vector<alph>;
 };
 
 struct Minimizer
@@ -88,7 +106,7 @@ public:
             return std::vector<uint64_t> {};
 
         // Reverse complement without copying/modifying the original string
-        seqan3::dna4_vector revComp = text | std::view::reverse | seqan3::view::complement;
+        seqan3::dna4_vector revComp = text | std::views::reverse | seqan3::views::complement;
 
         uint64_t possible = text.size() > w ? text.size() - w + 1 : 1;
         uint32_t windowKmers = w - k + 1;
@@ -100,14 +118,14 @@ public:
         // Stores hash, begin and end for all k-mers in the window
         std::deque<uint64_t> windowValues;
 
-        auto kmerHashing = text | seqan3::view::kmer_hash(shape);
-        auto revcHashing = revComp | seqan3::view::kmer_hash(shape) | std::view::reverse;
+        auto kmerHashing = text | seqan3::views::kmer_hash(shape);
+        auto revcHashing = revComp | seqan3::views::kmer_hash(shape) | std::views::reverse;
 
         uint32_t i = 0;
 
         // Initialisation. We need to compute all hashes for the first window.
-        for ( auto && [hf, hr] : std::ranges::view::zip(kmerHashing | seqan3::view::take_exactly(windowKmers),
-             revcHashing | seqan3::view::take_exactly(windowKmers)) )
+        for ( auto && [hf, hr] : seqan3::views::zip(kmerHashing | seqan3::views::take_exactly(windowKmers),
+             revcHashing | seqan3::views::take_exactly(windowKmers)) )
         {
             // Get smallest canonical k-mer
             uint64_t kmerHash = hf ^ seed;
@@ -129,8 +147,8 @@ public:
         // For the following windows, we remove the first window k-mer (is now not in window) and add the new k-mer
         // that results from the window shifting
         bool minimizer_changed{false};
-        for ( auto && [hf, hr] : std::ranges::view::zip(kmerHashing | seqan3::view::drop(windowKmers),
-             revcHashing | seqan3::view::drop(windowKmers)))
+        for ( auto && [hf, hr] : seqan3::views::zip(kmerHashing | seqan3::views::drop(windowKmers),
+             revcHashing | seqan3::views::drop(windowKmers)))
         {
             if (min == std::begin(windowValues))
             {

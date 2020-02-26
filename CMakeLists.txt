@@ -40,15 +40,12 @@ set(CMAKE_BUILD_TYPE Release)
 find_package (SeqAn3 REQUIRED)
 add_executable (count
                 count.cpp)
-add_executable (ibf
+add_executable (needle
                 needle.cpp)
-add_executable (needle-search
-                search.cpp)
 add_executable (test
                 test.cpp)
 target_link_libraries (count seqan3::seqan3)
-target_link_libraries (ibf seqan3::seqan3)
-target_link_libraries (needle-search seqan3::seqan3)
+target_link_libraries (needle seqan3::seqan3)
 target_link_libraries (test seqan3::seqan3)
 # Now simply link against gtest or gtest_main as needed. Eg
 target_link_libraries(test gtest_main)

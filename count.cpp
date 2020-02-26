@@ -10,7 +10,7 @@
 #include <seqan3/std/filesystem>
 #include <seqan3/std/ranges>
 
-#include "minimizer3.h"
+#include "minimizer.h"
 
 uint8_t num_bins;
 
@@ -21,7 +21,7 @@ uint8_t k;
 size_t window_size;
 uint64_t seed;
 
-struct cmd_arguments2
+struct cmd_arguments
 {
     std::filesystem::path file_path_fasta{};
     std::filesystem::path file_path_gene;
@@ -32,7 +32,7 @@ struct cmd_arguments2
     uint64_t seed{0x8F3F73B5CF1C9ADE};
 };
 
-void initialize_argument_parser(seqan3::argument_parser & parser, cmd_arguments2 & args)
+void initialize_argument_parser(seqan3::argument_parser & parser, cmd_arguments & args)
 {
     parser.info.author = "Mitra Darvish";
     parser.info.short_description = "Calculates Minimizer.";
@@ -50,7 +50,7 @@ int main(int const argc, char const ** argv)
 {
 
     seqan3::argument_parser miniparser("Minimizer", argc, argv);
-    cmd_arguments2 args{};
+    cmd_arguments args{};
     initialize_argument_parser(miniparser, args);
 
     try
