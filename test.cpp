@@ -6,6 +6,10 @@
 #include "minimizer.h"
 #include "search.h"
 
+#ifndef DATA_DIR
+#  define DATA_DIR @DATA_DIR@
+#endif
+
 void initialization_args(arguments & args)
 {
     args.compressed = true;
@@ -18,7 +22,7 @@ void initialization_ibf_args(ibf_arguments & args)
 {
     args.expression_levels = {1};
     args.bits = {1000};
-    args.path_out = "./example/";
+    args.path_out = DATA_DIR;
 }
 
 TEST(minimizer, small_example)
@@ -81,7 +85,7 @@ TEST(ibf, median)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.sequence_files = {"./example/mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "/mini_example.fasta"};
 
     std::vector<uint32_t> expected{3};
 
@@ -96,7 +100,7 @@ TEST(ibf, mean)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.sequence_files = {"./example/mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "/mini_example.fasta"};
     ibf_args.aggregate_by = "mean";
 
     std::vector<uint32_t> expected{3};
@@ -112,7 +116,7 @@ TEST(ibf, random)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.sequence_files = {"./example/mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "/mini_example.fasta"};
     ibf_args.aggregate_by = "random";
     ibf_args.random = 40;
 
@@ -127,8 +131,8 @@ TEST(ibf, genom_median)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.sequence_files = {"./example/mini_example.fasta"};
-    ibf_args.genome_file = "./example/mini_genom.fasta";
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "/mini_example.fasta"};
+    ibf_args.genome_file = std::string(DATA_DIR) + "/mini_genom.fasta";
 
     std::vector<uint32_t> expected{4};
 
@@ -144,8 +148,8 @@ TEST(ibf, genom_median_no_match)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.sequence_files = {"./example/mini_example2.fasta"};
-    ibf_args.genome_file = "./example/mini_genom.fasta";
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "/mini_example2.fasta"};
+    ibf_args.genome_file = std::string(DATA_DIR) + "/mini_genom.fasta";
 
     std::vector<uint32_t> expected{1};
 
@@ -160,8 +164,8 @@ TEST(ibf, genom_mean)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.sequence_files = {"./example/mini_example.fasta"};
-    ibf_args.genome_file = "./example/mini_genom.fasta";
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "/mini_example.fasta"};
+    ibf_args.genome_file = std::string(DATA_DIR) + "/mini_genom.fasta";
     ibf_args.aggregate_by = "mean";
 
     std::vector<uint32_t> expected{4};
@@ -179,11 +183,11 @@ TEST(search, small_example)
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     std::vector<uint32_t> expected{1};
-    ibf_args.sequence_files = {"./example/mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "/mini_example.fasta"};
 
     ibf(args, ibf_args);
 
-    search_args.gene_file = "./example/mini_gen.fasta";
+    search_args.gene_file = std::string(DATA_DIR) + "/mini_gen.fasta";
     search_args.path_in = ibf_args.path_out;
     search_args.expression = 1;
 
@@ -200,11 +204,11 @@ TEST(search, small_example_gene_not_found)
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     std::vector<uint32_t> expected{0};
-    ibf_args.sequence_files = {"./example/mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "/mini_example.fasta"};
 
     ibf(args, ibf_args);
 
-    search_args.gene_file = "./example/mini_gen2.fasta";
+    search_args.gene_file = std::string(DATA_DIR) + "/mini_gen2.fasta";
     search_args.path_in = ibf_args.path_out;
     search_args.expression = 1;
 
@@ -221,13 +225,13 @@ TEST(search, small_example_own_cutoffs)
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     std::vector<uint32_t> expected{0};
-    ibf_args.sequence_files = {"./example/mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "/mini_example.fasta"};
     ibf_args.expression_levels = {0};
     ibf_args.cutoffs = {2};
 
     ibf(args, ibf_args);
 
-    search_args.gene_file = "./example/mini_gen3.fasta";
+    search_args.gene_file = std::string(DATA_DIR) + "/mini_gen3.fasta";
     search_args.path_in = ibf_args.path_out;
     search_args.expression = 1;
 
@@ -242,17 +246,17 @@ TEST(search, example)
     ibf_arguments ibf_args{};
     search_arguments search_args{};
     std::vector<uint32_t> expected{0,1};
-    // ./needle-ibf ./example/exp_*.fasta -m 2 -m 2 -o ./example/ -e 0.5 -z 1559922 -c
-    ibf_args.sequence_files = {"./example/exp_01.fasta", "./example/exp_02.fasta", "./example/exp_11.fasta", "./example/exp_12.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "/exp_01.fasta", std::string(DATA_DIR) + "/exp_02.fasta",
+                               std::string(DATA_DIR) + "/exp_11.fasta", std::string(DATA_DIR) + "/exp_12.fasta"};
     ibf_args.samples = {2,2};
     ibf_args.expression_levels = {0.5};
     ibf_args.bits = {1559922};
-    ibf_args.path_out = "./example/";
+    ibf_args.path_out = std::string(DATA_DIR) + "/";
     args.compressed = true;
     ibf(args, ibf_args);
 
-    // ./needle-search ./example/gene.fasta -i ./example/ -e 0.5 -c
-    search_args.gene_file = "./example/gene.fasta";
+    // ./needle-search DATA_DIR"+"/gene.fasta -i DATA_DIR"+"/ -e 0.5 -c
+    search_args.gene_file = std::string(DATA_DIR) + "/gene.fasta";
     search_args.path_in = ibf_args.path_out;
     search_args.expression = 0.5;
 
