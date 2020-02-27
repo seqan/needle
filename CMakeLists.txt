@@ -34,19 +34,23 @@ endif()
 
 set (EXECUTABLE_OUTPUT_PATH ${OUTPUT_PATH})
 set (LIBRARY_OUTPUT_PATH ${OUTPUT_PATH})
-project (seqan3_tutorial CXX)
+set(DATA_DIR DATADIR=${CMAKE_CURRENT_SOURCE_DIR})
+project (needle CXX)
 set(SeqAn3_DIR "${SEQAN_DIR}/build_system")
+add_compile_definitions(DATA_DIR="${CMAKE_CURRENT_LIST_DIR}/example/")
 set(CMAKE_BUILD_TYPE Release)
 find_package (SeqAn3 REQUIRED)
 add_executable (count
                 count.cpp)
 add_executable (needle
                 needle.cpp)
-add_executable (test
+add_executable (test-needle
                 test.cpp)
 target_link_libraries (count seqan3::seqan3)
 target_link_libraries (needle seqan3::seqan3)
-target_link_libraries (test seqan3::seqan3)
+target_link_libraries (test-needle seqan3::seqan3)
 # Now simply link against gtest or gtest_main as needed. Eg
-target_link_libraries(test gtest_main)
+target_link_libraries(test-needle gtest_main)
 # add_test(NAME example_test COMMAND example)
+enable_testing()
+#add_test(FooTest test2 "${CMAKE_CURRENT_LIST_DIR}/example")
