@@ -137,6 +137,23 @@ TEST(ibf, genom_median)
     EXPECT_EQ(expected, medians);
 }
 
+// Test a genome which has so different minimizers that some minimizers in seq can not be found
+TEST(ibf, genom_median_no_match)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+    ibf_args.sequence_files = {"./example/mini_example2.fasta"};
+    ibf_args.genome_file = "./example/mini_genom.fasta";
+
+    std::vector<uint32_t> expected{1};
+
+    std::vector<uint32_t> medians = ibf(args, ibf_args);
+
+    EXPECT_EQ(expected, medians);
+}
+
 TEST(ibf, genom_mean)
 {
     arguments args{};
