@@ -20,6 +20,16 @@
 
 #include "minimizer.h"
 
+// specific arguments needed for the search
+struct search_arguments
+{
+    std::filesystem::path gene_file;
+    std::filesystem::path exp_file;
+    std::filesystem::path path_in{"./"};
+    float expression{1.0};
+
+};
+
 template <typename number_type, typename range_type>
 number_type to_number(range_type && range)
 {

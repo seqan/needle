@@ -20,6 +20,21 @@
 
 #include "minimizer.h"
 
+// specific arguments needed for constructing an IBF
+struct ibf_arguments
+{
+    std::vector<std::filesystem::path> sequence_files;
+    std::filesystem::path genome_file;
+    std::vector<size_t> bits{};
+    size_t num_hash{1};
+    std::filesystem::path path_out{"./"};
+    std::vector<float> expression_levels{}; // 0.5,1,2,4
+    std::vector<int> samples{};
+    std::vector<int> cutoffs{};
+    std::string aggregate_by{"median"};
+    size_t random{10};
+};
+
 struct RandomGenerator {
 	int maxi;
 	RandomGenerator(int max) :

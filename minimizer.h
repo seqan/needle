@@ -38,31 +38,6 @@ struct arguments
 
 };
 
-// specific arguments needed for constructing an IBF
-struct ibf_arguments
-{
-    std::vector<std::filesystem::path> sequence_files;
-    std::filesystem::path genome_file;
-    std::vector<size_t> bits{};
-    size_t num_hash{1};
-    std::filesystem::path path_out{"./"};
-    std::vector<float> expression_levels{}; // 0.5,1,2,4
-    std::vector<int> samples{};
-    std::vector<int> cutoffs{};
-    std::string aggregate_by{"median"};
-    size_t random{10};
-};
-
-// specific arguments needed for the search
-struct search_arguments
-{
-    std::filesystem::path gene_file;
-    std::filesystem::path exp_file;
-    std::filesystem::path path_in{"./"};
-    float expression{1.0};
-
-};
-
 // Use dna4 instead of default dna5
 struct my_traits : seqan3::sequence_file_input_default_traits_dna
 {
