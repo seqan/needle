@@ -12,7 +12,7 @@
 
 void initialization_args(arguments & args)
 {
-    args.compressed = true;
+    args.compressed = false;
     args.k = 4;
     args.window_size = 4;
     args.seed = 0;
@@ -250,9 +250,9 @@ TEST(search, example)
                                std::string(DATA_DIR) + "/exp_11.fasta", std::string(DATA_DIR) + "/exp_12.fasta"};
     ibf_args.samples = {2,2};
     ibf_args.expression_levels = {0.5};
-    ibf_args.bits = {1559922};
+    ibf_args.bits = {100000};
     ibf_args.path_out = std::string(DATA_DIR) + "/";
-    args.compressed = true;
+    args.compressed = false;
     ibf(args, ibf_args);
 
     // ./needle-search DATA_DIR"+"/gene.fasta -i DATA_DIR"+"/ -e 0.5 -c
