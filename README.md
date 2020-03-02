@@ -17,7 +17,7 @@ make
 Run test to check, if Needle is working as intended. All tests should pass.
 
 ```
-./test
+./test-needle
 ```
 
 ## Create an IBF
