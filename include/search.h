@@ -23,7 +23,7 @@
 // specific arguments needed for the search
 struct search_arguments
 {
-    std::filesystem::path gene_file;
+    std::filesystem::path search_file;
     std::filesystem::path exp_file;
     std::filesystem::path path_in{"./"};
     float expression{1.0};
@@ -52,7 +52,7 @@ std::vector<uint32_t> search(arguments const & args, search_arguments const & se
     std::vector<float> expression;
     std::vector<seqan3::dna4_vector> seqs;
 
-    seqan3::sequence_file_input<my_traits> fin{search_args.gene_file};
+    seqan3::sequence_file_input<my_traits> fin{search_args.search_file};
     for (auto & [seq, id, qual] : fin)
     {
         seqs.push_back(seq);

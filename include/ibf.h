@@ -24,15 +24,17 @@
 struct ibf_arguments
 {
     std::vector<std::filesystem::path> sequence_files;
-    std::filesystem::path genome_file;
-    std::vector<size_t> bits{};
-    size_t num_hash{1};
-    std::filesystem::path path_out{"./"};
-    std::vector<float> expression_levels{}; // 0.5,1,2,4
-    std::vector<int> samples{};
+    std::filesystem::path genome_file; // Needs to be defined when normalization_method should only use the genome sequence
+    std::vector<size_t> bin_size{}; // The bin size of one IBF, can be different for different expression levels
+    size_t num_hash{1}; // Number of hash functions to use, default 1
+    std::filesystem::path path_out{"./"}; // Path where ibf should be stored
+    std::vector<float> expression_levels{}; // 0.5,1,2,4 are default, expression levels which should be created
+    std::vector<int> samples{}; // Can be used to indicate that sequence files belong to the same experiment
+    // Which expression values should be ignored during calculation of the normalization_method, default is zero
     std::vector<int> cutoffs{};
-    std::string aggregate_by{"median"};
-    size_t random{10};
+    std::string normalization_method{"median"}; // Method to calculate normalized expression value
+    size_t random{10}; // What percentage of sequences should be used when using normalization_method random
+    bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
 };
 
 struct RandomGenerator {
@@ -53,7 +55,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
     // Declarations
     std::vector<uint32_t> counts;
     std::unordered_map<uint64_t, float> hash_table{}; // Storage for minimizers
-    double mean;
+    double mean; // the normalized expression value
     std::vector<uint32_t> medians;
     std::vector<uint32_t> normal_expression_values;
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences;
@@ -75,13 +77,13 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
     if (ibf_args.expression_levels.size() == 0)
         ibf_args.expression_levels = {0.5,1,2,4};
 
-    // If no size in bits is given or not the right amount, throw error.
-    if (ibf_args.bits.empty())
+    // If no bin size is given or not the right amount, throw error.
+    if (ibf_args.bin_size.empty())
         throw std::invalid_argument{"Error. Please give a size for the IBFs in bit."};
-    else if (ibf_args.bits.size() == 1)
-        ibf_args.bits.assign(ibf_args.expression_levels.size(),ibf_args.bits[0]);
-    else if (ibf_args.bits.size() != ibf_args.expression_levels.size())
-        throw std::invalid_argument{"Error. Length of sizes for IBFs in bits is not equal to length of expression levels."};
+    else if (ibf_args.bin_size.size() == 1)
+        ibf_args.bin_size.assign(ibf_args.expression_levels.size(),ibf_args.bin_size[0]);
+    else if (ibf_args.bin_size.size() != ibf_args.expression_levels.size())
+        throw std::invalid_argument{"Error. Length of sizes for IBFs in bin_size is not equal to length of expression levels."};
 
     // Generate genome mask
     std::unordered_set<uint64_t> genome_set_table{};
@@ -102,11 +104,24 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
     }
     //seqan3::debug_stream << "Kmers in Genome: " << genome_set_table.size() << "\n";
 
+    // Store experiment names
+    if (ibf_args.experiment_names)
+    {
+        std::ofstream outfile;
+        outfile.open(std::string{ibf_args.path_out} + "Stored_Files.txt");
+        for (unsigned i = 0; i < ibf_args.samples.size(); i++)
+        {
+            outfile  << ibf_args.sequence_files[std::accumulate(ibf_args.samples.begin(),
+                                                ibf_args.samples.begin()+i, 0)] << "\n";
+        }
+        outfile.close();
+    }
+
     // Create IBFs
     std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
     for (unsigned i = 0; i < ibf_args.expression_levels.size(); i++)
         ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
-					   seqan3::bin_count{ibf_args.samples.size()}, seqan3::bin_size{ibf_args.bits[i]},
+					   seqan3::bin_count{ibf_args.samples.size()}, seqan3::bin_size{ibf_args.bin_size[i]},
 					   seqan3::hash_function_count{ibf_args.num_hash}));
 
     // Add minimizers to ibf
@@ -150,7 +165,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
         }
 
         // Calculate mean expression by taking median of medians of all reads of one experiment, Default
-        if (ibf_args.aggregate_by == "median")
+        if (ibf_args.normalization_method == "median")
         {
             for (auto seq : *sequences_ptr)
             {
@@ -170,7 +185,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
             medians.clear();
         }
         // Calculate mean expression by dividing the sum of all squares by the sum of all elements in hash table
-        else if (ibf_args.aggregate_by == "mean")
+        else if (ibf_args.normalization_method == "mean")
         {
             size_t sum_hash{0};
             size_t sum{0};
@@ -186,7 +201,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
             mean = sum/sum_hash;
         }
         // Calculate mean expression by taking median of medians of 1000 random reads of one experiment, Default
-        else if (ibf_args.aggregate_by == "random")
+        else if (ibf_args.normalization_method == "random")
         {
             // How many sequences should be looked at
             uint64_t random_n = (sequences.size()/100.0) * ibf_args.random;

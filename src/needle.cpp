@@ -2,6 +2,16 @@
 #include "ibf.h"
 #include "search.h"
 
+void initialise_argument_parser(seqan3::argument_parser & parser, arguments & args)
+{
+    parser.add_flag(args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
+    parser.add_option(args.k, 'k', "kmer", "Define kmer size.");
+    parser.add_option(args.window_size, 'w', "window", "Define window size.");
+    parser.add_option(args.shape, 'p', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
+                                                "position to be ignored, 1 a position considered. Default: ungapped.");
+    parser.add_option(args.seed, 's', "seed", "Define seed.");
+}
+
 int run_needle_ibf(seqan3::argument_parser & parser)
 {
     arguments args{};
@@ -12,28 +22,27 @@ int run_needle_ibf(seqan3::argument_parser & parser)
 
     parser.add_positional_option(ibf_args.sequence_files, "Please provide at least one sequence file.");
     parser.add_option(ibf_args.genome_file, 'g', "genom-mask", "Genom file used as a mask.");
-    parser.add_option(ibf_args.bits, 'z', "size", "List of sizes in bits for IBF per expression rate.");
+    parser.add_option(ibf_args.bin_size, 'b', "bin-size", "List of bin sizes per expression level. If only one is given"
+                                                          ", then that bin size is used for all expression levels.");
     parser.add_option(ibf_args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
                       "one IBF.");
     parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
-    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for "
-                      "constructing the IBFs.");
-    parser.add_option(ibf_args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be equal"
-                      " to number of sequence files. Default: Every sequence file is one sample from one experiment.");
-    parser.add_option(ibf_args.cutoffs, 'u', "cut-offs", "Define for each sample, what number of found minimizers should be"
-                      " considered the result of a sequencing error and therefore be ignored. Default: Every sample"
-                      " has a cut off of zero.");
-    parser.add_option(ibf_args.aggregate_by, 'a', "aggregate-by", "Choose your method of aggregation: mean, median or "
-                      "random. Default: median.");
+    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
+                                                                            " constructing the IBFs.");
+    parser.add_option(ibf_args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be "
+                                                                 "equal to number of sequence files. Default: Every"
+                                                                 " sequence file is one sample from one experiment.");
+    parser.add_option(ibf_args.cutoffs, 'u', "cut-offs", "Define for each sample, what number of found minimizers "
+                                                         "should be considered the result of a sequencing error and "
+                                                         "therefore be ignored. Default: Every sample has a cut off of "
+                                                         "zero.");
+    parser.add_option(ibf_args.normalization_method, 'a', "normalization-method", "Choose a normalization method: mean,"
+                                                                                  " median or random. Default: median.");
     parser.add_option(ibf_args.random, 'r', "random-samples", "Choose the number of random sequences to pick from when "
-                      "using aggregation method random. Default: 1000.");
+                                                              "using normalization method random. Default: 1000.");
+    parser.add_option(ibf_args.random, 'f', "experiment-names", "If set, names of the experiments are stored in a txt file.");
 
-    parser.add_flag(args.compressed, 'c', "compressed", "If set ibf is compressed. Default: Not compressed.");
-    parser.add_option(args.k, 'k', "kmer", "Define kmer size.");
-    parser.add_option(args.window_size, 'w', "window", "Define window size.");
-    parser.add_option(args.shape, 'p', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
-                      "position to be ignored, 1 a position considered. Default: ungapped.");
-    parser.add_option(args.seed, 's', "seed", "Define seed.");
+    initialise_argument_parser(parser, args);
 
     try
     {
@@ -65,20 +74,16 @@ int run_needle_search(seqan3::argument_parser & parser)
     parser.info.version = "1.0.0";
     parser.info.author = "Mitra Darvish";
 
-    parser.add_positional_option(search_args.gene_file, "Please provide a sequence file.");
-    parser.add_option(search_args.exp_file, 'x', "expression_file", "A tab seperated file containing expression information "
-                      "per transcript given. By Default: Search for Existence in experiments",
+    parser.add_positional_option(search_args.search_file, "Please provide a sequence file.");
+    parser.add_option(search_args.exp_file, 'x', "expression_file", "A tab seperated file containing expression "
+                                                                    "information per transcript given. By Default: "
+                                                                    "Search for Existence in experiments",
                       seqan3::option_spec::DEFAULT, seqan3::input_file_validator{{"tsv"}});
     parser.add_option(search_args.path_in, 'i', "in", "Directory where input files can be found.");
     parser.add_option(search_args.expression, 'e', "expression", "Which expression level should be considered during a "
-                      "search.");
+                                                                 "search.");
 
-    parser.add_option(args.k, 'k', "kmer", "Define kmer size.");
-    parser.add_option(args.window_size, 'w', "window", "Define window size.");
-    parser.add_option(args.shape, 'p', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
-                      "position to be ignored, 1 a position considered. Default: ungapped.");
-    parser.add_option(args.seed, 's', "seed", "Define seed.");
-    parser.add_flag(args.compressed, 'c', "compressed", "If set ibf is compressed. Default: Not compressed.");
+    initialise_argument_parser(parser, args);
 
     try
     {
@@ -103,7 +108,7 @@ int run_needle_search(seqan3::argument_parser & parser)
 
     std::cout << "Results:\n";
     for( auto & elem : results)
-        std::cout << elem;
+        std::cout << elem << " ";
     std::cout << "\n";
     return 0;
 }
