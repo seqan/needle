@@ -34,7 +34,6 @@ struct arguments
     uint16_t window_size{60};
     uint64_t shape;
     uint64_t seed{0x8F3F73B5CF1C9ADE};
-    size_t nthreads{1};
 
 };
 
