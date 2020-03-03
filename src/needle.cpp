@@ -32,6 +32,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     parser.add_option(ibf_args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be "
                                                                  "equal to number of sequence files. Default: Every"
                                                                  " sequence file is one sample from one experiment.");
+    parser.add_flag(ibf_args.paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
     parser.add_option(ibf_args.cutoffs, 'u', "cut-offs", "Define for each sample, what number of found minimizers "
                                                          "should be considered the result of a sequencing error and "
                                                          "therefore be ignored. Default: Every sample has a cut off of "
@@ -40,7 +41,8 @@ int run_needle_ibf(seqan3::argument_parser & parser)
                                                                                   " median or random. Default: median.");
     parser.add_option(ibf_args.random, 'r', "random-samples", "Choose the number of random sequences to pick from when "
                                                               "using normalization method random. Default: 1000.");
-    parser.add_option(ibf_args.random, 'f', "experiment-names", "If set, names of the experiments are stored in a txt file.");
+    parser.add_option(ibf_args.experiment_names, 'f', "experiment-names", "If set, names of the experiments are stored"
+                                                                          " in a txt file.");
 
     initialise_argument_parser(parser, args);
 

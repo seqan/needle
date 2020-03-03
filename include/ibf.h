@@ -30,6 +30,7 @@ struct ibf_arguments
     std::filesystem::path path_out{"./"}; // Path where ibf should be stored
     std::vector<float> expression_levels{}; // 0.5,1,2,4 are default, expression levels which should be created
     std::vector<int> samples{}; // Can be used to indicate that sequence files belong to the same experiment
+    bool paired = false; // If true, than experiments are seen as paired-end experiments
     // Which expression values should be ignored during calculation of the normalization_method, default is zero
     std::vector<int> cutoffs{};
     std::string normalization_method{"median"}; // Method to calculate normalized expression value
@@ -62,7 +63,9 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
     seqan3::concatenated_sequences<seqan3::dna4_vector> *sequences_ptr;
 
-    if (ibf_args.samples.empty()) // If no samples are given, every file is seen as one experiment
+    if (ibf_args.paired) // If paired is true, a pair is seen as one sample
+        ibf_args.samples.assign(ibf_args.sequence_files.size()/2,2);
+    if (ibf_args.samples.empty()) // If no samples are given and not paired, every file is seen as one experiment
         ibf_args.samples.assign(ibf_args.sequence_files.size(),1);
     if (ibf_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
         ibf_args.cutoffs.assign(ibf_args.samples.size(),0);
