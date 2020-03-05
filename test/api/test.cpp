@@ -272,7 +272,7 @@ TEST(preprocess, small_example)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    std::string expected = "0 4 4 median\n0 \n12 ";
+    std::string expected = "0 4 4 0 median\n0 \n12 ";
     std::unordered_map<uint64_t,uint64_t> expected_hash_table{        // Minimizers:
                                                              {0,2},   // AAAA
                                                              {1,4},   // AAAC
@@ -293,29 +293,23 @@ TEST(preprocess, small_example)
     preprocess(args, ibf_args);
 
     // Test Header file
-    std::ifstream fin;
-    fin.open(std::string{ibf_args.path_out}  + "Header_" + std::string{ibf_args.sequence_files[0].stem()} + ".txt");
-    if (!fin.is_open())
-		std::cerr << "Error in open file" << std::endl;
-
-    std::string results = std::string((std::istreambuf_iterator<char>(fin)), std::istreambuf_iterator<char>());
-    fin.close();
-    EXPECT_EQ(expected, results);
+    ibf_args.expression_levels = {};
+    std::vector<uint64_t> counts{};
+    read_header(args, ibf_args, std::string{ibf_args.path_out}  + "Header_" +
+                std::string{ibf_args.sequence_files[0].stem()} + ".txt", counts);
+    EXPECT_EQ(4, args.k);
+    EXPECT_EQ(4, args.window_size);
+    EXPECT_EQ(0, args.seed);
+    EXPECT_EQ(0, args.shape);
+    //EXPECT_EQ("median", ibf_args.normalization_method);
+    EXPECT_EQ(0, ibf_args.expression_levels[0]);
+    EXPECT_EQ(1, ibf_args.expression_levels.size());
+    EXPECT_EQ(12, counts[0]);
+    EXPECT_EQ(1, counts.size());
 
     // Test binary file
     std::unordered_map<uint64_t,uint64_t> result_hash_table{};
-    fin.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[0].stem()} + ".minimizer",
-             std::ios::binary);
-    if (!fin.is_open())
-		std::cerr << "Error in open file" << std::endl;
-
-    uint64_t minimizer;
-    uint64_t minimizer_count;
-    while(fin.read((char*)&minimizer, sizeof(minimizer)))
-    {
-        fin.read((char*)&minimizer_count, sizeof(minimizer_count));
-        result_hash_table[minimizer] = minimizer_count;
-    }
+    read_binary(result_hash_table, std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[0].stem()}
+                + ".minimizer");
     EXPECT_EQ(expected_hash_table, result_hash_table);
-    fin.close();
 }

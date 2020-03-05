@@ -20,7 +20,7 @@ Run test to check, if Needle is working as intended. All tests should pass.
 ```
 
 ## Create an IBF
-In order to create an IBF a number of sequence files have to be given. All sequence file formats from seqan3 are accepted as an input (fasta, fastq, embl,... and their compressed forms). With the parameter m can be defined, which of these sequence files belong together, either because they are the result of paired-end sequencing or they are multiple replicates of the same experiment. If no specification with m is given, every sequence file is seen as one experiment. For paired-end experiments one can use the flag p to indicate this, so two consecutive sequence files are seen as belonging together. (This is equivalent to using -m 2 for all experiments.)
+In order to create an IBF a number of sequence files have to be given. All sequence file formats from seqan3 are accepted as an input (fasta, fastq, embl,... and their compressed forms). With the parameter m can be defined, which of these sequence files belong together, either because they are the result of paired-end sequencing or they are multiple replicates of the same experiment. If no specification with m is given, every sequence file is seen as one experiment. For paired-end experiments one can use the flag i to indicate this, so two consecutive sequence files are seen as belonging together. (This is equivalent to using -m 2 for all experiments.)
 Besides, the sequence file the bin size of the IBF has to be specified with parameter b. Good sizes for Bloom Filters for one experiment can be calculated with this [calculator] (https://hur.st/bloomfilter/?n=&p=5.0E-2&m=6559922&k=1).
 Use -h/--help for more information and to see further parameters.
 
@@ -29,8 +29,8 @@ The following example creates an IBF for two experiments for the expression rate
 ```
 ./needle ibf ../needle/test/data/exp_*.fasta -m 2 -m 2 -e 0.5 -b 100000 -c
 
-// Or with flag p
-./needle ibf ../needle/test/data/exp_*.fasta -p -e 0.5 -b 100000 -c
+// Or with flag i
+./needle ibf ../needle/test/data/exp_*.fasta -i -e 0.5 -b 100000 -c
 ```
 
 ## Search

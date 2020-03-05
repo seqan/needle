@@ -15,9 +15,11 @@
 #include <seqan3/core/concept/cereal.hpp>
 #include <seqan3/core/debug_stream.hpp>
 #include <seqan3/io/sequence_file/all.hpp>
+#include <seqan3/io/stream/iterator.hpp>
 #include <seqan3/search/dream_index/interleaved_bloom_filter.hpp>
 #include <seqan3/std/filesystem>
 #include <seqan3/std/ranges>
+#include <seqan3/range/views/take_until.hpp>
 
 #include "minimizer.h"
 
@@ -37,6 +39,7 @@ struct ibf_arguments
     std::string normalization_method{"median"}; // Method to calculate normalized expression value
     size_t random{10}; // What percentage of sequences should be used when using normalization_method random
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
+    std::filesystem::path preprocess_dir; // Directory to preprocessed files
 };
 
 struct RandomGenerator {
@@ -113,6 +116,87 @@ void set_arguments(arguments const & args, ibf_arguments & ibf_args,
 
 }
 
+// Reads a binary file preprocess creates
+void read_binary(std::unordered_map<uint64_t, uint64_t> & hash_table, std::filesystem::path filename)
+{
+    std::ifstream fin;
+    uint64_t minimizer;
+    uint64_t minimizer_count;
+    fin.open(filename, std::ios::binary);
+
+    while(fin.read((char*)&minimizer, sizeof(minimizer)))
+    {
+        fin.read((char*)&minimizer_count, sizeof(minimizer_count));
+        hash_table[minimizer] = minimizer_count;
+    }
+
+    fin.close();
+}
+
+// Reads one header file preprocess creates
+void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::path filename,
+                 std::vector<uint64_t> & counts)
+{
+    std::ifstream fin;
+    fin.open(filename);
+    auto stream_view = seqan3::views::istreambuf(fin);
+    auto stream_it = std::ranges::begin(stream_view);
+
+    // Read first line
+    std::string buffer;
+    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
+                                    std::ranges::back_inserter(buffer));
+    args.seed = std::stoi(buffer);
+    buffer.clear();
+    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
+                                    std::ranges::back_inserter(buffer));
+    args.k = std::stoi(buffer);
+    buffer.clear();
+    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
+                                    std::ranges::back_inserter(buffer));
+    args.window_size = std::stoi(buffer);
+    buffer.clear();
+    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
+                                    std::ranges::back_inserter(buffer));
+    args.shape = std::stoi(buffer);
+    buffer.clear();
+    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<'\n'>),
+                                    std::ranges::back_inserter(buffer));
+    ibf_args.normalization_method = buffer;
+
+    // Read second line = expression levels
+    do
+    {
+        buffer.clear();
+        std::ranges::copy(stream_view | seqan3::views::take_until_or_throw(seqan3::is_char<' '> || seqan3::is_char<'\n'>),
+                                        std::ranges::back_inserter(buffer));
+        ibf_args.expression_levels.push_back(std::stof(buffer));
+        if (*stream_it != '\n')
+            ++stream_it;
+    } while (*stream_it != '\n');
+    ++stream_it;
+
+    // Read third line = counts per minimizer per expression level
+    do
+    {
+        buffer.clear();
+        std::ranges::copy(stream_view | seqan3::views::take_until_or_throw(seqan3::is_char<' '>),
+                                        std::ranges::back_inserter(buffer));
+        counts.push_back(std::stoi(buffer));
+    } while (*stream_it != ' ');
+    fin.close();
+}
+
+// stores compressed and uncompressed ibfs
+template <class IBFType>
+void store_ibf(IBFType const & ibf,
+               std::filesystem::path opath)
+{
+    std::ofstream os{opath, std::ios::binary};
+    cereal::BinaryOutputArchive oarchive{os};
+    oarchive(seqan3::interleaved_bloom_filter(ibf));
+}
+
 // Calculate normalized expression value
 uint32_t normalization_method(arguments const & args, ibf_arguments const & ibf_args,
                               seqan3::concatenated_sequences<seqan3::dna4_vector> const & sequences,
@@ -183,83 +267,6 @@ uint32_t normalization_method(arguments const & args, ibf_arguments const & ibf_
     }
 
     return mean;
-}
-
-void preprocess(arguments const & args, ibf_arguments & ibf_args)
-{
-    // Declarations
-    std::vector<uint32_t> counts;
-    std::unordered_map<uint64_t,uint64_t> hash_table{}; // Storage for minimizers
-    std::ofstream outfile;
-    double mean; // the normalized expression value
-    seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for genome sequences
-    std::unordered_set<uint64_t> genome_set_table{}; // Storage for minimizers in genome sequences
-    seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
-
-    set_arguments(args, ibf_args, genome_sequences, genome_set_table);
-
-    //If no expression values given, set it to zero
-    if (ibf_args.expression_levels.size() == 0)
-        ibf_args.expression_levels = {0};
-
-    // Add minimizers to ibf
-    for (unsigned i = 0; i < ibf_args.samples.size(); i++)
-    {
-        get_sequences(ibf_args.sequence_files, sequences, std::accumulate(ibf_args.samples.begin(),
-                                                                          ibf_args.samples.begin()+i,0),
-                                                                          ibf_args.samples[i]);
-        get_minimizers(args, sequences, hash_table, ibf_args.genome_file, genome_set_table);
-
-        // Calculate normalized expression value in one experiment
-        // if genome file is given, calculation are based on genome sequences
-        if ((ibf_args.genome_file != "") & (i==0))
-        {
-            mean = normalization_method(args, ibf_args, genome_sequences, hash_table, ibf_args.cutoffs[i]);
-        }
-        else
-        {
-            genome_sequences.clear();
-            mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
-        }
-
-        counts.assign(ibf_args.expression_levels.size(),0);
-        for (auto & elem : hash_table)
-        {
-            for (unsigned j = 0; j < ibf_args.expression_levels.size(); j++)
-            {
-                if ((ibf_args.expression_levels[j] == 0) & (elem.second > ibf_args.cutoffs[i])) // for comparison with mantis, SBT
-                    counts[j]++;
-                else if ((((double) elem.second/mean)) >= ibf_args.expression_levels[j])
-                    counts[j]++;
-                else //If elem is not expressed at this level, it won't be expressed at a higher level
-                    break;
-            }
-        }
-        sequences.clear();
-
-        // Write minimizer and their counts to binary
-        outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[i].stem()} + ".minimizer",
-                     std::ios::binary);
-        for (auto & elem : hash_table)
-        {
-            outfile.write((char*) &elem.first, sizeof(elem.first));
-            outfile.write((char*) &elem.second, sizeof(elem.second));
-        }
-        outfile.close();
-        hash_table.clear();
-
-        // Write header file, containing information about the minimizer counts per expression level
-        outfile.open(std::string{ibf_args.path_out} + "Header_" + std::string{ibf_args.sequence_files[i].stem()} + ".txt");
-        outfile << args.seed << " " << std::to_string(args.k) << " " << args.window_size << " " << ibf_args.normalization_method << "\n";
-        for (unsigned k = 0; k < counts.size(); k++)
-            outfile  << ibf_args.expression_levels[k] << " ";
-
-        outfile << "\n";
-        for (unsigned k = 0; k < counts.size(); k++)
-            outfile  << counts[k] << " ";
-        outfile.close();
-    }
-
 }
 
 std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
@@ -352,19 +359,96 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
     for (unsigned i = 0; i < ibf_args.expression_levels.size(); i++)
     {
         std::filesystem::path filename{ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[i])};
-        std::ofstream os{filename, std::ios::binary};
-        cereal::BinaryOutputArchive oarchive{os};
-		if (args.compressed)
-		{
-			seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf2{ibfs[i]};
-            oarchive(seqan3::interleaved_bloom_filter(ibf2));
-		}
+        if (args.compressed)
+        {
+            seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf{ibfs[i]};
+		    store_ibf(ibf, filename);
+        }
         else
-		{
-            oarchive(seqan3::interleaved_bloom_filter(ibfs[i]));
-		}
+        {
+            store_ibf(ibfs[i], filename);
+        }
+
     }
 
 	return normal_expression_values;
+
+}
+
+void preprocess(arguments const & args, ibf_arguments & ibf_args)
+{
+    // Declarations
+    std::vector<uint32_t> counts;
+    std::unordered_map<uint64_t,uint64_t> hash_table{}; // Storage for minimizers
+    std::ofstream outfile;
+    double mean; // the normalized expression value
+    seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for genome sequences
+    std::unordered_set<uint64_t> genome_set_table{}; // Storage for minimizers in genome sequences
+    seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
+
+    set_arguments(args, ibf_args, genome_sequences, genome_set_table);
+
+    //If no expression values given, set it to zero
+    if (ibf_args.expression_levels.size() == 0)
+        ibf_args.expression_levels = {0};
+
+    // Add minimizers to ibf
+    for (unsigned i = 0; i < ibf_args.samples.size(); i++)
+    {
+        get_sequences(ibf_args.sequence_files, sequences, std::accumulate(ibf_args.samples.begin(),
+                                                                          ibf_args.samples.begin()+i,0),
+                                                                          ibf_args.samples[i]);
+        get_minimizers(args, sequences, hash_table, ibf_args.genome_file, genome_set_table);
+
+        // Calculate normalized expression value in one experiment
+        // if genome file is given, calculation are based on genome sequences
+        if ((ibf_args.genome_file != "") & (i==0))
+        {
+            mean = normalization_method(args, ibf_args, genome_sequences, hash_table, ibf_args.cutoffs[i]);
+        }
+        else
+        {
+            genome_sequences.clear();
+            mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
+        }
+
+        counts.assign(ibf_args.expression_levels.size(),0);
+        for (auto & elem : hash_table)
+        {
+            for (unsigned j = 0; j < ibf_args.expression_levels.size(); j++)
+            {
+                if ((ibf_args.expression_levels[j] == 0) & (elem.second > ibf_args.cutoffs[i])) // for comparison with mantis, SBT
+                    counts[j]++;
+                else if ((((double) elem.second/mean)) >= ibf_args.expression_levels[j])
+                    counts[j]++;
+                else //If elem is not expressed at this level, it won't be expressed at a higher level
+                    break;
+            }
+        }
+        sequences.clear();
+
+        // Write minimizer and their counts to binary
+        outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[i].stem()} + ".minimizer",
+                     std::ios::binary);
+        for (auto & elem : hash_table)
+        {
+            outfile.write((char*) &elem.first, sizeof(elem.first));
+            outfile.write((char*) &elem.second, sizeof(elem.second));
+        }
+        outfile.close();
+        hash_table.clear();
+
+        // Write header file, containing information about the minimizer counts per expression level
+        outfile.open(std::string{ibf_args.path_out} + "Header_" + std::string{ibf_args.sequence_files[i].stem()} + ".txt");
+        outfile << args.seed << " " << std::to_string(args.k) << " " << args.window_size << " " << args.shape << " "
+                << ibf_args.normalization_method << "\n";
+        for (unsigned k = 0; k < counts.size(); k++)
+            outfile  << ibf_args.expression_levels[k] << " ";
+
+        outfile << "\n";
+        for (unsigned k = 0; k < counts.size(); k++)
+            outfile  << counts[k] << " ";
+        outfile.close();
+    }
 
 }

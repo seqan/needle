@@ -24,7 +24,7 @@ void initialise_ibf_argument_parser(seqan3::argument_parser & parser, ibf_argume
     parser.add_option(ibf_args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be "
                                                                  "equal to number of sequence files. Default: Every"
                                                                  " sequence file is one sample from one experiment.");
-    parser.add_flag(ibf_args.paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
+    parser.add_flag(ibf_args.paired, 'i', "paired", "If set, experiments are paired. Default: Not paired.");
     parser.add_option(ibf_args.cutoffs, 'u', "cut-offs", "Define for each sample, what number of found minimizers "
                                                          "should be considered the result of a sequencing error and "
                                                          "therefore be ignored. Default: Every sample has a cut off of "
@@ -45,6 +45,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     parser.info.short_description = "Constructs an IBF.";
     parser.add_option(ibf_args.bin_size, 'b', "bin-size", "List of bin sizes per expression level. If only one is given"
                                                           ", then that bin size is used for all expression levels.");
+    parser.add_option(ibf_args.preprocess_dir, 'd', "dir_preprocess", "Directory to the preprocessed files.");
     parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
                                                                             " constructing the IBFs. Default: [0.5,1,2,4].");
     parser.add_option(ibf_args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
