@@ -12,7 +12,7 @@ void initialise_argument_parser(seqan3::argument_parser & parser, arguments & ar
     parser.add_option(args.seed, 's', "seed", "Define seed.");
 }
 
-// Initialize arguments for ibf and preprocess
+// Initialize arguments for ibf and minimizer
 void initialise_ibf_argument_parser(seqan3::argument_parser & parser, ibf_arguments & ibf_args)
 {
     parser.info.version = "1.0.0";
@@ -45,7 +45,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     parser.info.short_description = "Constructs an IBF.";
     parser.add_option(ibf_args.bin_size, 'b', "bin-size", "List of bin sizes per expression level. If only one is given"
                                                           ", then that bin size is used for all expression levels.");
-    parser.add_option(ibf_args.preprocess_dir, 'd', "dir_preprocess", "Directory to the preprocessed files.");
+    parser.add_option(ibf_args.minimizer_dir, 'd', "dir_minimizer", "Directory to the minimizer files.");
     parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
                                                                             " constructing the IBFs. Default: [0.5,1,2,4].");
     parser.add_option(ibf_args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
@@ -75,15 +75,20 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     return 0;
 }
 
-int run_needle_preprocess(seqan3::argument_parser & parser)
+int run_needle_minimizer(seqan3::argument_parser & parser)
 {
     arguments args{};
     initialise_argument_parser(parser, args);
     ibf_arguments ibf_args{};
     initialise_ibf_argument_parser(parser, ibf_args);
-    parser.info.short_description = "Preprocess experiments.";
-    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
-                                                                            " constructing the IBFs. Default: [0].");
+    parser.info.short_description = "Calculates minimizer for given experiments.";
+    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "The expression levels are used for counting"
+                                                                            " how many minimizers are greater or equal "
+                                                                            "than the given expression levels. Default "
+                                                                            "is an expression level of zero, so all "
+                                                                            "minimizers are counted. Multiple levels can"
+                                                                            "be given, so multiple counts will be "
+                                                                            "calculated. Default: [0].");
 
     try
     {
@@ -91,12 +96,12 @@ int run_needle_preprocess(seqan3::argument_parser & parser)
     }
     catch (seqan3::argument_parser_error const & ext)
     {
-        seqan3::debug_stream << "Error. Incorrect command line input for preprocess." << ext.what() << "\n";
+        seqan3::debug_stream << "Error. Incorrect command line input for minimizer." << ext.what() << "\n";
         return -1;
     }
     try
     {
-        preprocess(args, ibf_args);
+        minimizer(args, ibf_args);
     }
     catch (const std::invalid_argument & e)
     {
@@ -156,7 +161,7 @@ int run_needle_search(seqan3::argument_parser & parser)
 
 int main(int argc, char const ** argv)
 {
-    seqan3::argument_parser needle_parser{"needle", argc, argv, true, {"ibf", "preprocess", "search"}};
+    seqan3::argument_parser needle_parser{"needle", argc, argv, true, {"ibf", "minimizer", "search"}};
     needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
                                              "command ibf or search an IBF with the search command.");
     needle_parser.info.version = "1.0.0";
@@ -174,8 +179,8 @@ int main(int argc, char const ** argv)
     seqan3::argument_parser & sub_parser = needle_parser.get_sub_parser(); // hold a reference to the sub_parser
     if (sub_parser.info.app_name == std::string_view{"needle-ibf"})
         run_needle_ibf(sub_parser);
-    else if (sub_parser.info.app_name == std::string_view{"needle-preprocess"})
-        run_needle_preprocess(sub_parser);
+    else if (sub_parser.info.app_name == std::string_view{"needle-minimizer"})
+        run_needle_minimizer(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-search"})
         run_needle_search(sub_parser);
     else

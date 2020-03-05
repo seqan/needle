@@ -16,7 +16,7 @@ make
 Run test to check, if Needle is working as intended. All tests should pass.
 
 ```
-./teapi/test-needle
+./test/api/test-needle
 ```
 
 ## Create an IBF
@@ -31,6 +31,21 @@ The following example creates an IBF for two experiments for the expression rate
 
 // Or with flag i
 ./needle ibf ../needle/test/data/exp_*.fasta -i -e 0.5 -b 100000 -c
+```
+
+## Calculate Minimizers
+In case one is only interested in the minimizers or wants to preprocess the data first before creating an IBF, the function minimizer can be used. It calculates the minimizers of given experiments and stores their hash values and their occurences in a binary file named ".minimizer". Furthermore, a txt file is created where all used arguments are stored (like used k-mer size or window size), the used expression levels and the minimizer counts per expression level.
+
+The following command calculates the minimizers in the two experiments 0 and 1 for three different expression levels.
+```
+./needle minimizer ../needle/test/data/exp_*.fasta -m 2 -m 2 -e 0 -e 1 -e 4
+```
+
+A header file "Header_" experiment name ".txt" looks like this:
+```
+10322096095657499358 20 60 0 median  // seed k-mer_size window_size shape normalization_method
+0 1 4                                // expression levels
+62496 6116 25                        // minimizer count per expression level, so 62496 for 0, 6116 for 1, 25 for 4
 ```
 
 ## Search

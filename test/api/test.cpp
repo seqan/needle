@@ -266,13 +266,12 @@ TEST(search, example)
     EXPECT_EQ(expected, results);
 }
 
-TEST(preprocess, small_example)
+TEST(needle_minimizer, small_example)
 {
     arguments args{};
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    std::string expected = "0 4 4 0 median\n0 \n12 ";
     std::unordered_map<uint64_t,uint64_t> expected_hash_table{        // Minimizers:
                                                              {0,2},   // AAAA
                                                              {1,4},   // AAAC
@@ -290,7 +289,7 @@ TEST(preprocess, small_example)
     ibf_args.expression_levels = {0};
     ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
 
-    preprocess(args, ibf_args);
+    minimizer(args, ibf_args);
 
     // Test Header file
     ibf_args.expression_levels = {};

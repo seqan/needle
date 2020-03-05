@@ -39,7 +39,7 @@ struct ibf_arguments
     std::string normalization_method{"median"}; // Method to calculate normalized expression value
     size_t random{10}; // What percentage of sequences should be used when using normalization_method random
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
-    std::filesystem::path preprocess_dir; // Directory to preprocessed files
+    std::filesystem::path minimizer_dir; // Directory to minimizered files
 };
 
 struct RandomGenerator {
@@ -83,7 +83,7 @@ void get_minimizers(arguments const & args, seqan3::concatenated_sequences<seqan
     }
 }
 
-// Set arguments that ibf and preprocess use
+// Set arguments that ibf and minimizer use
 void set_arguments(arguments const & args, ibf_arguments & ibf_args,
                    seqan3::concatenated_sequences<seqan3::dna4_vector> & genome_sequences,
                    std::unordered_set<uint64_t> & genome_set_table)
@@ -116,7 +116,7 @@ void set_arguments(arguments const & args, ibf_arguments & ibf_args,
 
 }
 
-// Reads a binary file preprocess creates
+// Reads a binary file minimizer creates
 void read_binary(std::unordered_map<uint64_t, uint64_t> & hash_table, std::filesystem::path filename)
 {
     std::ifstream fin;
@@ -133,7 +133,7 @@ void read_binary(std::unordered_map<uint64_t, uint64_t> & hash_table, std::files
     fin.close();
 }
 
-// Reads one header file preprocess creates
+// Reads one header file minimizer creates
 void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::path filename,
                  std::vector<uint64_t> & counts)
 {
@@ -375,7 +375,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 
 }
 
-void preprocess(arguments const & args, ibf_arguments & ibf_args)
+void minimizer(arguments const & args, ibf_arguments & ibf_args)
 {
     // Declarations
     std::vector<uint32_t> counts;
@@ -385,6 +385,8 @@ void preprocess(arguments const & args, ibf_arguments & ibf_args)
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for genome sequences
     std::unordered_set<uint64_t> genome_set_table{}; // Storage for minimizers in genome sequences
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
+    int seen_before{0}; // just to keep track, which sequence files have already been processed, used in stead of:
+                        // std::accumulate(ibf_args.samples.begin(), ibf_args.samples.begin()+i,0)
 
     set_arguments(args, ibf_args, genome_sequences, genome_set_table);
 
@@ -395,9 +397,7 @@ void preprocess(arguments const & args, ibf_arguments & ibf_args)
     // Add minimizers to ibf
     for (unsigned i = 0; i < ibf_args.samples.size(); i++)
     {
-        get_sequences(ibf_args.sequence_files, sequences, std::accumulate(ibf_args.samples.begin(),
-                                                                          ibf_args.samples.begin()+i,0),
-                                                                          ibf_args.samples[i]);
+        get_sequences(ibf_args.sequence_files, sequences, seen_before, ibf_args.samples[i]);
         get_minimizers(args, sequences, hash_table, ibf_args.genome_file, genome_set_table);
 
         // Calculate normalized expression value in one experiment
@@ -428,8 +428,8 @@ void preprocess(arguments const & args, ibf_arguments & ibf_args)
         sequences.clear();
 
         // Write minimizer and their counts to binary
-        outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[i].stem()} + ".minimizer",
-                     std::ios::binary);
+        outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[seen_before].stem()}
+                     + ".minimizer", std::ios::binary);
         for (auto & elem : hash_table)
         {
             outfile.write((char*) &elem.first, sizeof(elem.first));
@@ -439,7 +439,8 @@ void preprocess(arguments const & args, ibf_arguments & ibf_args)
         hash_table.clear();
 
         // Write header file, containing information about the minimizer counts per expression level
-        outfile.open(std::string{ibf_args.path_out} + "Header_" + std::string{ibf_args.sequence_files[i].stem()} + ".txt");
+        outfile.open(std::string{ibf_args.path_out} + "Header_" +
+                     std::string{ibf_args.sequence_files[seen_before].stem()} + ".txt");
         outfile << args.seed << " " << std::to_string(args.k) << " " << args.window_size << " " << args.shape << " "
                 << ibf_args.normalization_method << "\n";
         for (unsigned k = 0; k < counts.size(); k++)
@@ -449,6 +450,7 @@ void preprocess(arguments const & args, ibf_arguments & ibf_args)
         for (unsigned k = 0; k < counts.size(); k++)
             outfile  << counts[k] << " ";
         outfile.close();
+        seen_before = seen_before + ibf_args.samples[i];
     }
 
 }
