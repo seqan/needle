@@ -294,13 +294,15 @@ TEST(needle_minimizer, small_example)
     // Test Header file
     ibf_args.expression_levels = {};
     std::vector<uint64_t> counts{};
+    float normalized_exp_value{};
     read_header(args, ibf_args, std::string{ibf_args.path_out}  + "Header_" +
-                std::string{ibf_args.sequence_files[0].stem()} + ".txt", counts);
+                std::string{ibf_args.sequence_files[0].stem()} + ".txt", counts, normalized_exp_value);
     EXPECT_EQ(4, args.k);
     EXPECT_EQ(4, args.window_size);
     EXPECT_EQ(0, args.seed);
     EXPECT_EQ(0, args.shape);
-    //EXPECT_EQ("median", ibf_args.normalization_method);
+    EXPECT_EQ(3.0, normalized_exp_value);
+    EXPECT_EQ("median", ibf_args.normalization_method);
     EXPECT_EQ(0, ibf_args.expression_levels[0]);
     EXPECT_EQ(1, ibf_args.expression_levels.size());
     EXPECT_EQ(12, counts[0]);

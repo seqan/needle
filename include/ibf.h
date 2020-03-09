@@ -39,7 +39,6 @@ struct ibf_arguments
     std::string normalization_method{"median"}; // Method to calculate normalized expression value
     size_t random{10}; // What percentage of sequences should be used when using normalization_method random
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
-    std::filesystem::path minimizer_dir; // Directory to minimizered files
 };
 
 struct RandomGenerator {
@@ -135,7 +134,7 @@ void read_binary(std::unordered_map<uint64_t, uint64_t> & hash_table, std::files
 
 // Reads one header file minimizer creates
 void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::path filename,
-                 std::vector<uint64_t> & counts)
+                 std::vector<uint64_t> & counts, float & normalized_exp_value)
 {
     std::ifstream fin;
     fin.open(filename);
@@ -146,7 +145,7 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
     std::string buffer;
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
                                     std::ranges::back_inserter(buffer));
-    args.seed = std::stoi(buffer);
+    args.seed = std::stoull(buffer);
     buffer.clear();
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
                                     std::ranges::back_inserter(buffer));
@@ -158,11 +157,15 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
     buffer.clear();
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
                                     std::ranges::back_inserter(buffer));
-    args.shape = std::stoi(buffer);
+    args.shape = std::stoull(buffer);
+    buffer.clear();
+    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
+                                    std::ranges::back_inserter(buffer));
+    ibf_args.normalization_method = buffer;
     buffer.clear();
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<'\n'>),
                                     std::ranges::back_inserter(buffer));
-    ibf_args.normalization_method = buffer;
+    normalized_exp_value = std::stof(buffer);
 
     // Read second line = expression levels
     do
@@ -182,8 +185,10 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
         buffer.clear();
         std::ranges::copy(stream_view | seqan3::views::take_until_or_throw(seqan3::is_char<' '>),
                                         std::ranges::back_inserter(buffer));
-        counts.push_back(std::stoi(buffer));
-    } while (*stream_it != ' ');
+        counts.push_back(std::stoull(buffer));
+        if (*stream_it != '\n')
+            ++stream_it;
+    } while (*stream_it != '\n');
     fin.close();
 }
 
@@ -442,15 +447,63 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
         outfile.open(std::string{ibf_args.path_out} + "Header_" +
                      std::string{ibf_args.sequence_files[seen_before].stem()} + ".txt");
         outfile << args.seed << " " << std::to_string(args.k) << " " << args.window_size << " " << args.shape << " "
-                << ibf_args.normalization_method << "\n";
+                << ibf_args.normalization_method << " " << mean << "\n";
         for (unsigned k = 0; k < counts.size(); k++)
             outfile  << ibf_args.expression_levels[k] << " ";
 
         outfile << "\n";
         for (unsigned k = 0; k < counts.size(); k++)
             outfile  << counts[k] << " ";
+        outfile << "\n";
         outfile.close();
         seen_before = seen_before + ibf_args.samples[i];
+    }
+
+}
+
+// Calculates statistics from header files created by minimizer
+void statistics(arguments & args, ibf_arguments & ibf_args,
+                std::vector<std::filesystem::path> const & header_files)
+{
+    // for every expression level a count list of all experiments is created
+    std::vector<std::vector<uint64_t>> count_all{};
+    std::vector<uint64_t> normalized_exp_values;
+    std::vector<float> exp_levels;
+
+    // For function call read_header
+    ibf_args.expression_levels = {};
+    std::vector<uint64_t> counts{};
+    float normalized_exp_value{};
+
+    for(auto & file : header_files) // Go over every minimizer file
+    {
+        read_header(args, ibf_args, file, counts, normalized_exp_value);
+        if (count_all.size() == 0) // is true for the very first file
+        {
+            exp_levels = ibf_args.expression_levels;
+            count_all.assign(ibf_args.expression_levels.size(), {});
+        }
+
+        for( unsigned i = 0; i < counts.size(); ++i)
+            count_all[i].push_back(counts[i]);
+        normalized_exp_values.push_back(normalized_exp_value);
+        ibf_args.expression_levels.clear();
+        counts.clear();
+    }
+
+    for( unsigned i = 0; i < exp_levels.size(); ++i)
+    {
+        std::cout << "For expression level " << exp_levels[i] << ":\n";
+        std::nth_element(normalized_exp_values.begin(), normalized_exp_values.begin() + normalized_exp_values.size()/2,
+                         normalized_exp_values.end());
+        std::cout << "Average normalized expression value: " << (1.0 * std::accumulate(normalized_exp_values.begin(),
+                                                               normalized_exp_values.end(), 0))/normalized_exp_values.size()
+                                                               <<"\n";
+
+        std::cout << "Minimum of Counts: " << *std::min_element(count_all[i].begin(), count_all[i].end()) << "\n";
+        std::nth_element(count_all[i].begin(), count_all[i].begin() + count_all[i].size()/2, count_all[i].end());
+        std::cout << "Median of Counts: " << count_all[i][count_all[i].size()/2] << "\n";
+        std::cout << "Maximum of Counts: " << *std::max_element(count_all[i].begin(), count_all[i].end()) << "\n\n\n";
     }
 
 }

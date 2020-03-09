@@ -43,9 +43,16 @@ The following command calculates the minimizers in the two experiments 0 and 1 f
 
 A header file "Header_" experiment name ".txt" looks like this:
 ```
-10322096095657499358 20 60 0 median  // seed k-mer_size window_size shape normalization_method
-0 1 4                                // expression levels
-62496 6116 25                        // minimizer count per expression level, so 62496 for 0, 6116 for 1, 25 for 4
+10322096095657499358 20 60 0 median 29 // seed k-mer_size window_size shape normalization_method normalized_expression_value
+0 1 4                                  // expression levels
+62496 6116 25                          // minimizer count per expression level, so 62496 for 0, 6116 for 1, 25 for 4
+```
+
+With the function stats some information about the counts on different expression levels and the normalized expression values can be calculated. (As shown in the following example.)
+
+```
+./needle stats Header_exp_01.txt Header_exp_11.txt
+
 ```
 
 ## Search
