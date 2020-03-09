@@ -379,6 +379,12 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 	return normal_expression_values;
 
 }
+/*
+// Create ibf based on the minimizer and header files
+std::vector<uint32_t> ibf( std::vector<std::filesystem::path> minimizer_files, float fpr, ibf_arguments & ibf_args)
+{
+
+}*/
 
 void minimizer(arguments const & args, ibf_arguments & ibf_args)
 {
@@ -462,18 +468,26 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
 }
 
 // Calculates statistics from header files created by minimizer
-void statistics(arguments & args, ibf_arguments & ibf_args,
-                std::vector<std::filesystem::path> const & header_files)
+std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> statistics(arguments & args, ibf_arguments & ibf_args,
+std::vector<std::filesystem::path> const & header_files)
 {
     // for every expression level a count list of all experiments is created
     std::vector<std::vector<uint64_t>> count_all{};
     std::vector<uint64_t> normalized_exp_values;
     std::vector<float> exp_levels;
+    std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> results{};
 
     // For function call read_header
     ibf_args.expression_levels = {};
     std::vector<uint64_t> counts{};
     float normalized_exp_value{};
+
+    float avg;
+    uint64_t minimum;
+    uint64_t median;
+    uint64_t maximum;
+    std::vector<float> first;
+    std::vector<uint64_t> second;
 
     for(auto & file : header_files) // Go over every minimizer file
     {
@@ -493,17 +507,21 @@ void statistics(arguments & args, ibf_arguments & ibf_args,
 
     for( unsigned i = 0; i < exp_levels.size(); ++i)
     {
-        std::cout << "For expression level " << exp_levels[i] << ":\n";
         std::nth_element(normalized_exp_values.begin(), normalized_exp_values.begin() + normalized_exp_values.size()/2,
                          normalized_exp_values.end());
-        std::cout << "Average normalized expression value: " << (1.0 * std::accumulate(normalized_exp_values.begin(),
-                                                               normalized_exp_values.end(), 0))/normalized_exp_values.size()
-                                                               <<"\n";
+        avg = (1.0 * std::accumulate(normalized_exp_values.begin(),
+                                     normalized_exp_values.end(), 0))/normalized_exp_values.size();
 
-        std::cout << "Minimum of Counts: " << *std::min_element(count_all[i].begin(), count_all[i].end()) << "\n";
+        minimum = *std::min_element(count_all[i].begin(), count_all[i].end());
         std::nth_element(count_all[i].begin(), count_all[i].begin() + count_all[i].size()/2, count_all[i].end());
-        std::cout << "Median of Counts: " << count_all[i][count_all[i].size()/2] << "\n";
-        std::cout << "Maximum of Counts: " << *std::max_element(count_all[i].begin(), count_all[i].end()) << "\n\n\n";
+        median = count_all[i][count_all[i].size()/2];
+        maximum = *std::max_element(count_all[i].begin(), count_all[i].end());
+
+        first = {exp_levels[i], avg};
+        second = {minimum, median, maximum};
+        results.push_back(std::make_tuple(first, second));
     }
+
+    return results;
 
 }

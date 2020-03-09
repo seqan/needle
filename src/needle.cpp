@@ -74,6 +74,45 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     return 0;
 }
 
+int run_needle_ibf_min(seqan3::argument_parser & parser)
+{
+    ibf_arguments ibf_args{};
+    std::vector<std::filesystem::path> minimizer_files{};
+    float fpr; // False Positive Rate
+
+    parser.info.short_description = "Constructs an IBF from the minimizer and header files created by needle minimizer.";
+    parser.add_positional_option(minimizer_files, "Please provide at least one minimizer file. It is assumed that the "
+                                                  "header file exits in the same directory.");
+    parser.add_option(fpr, 'f', "fpr", "False positive rate for the IBF. Default: 0.05.");
+    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
+                                                                            " constructing the IBFs. Default: The "
+                                                                            "expression levels found in the header files.");
+    parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
+    parser.add_option(ibf_args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
+                                                      "one IBF.");
+
+    try
+    {
+        parser.parse();
+    }
+    catch (seqan3::argument_parser_error const & ext)
+    {
+        seqan3::debug_stream << "Error. Incorrect command line input for IBF construct." << ext.what() << "\n";
+        return -1;
+    }
+    /*try
+    {
+        ibf(minimizer_files, fpr, ibf_args);
+    }
+    catch (const std::invalid_argument & e)
+    {
+        std::cerr << e.what() << std::endl;
+        return -1;
+    }*/
+
+    return 0;
+}
+
 int run_needle_minimizer(seqan3::argument_parser & parser)
 {
     arguments args{};
@@ -180,23 +219,35 @@ int run_needle_stats(seqan3::argument_parser & parser)
         return -1;
     }
 
+    std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> results;
+
     try
     {
-        statistics(args, ibf_args, minimizer_files);
+        results = statistics(args, ibf_args, minimizer_files);
     }
     catch (const std::invalid_argument & e)
     {
         std::cerr << e.what() << std::endl;
         return -1;
     }
-    
+
+    for (unsigned i = 0; i < results.size(); ++i)
+    {
+        std::cout << "For expression level " << std::get<0>(results[i])[0] << ":\n";
+        std::cout << "Average normalized expression value: " << std::get<0>(results[i])[1] <<"\n";
+        std::cout << "Minimum of Counts: " << std::get<1>(results[i])[0] << "\n";
+        std::cout << "Median of Counts: " << std::get<1>(results[i])[1] << "\n";
+        std::cout << "Maximum of Counts: " << std::get<1>(results[i])[2] << "\n\n\n";
+    }
+
+
     return 0;
 }
 
 
 int main(int argc, char const ** argv)
 {
-    seqan3::argument_parser needle_parser{"needle", argc, argv, true, {"ibf", "minimizer", "search", "stats"}};
+    seqan3::argument_parser needle_parser{"needle", argc, argv, true, {"ibf", "ibfmin", "minimizer", "search", "stats"}};
     needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
                                              "command ibf or search an IBF with the search command.");
     needle_parser.info.version = "1.0.0";
@@ -214,6 +265,8 @@ int main(int argc, char const ** argv)
     seqan3::argument_parser & sub_parser = needle_parser.get_sub_parser(); // hold a reference to the sub_parser
     if (sub_parser.info.app_name == std::string_view{"needle-ibf"})
         run_needle_ibf(sub_parser);
+    if (sub_parser.info.app_name == std::string_view{"needle-ibfmin"})
+        run_needle_ibf_min(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-minimizer"})
         run_needle_minimizer(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-search"})
