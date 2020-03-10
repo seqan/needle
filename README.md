@@ -16,11 +16,11 @@ make
 Run test to check, if Needle is working as intended. All tests should pass.
 
 ```
-./teapi/test-needle
+./test/api/test-needle
 ```
 
 ## Create an IBF
-In order to create an IBF a number of sequence files have to be given. All sequence file formats from seqan3 are accepted as an input (fasta, fastq, embl,... and their compressed forms). With the parameter m can be defined, which of these sequence files belong together, either because they are the result of paired-end sequencing or they are multiple replicates of the same experiment. If no specification with m is given, every sequence file is seen as one experiment. For paired-end experiments one can use the flag p to indicate this, so two consecutive sequence files are seen as belonging together. (This is equivalent to using -m 2 for all experiments.)
+In order to create an IBF a number of sequence files have to be given. All sequence file formats from seqan3 are accepted as an input (fasta, fastq, embl,... and their compressed forms). With the parameter m can be defined, which of these sequence files belong together, either because they are the result of paired-end sequencing or they are multiple replicates of the same experiment. If no specification with m is given, every sequence file is seen as one experiment. For paired-end experiments one can use the flag i to indicate this, so two consecutive sequence files are seen as belonging together. (This is equivalent to using -m 2 for all experiments.)
 Besides, the sequence file the bin size of the IBF has to be specified with parameter b. Good sizes for Bloom Filters for one experiment can be calculated with this [calculator] (https://hur.st/bloomfilter/?n=&p=5.0E-2&m=6559922&k=1).
 Use -h/--help for more information and to see further parameters.
 
@@ -29,8 +29,30 @@ The following example creates an IBF for two experiments for the expression rate
 ```
 ./needle ibf ../needle/test/data/exp_*.fasta -m 2 -m 2 -e 0.5 -b 100000 -c
 
-// Or with flag p
-./needle ibf ../needle/test/data/exp_*.fasta -p -e 0.5 -b 100000 -c
+// Or with flag i
+./needle ibf ../needle/test/data/exp_*.fasta -i -e 0.5 -b 100000 -c
+```
+
+## Calculate Minimizers
+In case one is only interested in the minimizers or wants to preprocess the data first before creating an IBF, the function minimizer can be used. It calculates the minimizers of given experiments and stores their hash values and their occurences in a binary file named ".minimizer". Furthermore, a txt file is created where all used arguments are stored (like used k-mer size or window size), the used expression levels and the minimizer counts per expression level.
+
+The following command calculates the minimizers in the two experiments 0 and 1 for three different expression levels.
+```
+./needle minimizer ../needle/test/data/exp_*.fasta -m 2 -m 2 -e 0 -e 1 -e 4
+```
+
+A header file "Header_" experiment name ".txt" looks like this:
+```
+10322096095657499358 20 60 0 median 29 // seed k-mer_size window_size shape normalization_method normalized_expression_value
+0 1 4                                  // expression levels
+62496 6116 25                          // minimizer count per expression level, so 62496 for 0, 6116 for 1, 25 for 4
+```
+
+With the function stats some information about the counts on different expression levels and the normalized expression values can be calculated. (As shown in the following example.)
+
+```
+./needle stats Header_exp_01.txt Header_exp_11.txt
+
 ```
 
 ## Search

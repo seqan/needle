@@ -9,7 +9,7 @@ project (needle VERSION 1.0.0)
 
 add_subdirectory(src)
 set(DATA_DIR DATADIR=${CMAKE_CURRENT_SOURCE_DIR})
-add_compile_definitions(DATA_DIR="${CMAKE_CURRENT_LIST_DIR}/test/data")
+add_compile_definitions(DATA_DIR="${CMAKE_CURRENT_LIST_DIR}/test/data/")
 set(CMAKE_BUILD_TYPE Release)
 add_executable (needle src/needle.cpp)
 target_link_libraries (needle seqan3::seqan3)
