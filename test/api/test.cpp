@@ -262,6 +262,28 @@ TEST(search, small_example)
     EXPECT_EQ(expected, results);
 }
 
+TEST(search, small_example_uncompressed)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    search_arguments search_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+    std::vector<uint32_t> expected{1};
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
+    args.compressed = false;
+
+    ibf(args, ibf_args);
+
+    search_args.search_file = std::string(DATA_DIR) + "mini_gen.fasta";
+    search_args.path_in = ibf_args.path_out;
+    search_args.expression = 1;
+
+    std::vector<uint32_t> results{search(args, search_args)};
+
+    EXPECT_EQ(expected, results);
+}
+
 TEST(search, small_example_gene_not_found)
 {
     arguments args{};
