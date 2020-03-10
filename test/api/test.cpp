@@ -13,7 +13,7 @@
 
 void initialization_args(arguments & args)
 {
-    args.compressed = false;
+    args.compressed = true;
     args.k = 4;
     args.window_size = 4;
     args.seed = 0;
