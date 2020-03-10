@@ -45,6 +45,16 @@ number_type to_number(range_type && range)
     return num;
 }
 
+// loads compressed and uncompressed ibfs
+template <class IBFType>
+void load_ibf(IBFType & ibf,
+               std::filesystem::path ipath)
+{
+    std::ifstream is{ipath, std::ios::binary};
+    cereal::BinaryInputArchive iarchive{is};
+    iarchive(ibf);
+}
+
 std::vector<uint32_t> search(arguments const & args, search_arguments const & search_args)
 {
     std::vector<uint32_t> counter;
@@ -85,10 +95,7 @@ std::vector<uint32_t> search(arguments const & args, search_arguments const & se
     if (args.compressed)
         seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
 
-    std::ifstream is{search_args.path_in.string() + "IBF_" + std::to_string(expression[0]), std::ios::binary};
-    //seqan3::debug_stream << "IBF_" + std::to_string(expression[0])<< "\n";
-    cereal::BinaryInputArchive iarchive{is};
-    iarchive(ibf);
+    load_ibf(ibf, search_args.path_in.string() + "IBF_" + std::to_string(expression[0]));
 
     uint32_t minimizer_length;
     counter.resize(ibf.bin_count(), 0);
