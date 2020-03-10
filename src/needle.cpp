@@ -76,20 +76,26 @@ int run_needle_ibf(seqan3::argument_parser & parser)
 
 int run_needle_ibf_min(seqan3::argument_parser & parser)
 {
+    arguments args{};
     ibf_arguments ibf_args{};
     std::vector<std::filesystem::path> minimizer_files{};
+    std::filesystem::path header_file = ""; // if only one header file should be used
     float fpr; // False Positive Rate
 
     parser.info.short_description = "Constructs an IBF from the minimizer and header files created by needle minimizer.";
+    parser.add_flag(args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
     parser.add_positional_option(minimizer_files, "Please provide at least one minimizer file. It is assumed that the "
                                                   "header file exits in the same directory.");
     parser.add_option(fpr, 'f', "fpr", "False positive rate for the IBF. Default: 0.05.");
     parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
                                                                             " constructing the IBFs. Default: The "
                                                                             "expression levels found in the header files.");
+    parser.add_option(ibf_args.genome_file, 'g', "genom-mask", "Genom file used as a mask.");
     parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_option(ibf_args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
                                                       "one IBF.");
+    parser.add_option(ibf_args.normalization_method, 'a', "normalization-method", "Choose a normalization method: mean,"
+                                                                                  " median or random. Default: median.");
 
     try
     {
@@ -100,15 +106,15 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
         seqan3::debug_stream << "Error. Incorrect command line input for IBF construct." << ext.what() << "\n";
         return -1;
     }
-    /*try
+    try
     {
-        ibf(minimizer_files, fpr, ibf_args);
+        ibf(minimizer_files, header_file, args, ibf_args, fpr);
     }
     catch (const std::invalid_argument & e)
     {
         std::cerr << e.what() << std::endl;
         return -1;
-    }*/
+    }
 
     return 0;
 }

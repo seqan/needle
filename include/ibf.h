@@ -52,6 +52,13 @@ struct RandomGenerator {
 	}
 };
 
+// Calculate best bin size based on number of elements maximal inserted, false positive rate and number of hash functions
+// See: https://hur.st/bloomfilter/
+uint64_t get_bin_size(uint64_t count, float fpr, size_t num_hash)
+{
+    return std::ceil((count * std::log(fpr)) / std::log(1 / std::pow(2, std::log(2))));
+}
+
 void get_sequences(std::vector<std::filesystem::path> const & sequence_files,
                    seqan3::concatenated_sequences<seqan3::dna4_vector> & sequences, unsigned min = 0, unsigned max = 1)
 {
@@ -274,10 +281,67 @@ uint32_t normalization_method(arguments const & args, ibf_arguments const & ibf_
     return mean;
 }
 
+// Calculates statistics from header files created by minimizer
+std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> statistics(arguments & args, ibf_arguments & ibf_args,
+std::vector<std::filesystem::path> const & header_files)
+{
+    // for every expression level a count list of all experiments is created
+    std::vector<std::vector<uint64_t>> count_all{};
+    std::vector<uint64_t> normalized_exp_values;
+    std::vector<float> exp_levels;
+    std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> results{};
+
+    // For function call read_header
+    ibf_args.expression_levels = {};
+    std::vector<uint64_t> counts{};
+    float normalized_exp_value{};
+
+    float avg;
+    uint64_t minimum;
+    uint64_t median;
+    uint64_t maximum;
+    std::vector<float> first;
+    std::vector<uint64_t> second;
+
+    for(auto & file : header_files) // Go over every minimizer file
+    {
+        read_header(args, ibf_args, file, counts, normalized_exp_value);
+        if (count_all.size() == 0) // is true for the very first file
+        {
+            exp_levels = ibf_args.expression_levels;
+            count_all.assign(ibf_args.expression_levels.size(), {});
+        }
+
+        for( unsigned i = 0; i < counts.size(); ++i)
+            count_all[i].push_back(counts[i]);
+        normalized_exp_values.push_back(normalized_exp_value);
+        ibf_args.expression_levels.clear();
+        counts.clear();
+    }
+
+    for( unsigned i = 0; i < exp_levels.size(); ++i)
+    {
+        std::nth_element(normalized_exp_values.begin(), normalized_exp_values.begin() + normalized_exp_values.size()/2,
+                         normalized_exp_values.end());
+        avg = (1.0 * std::accumulate(normalized_exp_values.begin(),
+                                     normalized_exp_values.end(), 0))/normalized_exp_values.size();
+
+        minimum = *std::min_element(count_all[i].begin(), count_all[i].end());
+        std::nth_element(count_all[i].begin(), count_all[i].begin() + count_all[i].size()/2, count_all[i].end());
+        median = count_all[i][count_all[i].size()/2];
+        maximum = *std::max_element(count_all[i].begin(), count_all[i].end());
+
+        first = {exp_levels[i], avg};
+        second = {minimum, median, maximum};
+        results.push_back(std::make_tuple(first, second));
+    }
+
+    return results;
+
+}
+
 std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 {
-    //using seqan3::get;
-
     // Declarations
     std::unordered_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
     double mean; // the normalized expression value
@@ -379,12 +443,117 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 	return normal_expression_values;
 
 }
-/*
+
 // Create ibf based on the minimizer and header files
-std::vector<uint32_t> ibf( std::vector<std::filesystem::path> minimizer_files, float fpr, ibf_arguments & ibf_args)
+std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, std::filesystem::path header_file,
+                          arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
 {
 
-}*/
+    // Declarations
+    std::unordered_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
+    seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for sequences in genome
+    float mean; // the normalized expression value
+    std::vector<uint32_t> normal_expression_values;
+    // For header file reading
+    std::vector<uint64_t> counts{};
+    //float normalized_exp_value{};
+    std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> statistic_results;
+    // Store what user might have entered
+    std::vector<float> expression_levels = ibf_args.expression_levels;
+    std::string normalization_method = ibf_args.normalization_method;
+
+    if (header_file == "") // If all header files should be considered
+    {
+        std::vector<std::filesystem::path> header_files{};
+
+        for (auto & elem : minimizer_files)
+            header_files.push_back(elem.replace_extension(".header"));
+
+        statistic_results = statistics(args, ibf_args, header_files);
+
+        for (unsigned i = 0; i < statistic_results.size(); ++i)
+            counts.push_back(std::get<1>(statistic_results[i])[2]); // Get maximum count of all files
+
+        if (expression_levels.size() == 0) // If no expression levels are given
+        {
+            for (unsigned i = 0; i < statistic_results.size(); ++i)
+                expression_levels.push_back(std::get<0>(statistic_results[i])[0]); // Get expression levels
+        }
+    }
+    else // Only given header file is read in
+    {
+        read_header(args, ibf_args, header_file, counts, mean);
+
+        if (expression_levels.size() == 0) // If no expression levels are given
+            expression_levels = ibf_args.expression_levels;
+    }
+
+    // Create IBFs
+    std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
+    // TODO: if expression levels given does not match the expression levels in header file, get_bin_size gives
+    // incorrect results or even an error, if more expression levels are added
+    for (unsigned i = 0; i < expression_levels.size(); i++)
+        ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
+					   seqan3::bin_count{minimizer_files.size()}, seqan3::bin_size{get_bin_size(counts[i], fpr,
+                                                                                                ibf_args.num_hash)},
+					   seqan3::hash_function_count{ibf_args.num_hash}));
+
+    // TODO: Take cutoffs from user?
+    ibf_args.cutoffs.assign(minimizer_files.size(),0);
+
+    // Add minimizers to ibf
+    for (unsigned i = 0; i < minimizer_files.size(); i++)
+    {
+        read_binary(hash_table, minimizer_files[i]);
+
+        // Get normalized expression value from header file or recalculate it when other method is asked for
+        if ((normalization_method == ibf_args.normalization_method) | normalization_method == "")
+        {
+            read_header(args, ibf_args, minimizer_files[i].replace_extension(".header"), counts, mean);
+        }
+        // TODO: Add sequences to use - only genome sequences ???
+        /*else
+        {
+            mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
+        }
+        sequences.clear();*/
+
+        normal_expression_values.push_back(mean);
+
+        // Every minimizer is stored in IBF, if it occurence divided by the mean is greater or equal expression level
+        for (auto & elem : hash_table)
+        {
+            for (unsigned j = 0; j < expression_levels.size(); j++)
+            {
+                if ((expression_levels[j] == 0) & (elem.second > ibf_args.cutoffs[i])) // for comparison with mantis, SBT
+                    ibfs[j].emplace(elem.first,seqan3::bin_index{i});
+                else if ((((double) elem.second/mean)) >= expression_levels[j])
+                    ibfs[j].emplace(elem.first,seqan3::bin_index{i});
+                else //If elem is not expressed at this level, it won't be expressed at a higher level
+                    break;
+            }
+        }
+        hash_table.clear();
+    }
+
+    // Store IBFs
+    for (unsigned i = 0; i < expression_levels.size(); i++)
+    {
+        std::filesystem::path filename{ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[i])};
+        if (args.compressed)
+        {
+            seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf{ibfs[i]};
+		    store_ibf(ibf, filename);
+        }
+        else
+        {
+            store_ibf(ibfs[i], filename);
+        }
+
+    }
+
+	return normal_expression_values;
+}
 
 void minimizer(arguments const & args, ibf_arguments & ibf_args)
 {
@@ -450,8 +619,8 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
         hash_table.clear();
 
         // Write header file, containing information about the minimizer counts per expression level
-        outfile.open(std::string{ibf_args.path_out} + "Header_" +
-                     std::string{ibf_args.sequence_files[seen_before].stem()} + ".txt");
+        outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[seen_before].stem()}
+                     + ".header");
         outfile << args.seed << " " << std::to_string(args.k) << " " << args.window_size << " " << args.shape << " "
                 << ibf_args.normalization_method << " " << mean << "\n";
         for (unsigned k = 0; k < counts.size(); k++)
@@ -464,64 +633,5 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
         outfile.close();
         seen_before = seen_before + ibf_args.samples[i];
     }
-
-}
-
-// Calculates statistics from header files created by minimizer
-std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> statistics(arguments & args, ibf_arguments & ibf_args,
-std::vector<std::filesystem::path> const & header_files)
-{
-    // for every expression level a count list of all experiments is created
-    std::vector<std::vector<uint64_t>> count_all{};
-    std::vector<uint64_t> normalized_exp_values;
-    std::vector<float> exp_levels;
-    std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> results{};
-
-    // For function call read_header
-    ibf_args.expression_levels = {};
-    std::vector<uint64_t> counts{};
-    float normalized_exp_value{};
-
-    float avg;
-    uint64_t minimum;
-    uint64_t median;
-    uint64_t maximum;
-    std::vector<float> first;
-    std::vector<uint64_t> second;
-
-    for(auto & file : header_files) // Go over every minimizer file
-    {
-        read_header(args, ibf_args, file, counts, normalized_exp_value);
-        if (count_all.size() == 0) // is true for the very first file
-        {
-            exp_levels = ibf_args.expression_levels;
-            count_all.assign(ibf_args.expression_levels.size(), {});
-        }
-
-        for( unsigned i = 0; i < counts.size(); ++i)
-            count_all[i].push_back(counts[i]);
-        normalized_exp_values.push_back(normalized_exp_value);
-        ibf_args.expression_levels.clear();
-        counts.clear();
-    }
-
-    for( unsigned i = 0; i < exp_levels.size(); ++i)
-    {
-        std::nth_element(normalized_exp_values.begin(), normalized_exp_values.begin() + normalized_exp_values.size()/2,
-                         normalized_exp_values.end());
-        avg = (1.0 * std::accumulate(normalized_exp_values.begin(),
-                                     normalized_exp_values.end(), 0))/normalized_exp_values.size();
-
-        minimum = *std::min_element(count_all[i].begin(), count_all[i].end());
-        std::nth_element(count_all[i].begin(), count_all[i].begin() + count_all[i].size()/2, count_all[i].end());
-        median = count_all[i][count_all[i].size()/2];
-        maximum = *std::max_element(count_all[i].begin(), count_all[i].end());
-
-        first = {exp_levels[i], avg};
-        second = {minimum, median, maximum};
-        results.push_back(std::make_tuple(first, second));
-    }
-
-    return results;
 
 }

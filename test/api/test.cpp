@@ -95,6 +95,22 @@ TEST(ibf, median)
     EXPECT_EQ(expected, medians);
 }
 
+TEST(ibfmin, median)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+    std::vector<std::filesystem::path> minimizer_file = {std::string(DATA_DIR) + "mini_example.minimizer"};
+    std::filesystem::path header_file = "";
+
+    std::vector<uint32_t> expected{3};
+
+    std::vector<uint32_t> medians = ibf(minimizer_file, header_file, args, ibf_args);
+
+    EXPECT_EQ(expected, medians);
+}
+
 TEST(ibf, mean)
 {
     arguments args{};
@@ -205,8 +221,8 @@ TEST(needle_minimizer, small_example)
     ibf_args.expression_levels = {};
     std::vector<uint64_t> counts{};
     float normalized_exp_value{};
-    read_header(args, ibf_args, std::string{ibf_args.path_out}  + "Header_" +
-                std::string{ibf_args.sequence_files[0].stem()} + ".txt", counts, normalized_exp_value);
+    read_header(args, ibf_args, std::string{ibf_args.path_out}  +
+                std::string{ibf_args.sequence_files[0].stem()} + ".header", counts, normalized_exp_value);
     EXPECT_EQ(4, args.k);
     EXPECT_EQ(4, args.window_size);
     EXPECT_EQ(0, args.seed);
@@ -319,8 +335,8 @@ TEST(stats, example)
 {
     arguments args{};
     ibf_arguments ibf_args{};
-    std::vector<std::filesystem::path> minimizer_files{std::string(DATA_DIR) + "Header_exp_01.txt",
-                                                       std::string(DATA_DIR) + "Header_exp_11.txt"};
+    std::vector<std::filesystem::path> minimizer_files{std::string(DATA_DIR) + "exp_01.header",
+                                                       std::string(DATA_DIR) + "exp_11.header"};
 
     std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> expected{{{0.0, 29.0}, {62496, 63053, 63053}},
                                                                                 {{1.0, 29.0}, {6116, 6359, 6359}},
