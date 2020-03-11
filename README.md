@@ -41,7 +41,7 @@ The following command calculates the minimizers in the two experiments 0 and 1 f
 ./needle minimizer ../needle/test/data/exp_*.fasta -m 2 -m 2 -e 0 -e 1 -e 4
 ```
 
-A header file "Header_" experiment name ".txt" looks like this:
+A header file experiment name ".header" looks like this:
 ```
 10322096095657499358 20 60 0 median 29 // seed k-mer_size window_size shape normalization_method normalized_expression_value
 0 1 4                                  // expression levels
