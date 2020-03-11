@@ -31,6 +31,9 @@
 *.out
 *.app
 
+# IBFs from testing
+test/data/IBF_*
+
 # Googletest folders
 googletest-build/
 googletest-download/

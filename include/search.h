@@ -45,12 +45,24 @@ number_type to_number(range_type && range)
     return num;
 }
 
-std::vector<uint32_t> search(arguments const & args, search_arguments const & search_args)
+// loads compressed and uncompressed ibfs
+template <class IBFType>
+void load_ibf(IBFType & ibf,
+               std::filesystem::path ipath)
+{
+    std::ifstream is{ipath, std::ios::binary};
+    cereal::BinaryInputArchive iarchive{is};
+    iarchive(ibf);
+}
+
+// Actual search
+template <class IBFType>
+std::vector<uint32_t> do_search(IBFType & ibf, arguments const & args, search_arguments const & search_args)
 {
     std::vector<uint32_t> counter;
-    std::vector<uint32_t> results;
     std::vector<float> expression;
     std::vector<seqan3::dna4_vector> seqs;
+    std::vector<uint32_t> results;
 
     seqan3::sequence_file_input<my_traits> fin{search_args.search_file};
     for (auto & [seq, id, qual] : fin)
@@ -80,15 +92,7 @@ std::vector<uint32_t> search(arguments const & args, search_arguments const & se
     {
         expression.assign(seqs.size(),search_args.expression);
     }
-
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
-    if (args.compressed)
-        seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-
-    std::ifstream is{search_args.path_in.string() + "IBF_" + std::to_string(expression[0]), std::ios::binary};
-    //seqan3::debug_stream << "IBF_" + std::to_string(expression[0])<< "\n";
-    cereal::BinaryInputArchive iarchive{is};
-    iarchive(ibf);
+    load_ibf(ibf, search_args.path_in.string() + "IBF_" + std::to_string(expression[0]));
 
     uint32_t minimizer_length;
     counter.resize(ibf.bin_count(), 0);
@@ -124,4 +128,18 @@ std::vector<uint32_t> search(arguments const & args, search_arguments const & se
     }
 
     return results;
+}
+
+std::vector<uint32_t> search(arguments const & args, search_arguments const & search_args)
+{
+    if (args.compressed)
+    {
+        seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+        return do_search(ibf, args, search_args);
+    }
+    else
+    {
+        seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
+        return do_search(ibf, args, search_args);
+    }
 }
