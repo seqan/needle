@@ -11,6 +11,8 @@
 #include <cereal/archives/binary.hpp>
 #endif // SEQAN3_WITH_CEREAL
 
+#include <robin_hood.h>
+
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 #include <seqan3/core/concept/cereal.hpp>
 #include <seqan3/core/debug_stream.hpp>
@@ -73,7 +75,7 @@ void get_sequences(std::vector<std::filesystem::path> const & sequence_files,
 }
 
 void get_minimizers(arguments const & args, seqan3::concatenated_sequences<seqan3::dna4_vector> const & sequences,
-                    std::unordered_map<uint64_t, uint64_t> & hash_table,
+                    robin_hood::unordered_map<uint64_t, uint64_t> & hash_table,
                     std::filesystem::path const & genome_file = "",
                     std::unordered_set<uint64_t> const & genome_set_table = {})
 {
@@ -123,7 +125,7 @@ void set_arguments(arguments const & args, ibf_arguments & ibf_args,
 }
 
 // Reads a binary file minimizer creates
-void read_binary(std::unordered_map<uint64_t, uint64_t> & hash_table, std::filesystem::path filename)
+void read_binary(robin_hood::unordered_map<uint64_t, uint64_t> & hash_table, std::filesystem::path filename)
 {
     std::ifstream fin;
     uint64_t minimizer;
@@ -212,7 +214,7 @@ void store_ibf(IBFType const & ibf,
 // Calculate normalized expression value
 uint32_t normalization_method(arguments const & args, ibf_arguments const & ibf_args,
                               seqan3::concatenated_sequences<seqan3::dna4_vector> const & sequences,
-                              std::unordered_map<uint64_t, uint64_t> & hash_table, unsigned cutoff)
+                              robin_hood::unordered_map<uint64_t, uint64_t> & hash_table, unsigned cutoff)
 {
     std::vector<uint32_t> counts;
     uint32_t mean; // the normalized expression value
@@ -343,7 +345,7 @@ std::vector<std::filesystem::path> const & header_files)
 std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 {
     // Declarations
-    std::unordered_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
+    robin_hood::unordered_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
     double mean; // the normalized expression value
     std::vector<uint32_t> normal_expression_values;
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for genome sequences
@@ -450,7 +452,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, st
 {
 
     // Declarations
-    std::unordered_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
+    robin_hood::unordered_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for sequences in genome
     float mean; // the normalized expression value
     std::vector<uint32_t> normal_expression_values;
@@ -559,7 +561,7 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
 {
     // Declarations
     std::vector<uint32_t> counts;
-    std::unordered_map<uint64_t,uint64_t> hash_table{}; // Storage for minimizers
+    robin_hood::unordered_map<uint64_t,uint64_t> hash_table{}; // Storage for minimizers
     std::ofstream outfile;
     double mean; // the normalized expression value
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for genome sequences

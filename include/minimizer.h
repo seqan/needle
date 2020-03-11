@@ -4,6 +4,8 @@
 #include <deque>
 #include <sstream>
 
+#include <robin_hood.h>
+
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 #include <seqan3/core/platform.hpp>
 #include <seqan3/io/sequence_file/input.hpp>
@@ -172,7 +174,7 @@ std::vector<uint64_t> compute_minimizer(const seqan3::dna4_vector & seq, uint8_t
 auto compute_occurrences(const std::vector<seqan3::dna4_vector> & seqs, uint8_t k = p_k, uint16_t window_size = p_w,
                          uint64_t shape = p_shape, uint64_t seed = p_seed)
 {
-    std::unordered_map<uint64_t, uint32_t> occurring_kmers{};
+    robin_hood::unordered_map<uint64_t, uint32_t> occurring_kmers{};
     unsigned total_count{0};
 
     for (auto & seq : seqs)
