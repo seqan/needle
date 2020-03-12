@@ -5,7 +5,7 @@
 #include <iostream>
 #include <math.h>
 #include <numeric>
-#include<string>
+#include <string>
 
 #if SEQAN3_WITH_CEREAL
 #include <cereal/archives/binary.hpp>
@@ -22,6 +22,7 @@
 #include <seqan3/range/views/take_until.hpp>
 
 #include "minimizer.h"
+#include "search.h"
 
 // specific arguments needed for constructing an IBF
 struct ibf_arguments
@@ -553,6 +554,78 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, st
     }
 
 	return normal_expression_values;
+}
+
+std::vector<uint32_t> insert(arguments const & args, ibf_arguments & ibf_args, std::filesystem::path path_in)
+{
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
+    std::unordered_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
+    double mean; // the normalized expression value
+    std::vector<uint32_t> normal_expression_values;
+    seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for genome sequences
+    std::unordered_set<uint64_t> genome_set_table{}; // Storage for minimizers in genome sequences
+    seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
+    std::vector<size_t> bin_before; // how many bins the ibf had before
+
+    set_arguments(args, ibf_args, genome_sequences, genome_set_table);
+
+    // Create IBFs
+    std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
+    for (unsigned i = 0; i < ibf_args.expression_levels.size(); i++)
+    {
+        load_ibf(ibf, path_in.string() + "IBF_" + std::to_string(ibf_args.expression_levels[i]));
+        bin_before.push_back(ibf.bin_count());
+        ibf.increase_bin_number_to(seqan3::bin_count{ibf.bin_count() + ibf_args.samples.size()});
+        ibfs.push_back(ibf);
+    }
+
+    // Add minimizers to ibf
+    for (unsigned i = 0; i < ibf_args.samples.size(); i++)
+    {
+        get_sequences(ibf_args.sequence_files, sequences, std::accumulate(ibf_args.samples.begin(),
+                                                                          ibf_args.samples.begin()+i,0),
+                                                                          ibf_args.samples[i]);
+        get_minimizers(args, sequences, hash_table, ibf_args.genome_file, genome_set_table);
+
+        // Calculate normalized expression value in one experiment
+        // if genome file is given, calculation are based on genome sequences
+        if ((ibf_args.genome_file != "") & (i==0))
+        {
+            mean = normalization_method(args, ibf_args, genome_sequences, hash_table, ibf_args.cutoffs[i]);
+        }
+        else
+        {
+            genome_sequences.clear();
+            mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
+        }
+
+        normal_expression_values.push_back(mean);
+        sequences.clear();
+
+        // Every minimizer is stored in IBF, if it occurence divided by the mean is greater or equal expression level
+        for (auto & elem : hash_table)
+        {
+            for (unsigned j = 0; j < ibf_args.expression_levels.size(); j++)
+            {
+                if ((ibf_args.expression_levels[j] == 0) & (elem.second > ibf_args.cutoffs[i])) // for comparison with mantis, SBT
+                    ibfs[j].emplace(elem.first,seqan3::bin_index{bin_before[j] + i});
+                else if ((((double) elem.second/mean)) >= ibf_args.expression_levels[j])
+                    ibfs[j].emplace(elem.first,seqan3::bin_index{bin_before[j] + i});
+                else //If elem is not expressed at this level, it won't be expressed at a higher level
+                    break;
+            }
+        }
+        hash_table.clear();
+    }
+
+    // Store IBFs
+    for (unsigned i = 0; i < ibf_args.expression_levels.size(); i++)
+    {
+        std::filesystem::path filename{ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[i])};
+        store_ibf(ibfs[i], filename);
+    }
+
+    return normal_expression_values;
 }
 
 void minimizer(arguments const & args, ibf_arguments & ibf_args)
