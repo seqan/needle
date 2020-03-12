@@ -1,4 +1,6 @@
 #include <seqan3/argument_parser/all.hpp>
+#include <seqan3/std/filesystem>
+
 #include "ibf.h"
 #include "search.h"
 
@@ -24,7 +26,7 @@ void initialise_ibf_argument_parser(seqan3::argument_parser & parser, ibf_argume
     parser.add_option(ibf_args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be "
                                                                  "equal to number of sequence files. Default: Every"
                                                                  " sequence file is one sample from one experiment.");
-    parser.add_flag(ibf_args.paired, 'i', "paired", "If set, experiments are paired. Default: Not paired.");
+    parser.add_flag(ibf_args.paired, 'q', "paired", "If set, experiments are paired. Default: Not paired.");
     parser.add_option(ibf_args.cutoffs, 'u', "cut-offs", "Define for each sample, what number of found minimizers "
                                                          "should be considered the result of a sequencing error and "
                                                          "therefore be ignored. Default: Every sample has a cut off of "
@@ -109,6 +111,48 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     try
     {
         ibf(minimizer_files, header_file, args, ibf_args, fpr);
+    }
+    catch (const std::invalid_argument & e)
+    {
+        std::cerr << e.what() << std::endl;
+        return -1;
+    }
+
+    return 0;
+}
+
+int run_needle_insert(seqan3::argument_parser & parser)
+{
+    arguments args{};
+    initialise_argument_parser(parser, args);
+
+    if (args.compressed)
+    {
+        seqan3::debug_stream << "Error. You can not append a compressed IBF.\n";
+        return -1;
+    }
+
+    ibf_arguments ibf_args{};
+    initialise_ibf_argument_parser(parser, ibf_args);
+    std::filesystem::path path_in = "./";
+
+    parser.info.short_description = "Constructs an IBF.";
+    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
+                                                                            " constructing the IBFs. Default: [0.5,1,2,4].");
+    parser.add_option(path_in, 'i', "in", "Directory where input ibfs can be found. Default: Current Directory.");
+
+    try
+    {
+        parser.parse();
+    }
+    catch (seqan3::argument_parser_error const & ext)
+    {
+        seqan3::debug_stream << "Error. Incorrect command line input for IBF construct." << ext.what() << "\n";
+        return -1;
+    }
+    try
+    {
+        insert(args, ibf_args, path_in);
     }
     catch (const std::invalid_argument & e)
     {
@@ -253,7 +297,8 @@ int run_needle_stats(seqan3::argument_parser & parser)
 
 int main(int argc, char const ** argv)
 {
-    seqan3::argument_parser needle_parser{"needle", argc, argv, true, {"ibf", "ibfmin", "minimizer", "search", "stats"}};
+    seqan3::argument_parser needle_parser{"needle", argc, argv, true, {"ibf", "ibfmin", "insert", "minimizer", "search",
+                                                                       "stats"}};
     needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
                                              "command ibf or search an IBF with the search command.");
     needle_parser.info.version = "1.0.0";
@@ -271,8 +316,10 @@ int main(int argc, char const ** argv)
     seqan3::argument_parser & sub_parser = needle_parser.get_sub_parser(); // hold a reference to the sub_parser
     if (sub_parser.info.app_name == std::string_view{"needle-ibf"})
         run_needle_ibf(sub_parser);
-    if (sub_parser.info.app_name == std::string_view{"needle-ibfmin"})
+    else if (sub_parser.info.app_name == std::string_view{"needle-ibfmin"})
         run_needle_ibf_min(sub_parser);
+    else if (sub_parser.info.app_name == std::string_view{"needle-insert"})
+        run_needle_insert(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-minimizer"})
         run_needle_minimizer(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-search"})
