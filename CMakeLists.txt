@@ -11,6 +11,8 @@ project (my_app VERSION 1.0.0)
 add_subdirectory(src)
 add_executable ("${PROJECT_NAME}" src/main.cpp)
 target_link_libraries ("${PROJECT_NAME}" "${PROJECT_NAME}_object")
+file(COPY test/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/test)
+add_definitions(-DDATADIR=\"${CMAKE_CURRENT_BINARY_DIR}/test/data/\")
 
 
 ## TEST
