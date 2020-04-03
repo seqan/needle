@@ -737,6 +737,7 @@ void test(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
         std::filesystem::create_directory(std::string(path_out/"Genome_")+m);
 
         ibf_args.path_out =std::string(path_out/"Genome_")+m;
+        ibf_args.normalization_method = m;
         build_ibf(args, ibf_args, fpr);
 
         ibf_args.path_out = path_out/m;
