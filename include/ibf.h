@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <deque>
 #include <iostream>
 #include <math.h>
@@ -736,15 +737,21 @@ void test(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
         std::filesystem::create_directory(path_out/m);
         std::filesystem::create_directory(std::string(path_out/"Genome_")+m);
 
+        auto start = std::chrono::high_resolution_clock::now();
         ibf_args.path_out =std::string(path_out/"Genome_")+m;
         ibf_args.normalization_method = m;
         build_ibf(args, ibf_args, fpr);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        std::cout << m << " With Genome Time taken by function: " << duration.count() << " microseconds\n";
 
+        start = std::chrono::high_resolution_clock::now();
         ibf_args.path_out = path_out/m;
         ibf_args.genome_file = "";
         build_ibf(args, ibf_args, fpr);
+        stop = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        std::cout << m <<" Without Time taken by function: " << duration.count() << " microseconds\n";
     }
-
-
 
 }
