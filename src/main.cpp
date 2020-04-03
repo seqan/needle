@@ -36,7 +36,7 @@ int main(int argc, char ** argv)
     convert_fastq(fastq_file, output_file); // Call fastq to fasta converter
 
     if (verbose) // if flag is set
-        seqan3::debug_stream << "Conversion was a sucess. Congrats!\n";
+        seqan3::debug_stream << "Conversion was a success. Congrats!\n";
 
 
 
