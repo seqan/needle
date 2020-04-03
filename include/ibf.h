@@ -76,9 +76,9 @@ void get_sequences(std::vector<std::filesystem::path> const & sequence_files,
 }
 
 void get_minimizers(arguments const & args, seqan3::concatenated_sequences<seqan3::dna4_vector> const & sequences,
-                    robin_hood::unordered_map<uint64_t, uint64_t> & hash_table,
-                    std::filesystem::path const & genome_file = "",
-                    std::unordered_set<uint64_t> const & genome_set_table = {})
+                    robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table,
+                    robin_hood::unordered_set<uint64_t> const & genome_set_table,
+                    std::filesystem::path const & genome_file = "")
 {
     // Count minimizer in sequence file
     for (auto seq : sequences)
@@ -95,7 +95,7 @@ void get_minimizers(arguments const & args, seqan3::concatenated_sequences<seqan
 // Set arguments that ibf and minimizer use
 void set_arguments(arguments const & args, ibf_arguments & ibf_args,
                    seqan3::concatenated_sequences<seqan3::dna4_vector> & genome_sequences,
-                   std::unordered_set<uint64_t> & genome_set_table)
+                   robin_hood::unordered_set<uint64_t> & genome_set_table)
 {
     if (ibf_args.paired) // If paired is true, a pair is seen as one sample
         ibf_args.samples.assign(ibf_args.sequence_files.size()/2,2);
@@ -126,7 +126,7 @@ void set_arguments(arguments const & args, ibf_arguments & ibf_args,
 }
 
 // Reads a binary file minimizer creates
-void read_binary(robin_hood::unordered_map<uint64_t, uint64_t> & hash_table, std::filesystem::path filename)
+void read_binary(robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table, std::filesystem::path filename)
 {
     std::ifstream fin;
     uint64_t minimizer;
@@ -215,7 +215,7 @@ void store_ibf(IBFType const & ibf,
 // Calculate normalized expression value
 uint32_t normalization_method(arguments const & args, ibf_arguments const & ibf_args,
                               seqan3::concatenated_sequences<seqan3::dna4_vector> const & sequences,
-                              robin_hood::unordered_map<uint64_t, uint64_t> & hash_table, unsigned cutoff)
+                              robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table, unsigned cutoff)
 {
     std::vector<uint32_t> counts;
     uint32_t mean; // the normalized expression value
@@ -346,11 +346,11 @@ std::vector<std::filesystem::path> const & header_files)
 std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 {
     // Declarations
-    robin_hood::unordered_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
+    robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
     double mean; // the normalized expression value
     std::vector<uint32_t> normal_expression_values;
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for genome sequences
-    std::unordered_set<uint64_t> genome_set_table{}; // Storage for minimizers in genome sequences
+    robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimizers in genome sequences
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
 
     set_arguments(args, ibf_args, genome_sequences, genome_set_table);
@@ -394,7 +394,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
         get_sequences(ibf_args.sequence_files, sequences, std::accumulate(ibf_args.samples.begin(),
                                                                           ibf_args.samples.begin()+i,0),
                                                                           ibf_args.samples[i]);
-        get_minimizers(args, sequences, hash_table, ibf_args.genome_file, genome_set_table);
+        get_minimizers(args, sequences, hash_table, genome_set_table, ibf_args.genome_file);
 
         // Calculate normalized expression value in one experiment
         // if genome file is given, calculation are based on genome sequences
@@ -453,7 +453,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, st
 {
 
     // Declarations
-    robin_hood::unordered_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
+    robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for sequences in genome
     float mean; // the normalized expression value
     std::vector<uint32_t> normal_expression_values;
@@ -561,11 +561,11 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, st
 std::vector<uint32_t> insert(arguments const & args, ibf_arguments & ibf_args, std::filesystem::path path_in)
 {
     seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
-    robin_hood::unordered_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
+    robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
     double mean; // the normalized expression value
     std::vector<uint32_t> normal_expression_values;
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for genome sequences
-    std::unordered_set<uint64_t> genome_set_table{}; // Storage for minimizers in genome sequences
+    robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimizers in genome sequences
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
     std::vector<size_t> bin_before; // how many bins the ibf had before
 
@@ -587,7 +587,7 @@ std::vector<uint32_t> insert(arguments const & args, ibf_arguments & ibf_args, s
         get_sequences(ibf_args.sequence_files, sequences, std::accumulate(ibf_args.samples.begin(),
                                                                           ibf_args.samples.begin()+i,0),
                                                                           ibf_args.samples[i]);
-        get_minimizers(args, sequences, hash_table, ibf_args.genome_file, genome_set_table);
+        get_minimizers(args, sequences, hash_table, genome_set_table, ibf_args.genome_file);
 
         // Calculate normalized expression value in one experiment
         // if genome file is given, calculation are based on genome sequences
@@ -634,11 +634,11 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
 {
     // Declarations
     std::vector<uint32_t> counts;
-    robin_hood::unordered_map<uint64_t,uint64_t> hash_table{}; // Storage for minimizers
+    robin_hood::unordered_node_map<uint64_t,uint64_t> hash_table{}; // Storage for minimizers
     std::ofstream outfile;
     double mean; // the normalized expression value
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for genome sequences
-    std::unordered_set<uint64_t> genome_set_table{}; // Storage for minimizers in genome sequences
+    robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimizers in genome sequences
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
     int seen_before{0}; // just to keep track, which sequence files have already been processed, used in stead of:
                         // std::accumulate(ibf_args.samples.begin(), ibf_args.samples.begin()+i,0)
@@ -653,7 +653,7 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
     for (unsigned i = 0; i < ibf_args.samples.size(); i++)
     {
         get_sequences(ibf_args.sequence_files, sequences, seen_before, ibf_args.samples[i]);
-        get_minimizers(args, sequences, hash_table, ibf_args.genome_file, genome_set_table);
+        get_minimizers(args, sequences, hash_table, genome_set_table, ibf_args.genome_file);
 
         // Calculate normalized expression value in one experiment
         // if genome file is given, calculation are based on genome sequences

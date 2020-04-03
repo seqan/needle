@@ -31,8 +31,10 @@
 *.out
 *.app
 
-# IBFs from testing
+# Files from testing
 test/data/IBF_*
+test/data/*.header
+test/data/*.minimizer
 
 # Googletest folders
 googletest-build/
