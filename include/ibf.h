@@ -710,3 +710,40 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
     }
 
 }
+
+void build_ibf(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
+{
+    std::vector<std::filesystem::path> minimizer_files;
+    minimizer(args, ibf_args);
+    for (const auto & entry : std::filesystem::directory_iterator(ibf_args.path_out))
+    {
+        if (entry.path().stem() == ".minimizer")
+            minimizer_files.push_back(entry.path());
+    }
+
+    ibf(minimizer_files, "", args, ibf_args, fpr);
+    minimizer_files.clear();
+}
+
+void test(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
+{
+    std::vector<std::string> methods{"median", "mean"};
+    std::filesystem::path genome_file = ibf_args.genome_file;
+    std::filesystem::path path_out = ibf_args.path_out;
+
+    for(auto m: methods)
+    {
+        std::filesystem::create_directory(path_out/m);
+        std::filesystem::create_directory(std::string(path_out/"Genome_")+m);
+
+        ibf_args.path_out =std::string(path_out/"Genome_")+m;
+        build_ibf(args, ibf_args, fpr);
+
+        ibf_args.path_out = path_out/m;
+        ibf_args.genome_file = "";
+        build_ibf(args, ibf_args, fpr);
+    }
+
+
+
+}
