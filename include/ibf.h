@@ -561,7 +561,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, st
 std::vector<uint32_t> insert(arguments const & args, ibf_arguments & ibf_args, std::filesystem::path path_in)
 {
     seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
-    std::unordered_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
+    robin_hood::unordered_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
     double mean; // the normalized expression value
     std::vector<uint32_t> normal_expression_values;
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for genome sequences
