@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
+#include <robin_hood.h>
+
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 
 #include "ibf.h"
@@ -226,7 +228,7 @@ TEST(needle_minimizer, small_example)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    std::unordered_map<uint64_t,uint64_t> expected_hash_table{        // Minimizers:
+    robin_hood::unordered_map<uint64_t,uint64_t> expected_hash_table{        // Minimizers:
                                                              {0,2},   // AAAA
                                                              {1,4},   // AAAC
                                                              {6,4},   // AACG
@@ -263,7 +265,7 @@ TEST(needle_minimizer, small_example)
     EXPECT_EQ(1, counts.size());
 
     // Test binary file
-    std::unordered_map<uint64_t,uint64_t> result_hash_table{};
+    robin_hood::unordered_map<uint64_t,uint64_t> result_hash_table{};
     read_binary(result_hash_table, std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[0].stem()}
                 + ".minimizer");
     EXPECT_EQ(expected_hash_table, result_hash_table);

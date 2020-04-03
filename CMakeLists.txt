@@ -8,11 +8,13 @@ project (needle VERSION 1.0.0)
 ## BUILD
 
 add_subdirectory(src)
+add_subdirectory(lib/robin-hood-hashing)
 set(DATA_DIR DATADIR=${CMAKE_CURRENT_SOURCE_DIR})
 add_compile_definitions(DATA_DIR="${CMAKE_CURRENT_LIST_DIR}/test/data/")
 set(CMAKE_BUILD_TYPE Release)
 add_executable (needle src/needle.cpp)
 target_link_libraries (needle seqan3::seqan3)
+target_link_libraries (needle robin_hood)
 target_include_directories (needle PUBLIC include)
 
 ## TEST
