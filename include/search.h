@@ -30,21 +30,6 @@ struct search_arguments
 
 };
 
-template <typename number_type, typename range_type>
-number_type to_number(range_type && range)
-{
-    std::string str;
-    number_type num;
-    std::ranges::copy(range, std::back_inserter(str));
-    auto res = std::from_chars(&str[0], &str[0] + str.size(), num);
-    if (res.ec != std::errc{})
-    {
-        seqan3::debug_stream << "Could not cast '" << range << "' to a valid number\n";
-        throw std::invalid_argument{"CAST ERROR"};
-    }
-    return num;
-}
-
 // loads compressed and uncompressed ibfs
 template <class IBFType>
 void load_ibf(IBFType & ibf,
@@ -72,21 +57,20 @@ std::vector<uint32_t> do_search(IBFType & ibf, arguments const & args, search_ar
 
     if (search_args.exp_file != "")
     {
-        throw std::invalid_argument{"Error! Number of given expression levels do not match number of sequences."};
-    /*    std::ifstream file{search_args.exp_file.string()};
+        std::ifstream file{search_args.exp_file.string()};
         if (file.is_open())
         {
             std::string line;
             while (std::getline(file, line))
             {
-                auto splitted_line = line | std::view::split('\t');
-                auto it = splitted_line.begin(); // move to 1rst column
-                expression.push_back(to_number<double>(*std::next(it, 1)));
+                size_t exp_start = line.find_first_not_of('\t', line.find('\t', 0));
+                size_t exp_end = line.find('\n', 0);
+                expression.push_back(std::stod(line.substr(exp_start, exp_end-exp_start)));
             }
 
             if (expression.size() != seqs.size())
                 throw std::invalid_argument{"Error! Number of given expression levels do not match number of sequences."};
-        }*/
+        }
     }
     else
     {

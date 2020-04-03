@@ -358,6 +358,29 @@ TEST(search, small_example_own_cutoffs)
     EXPECT_EQ(expected, results);
 }
 
+TEST(search, expression_file)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    search_arguments search_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+    std::vector<uint32_t> expected{1};
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
+    ibf_args.expression_levels = {1};
+    ibf_args.cutoffs = {2};
+
+    ibf(args, ibf_args);
+
+    search_args.search_file = std::string(DATA_DIR) + "mini_genes.fasta";
+    search_args.path_in = ibf_args.path_out;
+    search_args.exp_file  = {std::string(DATA_DIR) + "mini_example_exp.tsv"};
+
+    std::vector<uint32_t> results{search(args, search_args)};
+
+    EXPECT_EQ(expected, results);
+}
+
 TEST(search, example)
 {
     arguments args{};
