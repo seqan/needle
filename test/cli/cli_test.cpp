@@ -1,17 +1,19 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include <cstdlib>     // for std::system
-#include <string>      // for std::string
-#include <sstream>     // for std::ostringstream
+#include <cstdlib>               // system calls
+#include <seqan3/std/filesystem> // test directory creation
+#include <seqan3/std/ranges>     // range comparisons
+#include <string>                // strings
+#include <sstream>               // ostringstream
 
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
 #include <seqan3/io/sequence_file/input.hpp>
-#include <seqan3/std/ranges>
 
 // Provides functions for CLI test implementation.
 struct cli_test : public ::testing::Test
 {
+protected:
     // Result struct for returning captured streams and exit code.
     struct cli_test_result
     {
@@ -45,9 +47,46 @@ struct cli_test : public ::testing::Test
 
     // Generate the full path of a test file that is provided in the data directory.
     static
-    std::string data(std::string const & filename)
+    std::filesystem::path data(std::string const & filename)
     {
-        return std::string{DATADIR}.append(filename);
+        return std::filesystem::path{std::string{DATADIR}}.concat(filename);
+    }
+
+    // Holds the original work directory.
+    std::filesystem::path original_workdir{};
+
+    // Creates a work directory for the test.
+    void SetUp() override
+    {
+        ::testing::TestInfo const * const info = ::testing::UnitTest::GetInstance()->current_test_info();
+        std::filesystem::path const test_dir{std::string{OUTPUTDIR} +
+                                             std::string{info->test_case_name()} +
+                                             std::string{"."} +
+                                             std::string{info->name()}};
+        try
+        {
+            std::filesystem::remove_all(test_dir);              // delete the directory if it exists
+            std::filesystem::create_directories(test_dir);      // create new empty directory
+            original_workdir = std::filesystem::current_path(); // store original wd
+            std::filesystem::current_path(test_dir);            // change wd
+        }
+        catch (std::exception const & exc)
+        {
+            FAIL() << "Failed to set up the test directory " << test_dir << ":\n" << exc.what();
+        }
+    }
+
+    // Switches back to the initial working directory.
+    void TearDown() override
+    {
+        try
+        {
+            std::filesystem::current_path(original_workdir);   // restore original wd
+        }
+        catch (std::exception const & exc)
+        {
+            FAIL() << "Failed to set the work directory to " << original_workdir << ":\n" << exc.what();
+        }
     }
 };
 
@@ -96,8 +135,8 @@ TEST_F(cli_test, with_argument_verbose)
 
 TEST_F(cli_test, with_out_file)
 {
-    cli_test_result result = execute_app("fastq_to_fasta", data("in.fastq"), "-o", data("out.fa"));
-    seqan3::sequence_file_input fin{data("out.fa"), seqan3::fields<seqan3::field::seq, seqan3::field::id>{}};
+    cli_test_result result = execute_app("fastq_to_fasta", data("in.fastq"), "-o", "out.fasta");
+    seqan3::sequence_file_input fin{"out.fasta", seqan3::fields<seqan3::field::seq, seqan3::field::id>{}};
 
     // create records to compare
     using record_type = typename decltype(fin)::record_type;
