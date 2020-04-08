@@ -8,60 +8,49 @@ git:
   quiet: true
 
 cache:
-  apt: true
   ccache: true
-
-linux-gcc-7: &linux-gcc-7
-  os: linux
-  compiler: 'g++-7'
-  addons:
-    apt:
-      sources: ['ubuntu-toolchain-r-test']
-      packages: ['g++-7', 'lcov']
-  before_install:
-    - export CC="gcc-7" CXX="g++-7"
-
-linux-gcc-8: &linux-gcc-8
-  os: linux
-  compiler: 'g++-8'
-  addons:
-    apt:
-      sources: ['ubuntu-toolchain-r-test']
-      packages: ['g++-8']
-  before_install:
-    - export CC="gcc-8" CXX="g++-8"
-
-linux-gcc-9: &linux-gcc-9
-  os: linux
-  compiler: 'g++-9'
-  addons:
-    apt:
-      sources: ['ubuntu-toolchain-r-test']
-      packages: ['g++-9']
-  before_install:
-    - export CC="gcc-9" CXX="g++-9"
 
 # https://docs.travis-ci.com/user/languages/c/#gcc-on-linux
 jobs:
   include:
-    - << : *linux-gcc-9
+    # works on Precise and Trusty
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
+          packages:
+            - g++-7
       env:
-        - BUILD=api
+        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
         - BUILD_TYPE=Release
+        - CMAKE_VERSION=3.8.2
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
+          packages:
+            - g++-8
+      env:
+        - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
+        - BUILD_TYPE=Release
+        - CMAKE_VERSION=3.8.2
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
+          packages:
+            - g++-9
+      env:
+        - MATRIX_EVAL="CC=gcc-9 && CXX=g++-9"
+        - BUILD_TYPE=Release
+        - CMAKE_VERSION=3.8.2
         - CXXFLAGS="-std=c++2a"
-        - CMAKE_VERSION=3.0.2
 
-    - << : *linux-gcc-8
-      env:
-        - BUILD=api
-        - BUILD_TYPE=Release
-        - CMAKE_VERSION=3.0.2
-
-    - << : *linux-gcc-7
-      env:
-        - BUILD=api
-        - BUILD_TYPE=Release
-        - CMAKE_VERSION=3.0.2
+before_install:
+  - eval "${MATRIX_EVAL}"
 
 install:
   - |
@@ -86,3 +75,4 @@ script:
     ctest . --output-on-failure
 after_script:
   - ccache -s
+
