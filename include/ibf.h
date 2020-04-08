@@ -144,7 +144,7 @@ void read_binary(robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table
 
 // Reads one header file minimizer creates
 void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::path filename,
-                 std::vector<uint64_t> & counts, float & normalized_exp_value)
+                 std::vector<uint64_t> & counts, uint32_t & normalized_exp_value)
 {
     std::ifstream fin;
     fin.open(filename);
@@ -175,7 +175,7 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
     buffer.clear();
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<'\n'>),
                                     std::ranges::back_inserter(buffer));
-    normalized_exp_value = std::stof(buffer);
+    normalized_exp_value = std::stoi(buffer);
 
     // Read second line = expression levels
     do
@@ -297,7 +297,7 @@ std::vector<std::filesystem::path> const & header_files)
     // For function call read_header
     ibf_args.expression_levels = {};
     std::vector<uint64_t> counts{};
-    float normalized_exp_value{};
+    uint32_t normalized_exp_value{};
 
     float avg;
     uint64_t minimum;
@@ -455,7 +455,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, st
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for sequences in genome
-    float mean; // the normalized expression value
+    uint32_t mean; // the normalized expression value
     std::vector<uint32_t> normal_expression_values;
     // For header file reading
     std::vector<uint64_t> counts{};
