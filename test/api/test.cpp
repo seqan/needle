@@ -229,23 +229,7 @@ TEST(needle_minimizer, small_example)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-<<<<<<< HEAD
-    robin_hood::unordered_node_map<uint64_t,uint64_t> expected_hash_table{        // Minimizers:
-                                                             {0,2},   // AAAA
-                                                             {1,4},   // AAAC
-                                                             {6,4},   // AACG
-                                                             {24,1},  // ACGA
-                                                             {27,5},  // ACGT
-                                                             {97,3},  // CGAC
-                                                             {108,2}, // CGTA
-                                                             {109,3}, // CGTC
-                                                             {112,3}, // CTAA
-                                                             {177,1}, // GTAC
-                                                             {192,3}, // TAAA
-                                                             {216,1}, // TCGA
-                                                             };
-=======
-    std::vector<robin_hood::unordered_map<uint64_t,uint64_t>> expected_hash_tables{        // Minimizers:
+    std::vector<robin_hood::unordered_node_map<uint64_t,uint64_t>> expected_hash_tables{        // Minimizers:
                                                                                  {{0,2},   // AAAA
                                                                                   {1,4},   // AAAC
                                                                                   {6,4},   // AACG
@@ -274,7 +258,6 @@ TEST(needle_minimizer, small_example)
                                                                                          },};
     std::vector<uint32_t> expected_normalized_exp_values{3,19};
 
->>>>>>> Expand test for needle_minimizer
     ibf_args.expression_levels = {0};
     ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta",
                                std::string(DATA_DIR) + "mini_example2.fasta"};
@@ -282,7 +265,7 @@ TEST(needle_minimizer, small_example)
     minimizer(args, ibf_args);
     std::vector<uint64_t> counts{};
     uint32_t normalized_exp_value{};
-    robin_hood::unordered_map<uint64_t,uint64_t> result_hash_table{};
+    robin_hood::unordered_node_map<uint64_t,uint64_t> result_hash_table{};
     std::vector<std::filesystem::path> minimizer_files{};
 
     for (int i = 0; i < ibf_args.sequence_files.size(); ++i)
