@@ -4,6 +4,7 @@
 #include <robin_hood.h>
 
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
+#include <seqan3/core/debug_stream.hpp>
 
 #include "ibf.h"
 #include "minimizer.h"
@@ -228,6 +229,7 @@ TEST(needle_minimizer, small_example)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
+<<<<<<< HEAD
     robin_hood::unordered_node_map<uint64_t,uint64_t> expected_hash_table{        // Minimizers:
                                                              {0,2},   // AAAA
                                                              {1,4},   // AAAC
@@ -242,33 +244,78 @@ TEST(needle_minimizer, small_example)
                                                              {192,3}, // TAAA
                                                              {216,1}, // TCGA
                                                              };
+=======
+    std::vector<robin_hood::unordered_map<uint64_t,uint64_t>> expected_hash_tables{        // Minimizers:
+                                                                                 {{0,2},   // AAAA
+                                                                                  {1,4},   // AAAC
+                                                                                  {6,4},   // AACG
+                                                                                  {24,1},  // ACGA
+                                                                                  {27,5},  // ACGT
+                                                                                  {97,3},  // CGAC
+                                                                                  {108,2}, // CGTA
+                                                                                  {109,3}, // CGTC
+                                                                                  {112,3}, // CTAA
+                                                                                  {177,1}, // GTAC
+                                                                                  {192,3}, // TAAA
+                                                                                  {216,1}, // TCGA
+                                                                                         },
+                                                                                 {{27,1},  // ACGT
+                                                                                  {42,1},  // AGGG
+                                                                                  {74,1},  // CAGG
+                                                                                  {82,1},  // CCAG
+                                                                                  {84,1},  // CCCA
+                                                                                  {85,19}, // CCCC
+                                                                                  {86,1},  // CCCG
+                                                                                  {109,1}, // CGTC
+                                                                                  {149,2}, // GCCC
+                                                                                  {161,1}, // GGAC
+                                                                                  {165,1}, // GGCC
+                                                                                  {168,1}, // GGGA
+                                                                                         },};
+    std::vector<uint32_t> expected_normalized_exp_values{3,19};
+
+>>>>>>> Expand test for needle_minimizer
     ibf_args.expression_levels = {0};
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta",
+                               std::string(DATA_DIR) + "mini_example2.fasta"};
 
     minimizer(args, ibf_args);
-
-    // Test Header file
-    ibf_args.expression_levels = {};
     std::vector<uint64_t> counts{};
-    float normalized_exp_value{};
-    read_header(args, ibf_args, std::string{ibf_args.path_out}  +
-                std::string{ibf_args.sequence_files[0].stem()} + ".header", counts, normalized_exp_value);
-    EXPECT_EQ(4, args.k);
-    EXPECT_EQ(4, args.window_size);
-    EXPECT_EQ(0, args.seed);
-    EXPECT_EQ(0, args.shape);
-    EXPECT_EQ(3.0, normalized_exp_value);
-    EXPECT_EQ("median", ibf_args.normalization_method);
-    EXPECT_EQ(0, ibf_args.expression_levels[0]);
-    EXPECT_EQ(1, ibf_args.expression_levels.size());
-    EXPECT_EQ(12, counts[0]);
-    EXPECT_EQ(1, counts.size());
+    uint32_t normalized_exp_value{};
+    robin_hood::unordered_map<uint64_t,uint64_t> result_hash_table{};
+    std::vector<std::filesystem::path> minimizer_files{};
 
-    // Test binary file
-    robin_hood::unordered_node_map<uint64_t,uint64_t> result_hash_table{};
-    read_binary(result_hash_table, std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[0].stem()}
-                + ".minimizer");
-    EXPECT_EQ(expected_hash_table, result_hash_table);
+    for (int i = 0; i < ibf_args.sequence_files.size(); ++i)
+    {
+        // Test Header file
+        ibf_args.expression_levels = {};
+        read_header(args, ibf_args, std::string{ibf_args.path_out}  +
+                    std::string{ibf_args.sequence_files[i].stem()} + ".header", counts, normalized_exp_value);
+
+        EXPECT_EQ(4, args.k);
+        EXPECT_EQ(4, args.window_size);
+        EXPECT_EQ(0, args.seed);
+        EXPECT_EQ(0, args.shape);
+        EXPECT_EQ(expected_normalized_exp_values[i], normalized_exp_value);
+        EXPECT_EQ("median", ibf_args.normalization_method);
+        EXPECT_EQ(0, ibf_args.expression_levels[0]);
+        EXPECT_EQ(1, ibf_args.expression_levels.size());
+        EXPECT_EQ(12, counts[0]);
+        EXPECT_EQ(1, counts.size());
+        counts.clear();
+
+        // Test binary file
+        read_binary(result_hash_table, std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[i].stem()}
+                    + ".minimizer");
+        minimizer_files.push_back(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[i].stem()}
+                                  + ".minimizer");
+        EXPECT_EQ(expected_hash_tables[i], result_hash_table);
+
+        result_hash_table.clear();
+    }
+
+    std::vector<uint32_t> medians = ibf(minimizer_files, "", args, ibf_args);
+    EXPECT_EQ(expected_normalized_exp_values, medians);
 }
 
 TEST(search, small_example)
