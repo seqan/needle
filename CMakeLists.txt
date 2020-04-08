@@ -7,6 +7,10 @@ project (fastq_to_fasta VERSION 1.0.0)
 set (CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Specify the directories where to store the built archives, libraries and executables
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 ## BUILD
 add_subdirectory(src)
@@ -19,7 +23,7 @@ target_link_libraries ("${PROJECT_NAME}" "${PROJECT_NAME}_lib")
 # copy test data and define DATADIR
 file(COPY test/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/test)
 add_definitions(-DDATADIR=\"${CMAKE_CURRENT_BINARY_DIR}/test/data/\")
-add_definitions(-DBINDIR=\"${CMAKE_CURRENT_BINARY_DIR}/\")
+add_definitions(-DBINDIR=\"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/\")
 
 # Dependency: Googletest
 add_subdirectory(lib/gtest)
