@@ -720,29 +720,27 @@ void build_ibf(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
         if (entry.path().extension() == ".minimizer")
             minimizer_files.push_back(entry.path());
     }
-
     ibf(minimizer_files, "", args, ibf_args, fpr);
     minimizer_files.clear();
 }
 
-void test(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
+void test(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05, bool print = false)
 {
     std::vector<std::string> methods{"median", "mean"};
     std::filesystem::path genome_file = ibf_args.genome_file;
     std::filesystem::path path_out = ibf_args.path_out;
-
     for(auto m: methods)
     {
         std::filesystem::create_directory(path_out/m);
         std::filesystem::create_directory(std::string(path_out/"Genome_")+m);
-
         auto start = std::chrono::high_resolution_clock::now();
         ibf_args.path_out = std::string(path_out/"Genome_")+m +"/";
         ibf_args.normalization_method = m;
         build_ibf(args, ibf_args, fpr);
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-        std::cout << m << " With Genome Time taken by function: " << duration.count() << " microseconds\n";
+        if (print)
+            std::cout << m << " With Genome Time taken by function: " << duration.count() << " microseconds\n";
 
         start = std::chrono::high_resolution_clock::now();
         ibf_args.path_out =  std::string(path_out/m) +"/";
@@ -750,7 +748,8 @@ void test(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
         build_ibf(args, ibf_args, fpr);
         stop = std::chrono::high_resolution_clock::now();
         duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-        std::cout << m <<" Without Time taken by function: " << duration.count() << " microseconds\n";
+        if (print)
+            std::cout << m <<" Without Time taken by function: " << duration.count() << " microseconds\n";
     }
 
 }
