@@ -229,7 +229,7 @@ TEST(needle_minimizer, small_example)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    std::vector<robin_hood::unordered_node_map<uint64_t,uint64_t>> expected_hash_tables{        // Minimizers:
+    std::vector<robin_hood::unordered_node_map<uint64_t,uint64_t>> expected_hash_tables{   // Minimizers:
                                                                                  {{0,2},   // AAAA
                                                                                   {1,4},   // AAAC
                                                                                   {6,4},   // AACG
@@ -448,6 +448,31 @@ TEST(stats, example)
                                                                                 {{4.0, 29.0}, {7, 25, 25}}};
 
     std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> results = statistics(args, ibf_args, minimizer_files);
+
+    EXPECT_EQ(expected, results);
+}
+
+TEST(test, small_example)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    initialization_args(args);
+    ibf_args.path_out = std::string(DATA_DIR);
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta",
+                                                       std::string(DATA_DIR) + "mini_example.fasta"};
+    test(args, ibf_args);
+    EXPECT_TRUE(std::filesystem::exists(std::string(DATA_DIR) + "Genome_median/"));
+    EXPECT_TRUE(std::filesystem::exists(std::string(DATA_DIR) + "Genome_mean/"));
+    EXPECT_TRUE(std::filesystem::exists(std::string(DATA_DIR) + "median/"));
+    EXPECT_TRUE(std::filesystem::exists(std::string(DATA_DIR) + "mean/"));
+
+    search_arguments search_args{};
+    search_args.search_file = std::string(DATA_DIR) + "mini_gen3.fasta";
+    search_args.path_in = std::string(DATA_DIR) + "median/";
+    search_args.expression = 0;
+
+    std::vector<uint32_t> expected{0};
+    std::vector<uint32_t> results{search(args, search_args)};
 
     EXPECT_EQ(expected, results);
 }

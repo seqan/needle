@@ -35,6 +35,11 @@
 test/data/IBF_*
 test/data/*.header
 test/data/*.minimizer
+test/data/Genome_mean/
+test/data/Genome_median/
+test/data/mean/
+test/data/median/
+
 
 # Googletest folders
 googletest-build/

@@ -294,11 +294,48 @@ int run_needle_stats(seqan3::argument_parser & parser)
     return 0;
 }
 
+int run_needle_test(seqan3::argument_parser & parser)
+{
+    arguments args{};
+    initialise_argument_parser(parser, args);
+    ibf_arguments ibf_args{};
+    initialise_ibf_argument_parser(parser, ibf_args);
+    float fpr; // False Positive Rate
+
+    parser.info.short_description = "Constructs multiple IBFs for given experiments and searches through them.";
+    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
+                                                                            " constructing the IBFs. Default: [0.5,1,2,4].");
+    parser.add_option(fpr, 'f', "fpr", "False positive rate for the IBF. Default: 0.05.");
+    parser.add_option(ibf_args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
+                                                      "one IBF.");
+    ibf_args.experiment_names = true;
+
+    try
+    {
+        parser.parse();
+    }
+    catch (seqan3::argument_parser_error const & ext)
+    {
+        seqan3::debug_stream << "Error. Incorrect command line input for IBF construct." << ext.what() << "\n";
+        return -1;
+    }
+    try
+    {
+        test(args, ibf_args);
+    }
+    catch (const std::invalid_argument & e)
+    {
+        std::cerr << e.what() << std::endl;
+        return -1;
+    }
+
+    return 0;
+}
 
 int main(int argc, char const ** argv)
 {
     seqan3::argument_parser needle_parser{"needle", argc, argv, true, {"ibf", "ibfmin", "insert", "minimizer", "search",
-                                                                       "stats"}};
+                                                                       "stats", "test"}};
     needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
                                              "command ibf or search an IBF with the search command.");
     needle_parser.info.version = "1.0.0";
@@ -326,6 +363,8 @@ int main(int argc, char const ** argv)
         run_needle_search(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-stats"})
         run_needle_stats(sub_parser);
+    else if (sub_parser.info.app_name == std::string_view{"needle-test"})
+        run_needle_test(sub_parser);
     else
         throw std::logic_error{"The used sub parser is not known: " + sub_parser.info.app_name};
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <deque>
 #include <iostream>
 #include <math.h>
@@ -666,7 +667,6 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
             genome_sequences.clear();
             mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
         }
-
         counts.assign(ibf_args.expression_levels.size(),0);
         for (auto & elem : hash_table)
         {
@@ -707,6 +707,49 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
         outfile << "\n";
         outfile.close();
         seen_before = seen_before + ibf_args.samples[i];
+    }
+
+}
+
+void build_ibf(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
+{
+    std::vector<std::filesystem::path> minimizer_files;
+    minimizer(args, ibf_args);
+    for (const auto & entry : std::filesystem::directory_iterator(ibf_args.path_out))
+    {
+        if (entry.path().extension() == ".minimizer")
+            minimizer_files.push_back(entry.path());
+    }
+    ibf(minimizer_files, "", args, ibf_args, fpr);
+    minimizer_files.clear();
+}
+
+void test(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05, bool print = false)
+{
+    std::vector<std::string> methods{"median", "mean"};
+    std::filesystem::path genome_file = ibf_args.genome_file;
+    std::filesystem::path path_out = ibf_args.path_out;
+    for(auto m: methods)
+    {
+        std::filesystem::create_directory(path_out/m);
+        std::filesystem::create_directory(std::string(path_out/"Genome_")+m);
+        auto start = std::chrono::high_resolution_clock::now();
+        ibf_args.path_out = std::string(path_out/"Genome_")+m +"/";
+        ibf_args.normalization_method = m;
+        build_ibf(args, ibf_args, fpr);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        if (print)
+            std::cout << m << " With Genome Time taken by function: " << duration.count() << " microseconds\n";
+
+        start = std::chrono::high_resolution_clock::now();
+        ibf_args.path_out =  std::string(path_out/m) +"/";
+        ibf_args.genome_file = "";
+        build_ibf(args, ibf_args, fpr);
+        stop = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        if (print)
+            std::cout << m <<" Without Time taken by function: " << duration.count() << " microseconds\n";
     }
 
 }
