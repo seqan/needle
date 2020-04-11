@@ -667,7 +667,6 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
             genome_sequences.clear();
             mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
         }
-
         counts.assign(ibf_args.expression_levels.size(),0);
         for (auto & elem : hash_table)
         {
@@ -718,7 +717,7 @@ void build_ibf(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
     minimizer(args, ibf_args);
     for (const auto & entry : std::filesystem::directory_iterator(ibf_args.path_out))
     {
-        if (entry.path().stem() == ".minimizer")
+        if (entry.path().extension() == ".minimizer")
             minimizer_files.push_back(entry.path());
     }
 
@@ -738,7 +737,7 @@ void test(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
         std::filesystem::create_directory(std::string(path_out/"Genome_")+m);
 
         auto start = std::chrono::high_resolution_clock::now();
-        ibf_args.path_out =std::string(path_out/"Genome_")+m;
+        ibf_args.path_out = std::string(path_out/"Genome_")+m +"/";
         ibf_args.normalization_method = m;
         build_ibf(args, ibf_args, fpr);
         auto stop = std::chrono::high_resolution_clock::now();
@@ -746,7 +745,7 @@ void test(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
         std::cout << m << " With Genome Time taken by function: " << duration.count() << " microseconds\n";
 
         start = std::chrono::high_resolution_clock::now();
-        ibf_args.path_out = path_out/m;
+        ibf_args.path_out =  std::string(path_out/m) +"/";
         ibf_args.genome_file = "";
         build_ibf(args, ibf_args, fpr);
         stop = std::chrono::high_resolution_clock::now();
