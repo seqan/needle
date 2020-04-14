@@ -399,18 +399,14 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 
         // Calculate normalized expression value in one experiment
         // if genome file is given, calculation are based on genome sequences
-        if ((ibf_args.genome_file != "") & (i==0))
-        {
+        if (ibf_args.genome_file != "")
             mean = normalization_method(args, ibf_args, genome_sequences, hash_table, ibf_args.cutoffs[i]);
-        }
         else
-        {
-            genome_sequences.clear();
             mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
-        }
 
-        normal_expression_values.push_back(mean);
         sequences.clear();
+        normal_expression_values.push_back(mean);
+
 
         // Every minimizer is stored in IBF, if it occurence divided by the mean is greater or equal expression level
         for (auto & elem : hash_table)
@@ -427,6 +423,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
         }
         hash_table.clear();
     }
+    genome_sequences.clear();
 
     // Store IBFs
     for (unsigned i = 0; i < ibf_args.expression_levels.size(); i++)
@@ -592,15 +589,10 @@ std::vector<uint32_t> insert(arguments const & args, ibf_arguments & ibf_args, s
 
         // Calculate normalized expression value in one experiment
         // if genome file is given, calculation are based on genome sequences
-        if ((ibf_args.genome_file != "") & (i==0))
-        {
+        if (ibf_args.genome_file != "")
             mean = normalization_method(args, ibf_args, genome_sequences, hash_table, ibf_args.cutoffs[i]);
-        }
         else
-        {
-            genome_sequences.clear();
             mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
-        }
 
         normal_expression_values.push_back(mean);
         sequences.clear();
@@ -620,6 +612,7 @@ std::vector<uint32_t> insert(arguments const & args, ibf_arguments & ibf_args, s
         }
         hash_table.clear();
     }
+    genome_sequences.clear();
 
     // Store IBFs
     for (unsigned i = 0; i < ibf_args.expression_levels.size(); i++)
@@ -659,14 +652,10 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
         // Calculate normalized expression value in one experiment
         // if genome file is given, calculation are based on genome sequences
         if ((ibf_args.genome_file != "") & (i==0))
-        {
             mean = normalization_method(args, ibf_args, genome_sequences, hash_table, ibf_args.cutoffs[i]);
-        }
         else
-        {
-            genome_sequences.clear();
             mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
-        }
+
         counts.assign(ibf_args.expression_levels.size(),0);
         for (auto & elem : hash_table)
         {
