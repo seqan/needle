@@ -651,7 +651,7 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
 
         // Calculate normalized expression value in one experiment
         // if genome file is given, calculation are based on genome sequences
-        if ((ibf_args.genome_file != "") & (i==0))
+        if (ibf_args.genome_file != "")
             mean = normalization_method(args, ibf_args, genome_sequences, hash_table, ibf_args.cutoffs[i]);
         else
             mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
