@@ -29,5 +29,4 @@ add_definitions(-DBINDIR=\"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/\")
 add_subdirectory(lib/gtest)
 
 enable_testing ()
-add_subdirectory(test/api)
-add_subdirectory(test/cli)
+add_subdirectory(test)
