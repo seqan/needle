@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.8)
 
+unset(CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+unset(CMAKE_LIBRARY_OUTPUT_DIRECTORY)
 unset(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 
 # Get a specific component of a test file which follows the seqan3 naming scheme.
@@ -47,4 +49,3 @@ endmacro ()
 # Add subdirectories
 add_subdirectory (api)
 add_subdirectory (cli)
-
