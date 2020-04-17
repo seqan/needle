@@ -1,1 +1,1 @@
-add_app_test(cli_test.cpp)
+add_cli_test(cli_test.cpp)

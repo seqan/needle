@@ -1,1 +1,1 @@
-add_app_test(fastq_conversion_test.cpp)
+add_api_test(fastq_conversion_test.cpp)
