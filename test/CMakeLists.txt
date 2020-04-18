@@ -16,7 +16,7 @@ macro (add_app_test test_filename test_alternative)
     target_link_libraries (${target} "${PROJECT_NAME}_lib" seqan3::seqan3 gmock gmock_main gtest pthread)
 
     # Add main application as a dependency for command line tests
-    if (test_alternative STREQUAL "CLI_TEST")
+    if (${test_alternative} STREQUAL "CLI_TEST")
         add_dependencies(${target} "${PROJECT_NAME}")
     endif()
 
