@@ -5,7 +5,6 @@ cmake_minimum_required (VERSION 3.8)
 # Dependency: SeqAn3.
 find_package (SeqAn3 REQUIRED HINTS ../lib/seqan3/build_system)
 
-
 ## BUILD
 
 # An object library (without main) to be used in multiple targets.

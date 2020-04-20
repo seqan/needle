@@ -17,16 +17,13 @@ add_subdirectory(src)
 add_executable ("${PROJECT_NAME}" src/main.cpp)
 target_link_libraries ("${PROJECT_NAME}" "${PROJECT_NAME}_lib")
 
-
 ## TEST
-
-# copy test data and define DATADIR
-file(COPY test/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/test)
-add_definitions(-DDATADIR=\"${CMAKE_CURRENT_BINARY_DIR}/test/data/\")
+add_definitions(-DDATADIR=\"${CMAKE_CURRENT_BINARY_DIR}/data/\")
 add_definitions(-DBINDIR=\"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/\")
 
 # Dependency: Googletest
 add_subdirectory(lib/gtest)
 
 enable_testing ()
+include(test/data/datasources.cmake)
 add_subdirectory(test)
