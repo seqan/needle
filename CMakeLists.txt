@@ -21,6 +21,10 @@ target_link_libraries ("${PROJECT_NAME}" "${PROJECT_NAME}_lib")
 add_definitions(-DDATADIR=\"${CMAKE_CURRENT_BINARY_DIR}/data/\")
 add_definitions(-DBINDIR=\"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/\")
 
+# Directory for test output files.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/test/output)
+add_definitions(-DOUTPUTDIR=\"${CMAKE_CURRENT_BINARY_DIR}/test/output/\")
+
 # Dependency: Googletest
 add_subdirectory(lib/gtest)
 
