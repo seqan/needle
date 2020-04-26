@@ -62,6 +62,30 @@ jobs:
         - CXX=g++-9
         - CC=gcc-9
         - BUILD_TYPE=Release
+    - os: linux
+      name: "Documentation"
+      addons:
+        apt:
+          sources:
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
+          packages:
+            - g++-9
+            - doxygen
+            - doxygen-doc
+            - doxygen-latex
+            - graphviz
+      script:
+        - doxygen --version
+        - doxygen -u doc/Doxyfile
+        - make -j 2 doc 2>doxygen_warnings.txt
+        - cat doxygen_warnings.txt && test ! -s doxygen_warnings.txt
+      env:
+        - CXX=g++-9
+        - CC=gcc-9
+        - BUILD_TYPE=Debug
+  allow_failures:
+    - name: "Documentation"
+  fast_finish: true
 
 install:
   - |
