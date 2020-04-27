@@ -216,6 +216,8 @@ int run_needle_search(seqan3::argument_parser & parser)
     parser.add_option(search_args.path_in, 'i', "in", "Directory where input files can be found.");
     parser.add_option(search_args.expression, 'e', "expression", "Which expression level should be considered during a "
                                                                  "search.");
+    parser.add_option(search_args.expression, 't', "threshold", "The minimal amount of minimizers found in a transcript"
+                                                                " to consider it as found in an IBF. Default: 0.5");
 
     initialise_argument_parser(parser, args);
 

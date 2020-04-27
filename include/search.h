@@ -27,6 +27,7 @@ struct search_arguments
     std::filesystem::path exp_file;
     std::filesystem::path path_in{"./"};
     float expression{1.0};
+    float threshold{0.5};
 
 };
 
@@ -104,7 +105,7 @@ std::vector<uint32_t> do_search(IBFType & ibf, arguments const & args, search_ar
 
         for(unsigned j = 0; j < counter.size(); j++)
         {
-            if (counter[j] >= minimizer_length/2.0)
+            if (counter[j] >= (minimizer_length * search_args.threshold))
                 results[j] = results[j] + 1;
         }
         counter.clear();
