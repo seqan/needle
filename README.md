@@ -10,14 +10,14 @@ Instructions:
 3. run cmake: `cmake ../app-template`
 4. run `make`
 5. run the tests: `make test`
-6. execute the app: `./my_app`
+6. optional: build the api documentation: `make doc`
+7. execute the app: `./my_app`
 
 Planned features are:
 - build the app with seqan3
 - cli tests (black box)
 - api tests (white box)
 - tutorials, usage instructions
-- api documentation
 - benchmarks for time, memory and disk space consumption
 - coverage tests: api
 - automated CD

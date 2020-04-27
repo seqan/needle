@@ -31,3 +31,7 @@ add_subdirectory(lib/gtest)
 enable_testing ()
 include(test/data/datasources.cmake)
 add_subdirectory(test)
+
+
+## DOCUMENTATION
+add_subdirectory(doc)
