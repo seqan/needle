@@ -1,2 +1,2 @@
-add_cli_test(cli_test.cpp)
-target_use_datasources (cli_test FILES in.fastq)
+add_cli_test(fastq_to_fasta_options_test.cpp)
+target_use_datasources (fastq_to_fasta_options_test FILES in.fastq)

@@ -1,2 +1,2 @@
-add_api_test(fastq_conversion_test.cpp)
-target_use_datasources (fastq_conversion_test FILES in.fastq)
+add_api_test(convert_fastq_test.cpp)
+target_use_datasources (convert_fastq_test FILES in.fastq)
