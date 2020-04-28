@@ -64,7 +64,8 @@ uint64_t get_bin_size(uint64_t count, float fpr, size_t num_hash)
 }
 
 void get_sequences(std::vector<std::filesystem::path> const & sequence_files,
-                   seqan3::concatenated_sequences<seqan3::dna4_vector> & sequences, unsigned min = 0, unsigned max = 1)
+                   seqan3::concatenated_sequences<seqan3::dna4_vector> & sequences, uint16_t min_len, unsigned min = 0,
+                   unsigned max = 1)
 {
     //Loads all reads from all samples of one experiment to sequences
     //TODO: If not enough memory or too many samples in one experiment, read one file record by record
@@ -72,7 +73,11 @@ void get_sequences(std::vector<std::filesystem::path> const & sequence_files,
     {
         seqan3::sequence_file_input<my_traits> fin{sequence_files[i]};
         for (auto & [seq, id, qual]: fin)
-            sequences.push_back(seq);
+        {
+            if (seq.size() >= min_len)
+                sequences.push_back(seq);
+        }
+
     }
 }
 
@@ -111,7 +116,7 @@ void set_arguments(arguments const & args, ibf_arguments & ibf_args,
     // Generate genome mask
     if (ibf_args.genome_file != "")
     {
-		get_sequences({ibf_args.genome_file}, genome_sequences);
+		get_sequences({ibf_args.genome_file}, genome_sequences, args.k);
 
         // Count minimizer in sequence file
         for (auto seq : genome_sequences)
@@ -392,7 +397,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
     // Add minimizers to ibf
     for (unsigned i = 0; i < ibf_args.samples.size(); i++)
     {
-        get_sequences(ibf_args.sequence_files, sequences, std::accumulate(ibf_args.samples.begin(),
+        get_sequences(ibf_args.sequence_files, sequences, args.k, std::accumulate(ibf_args.samples.begin(),
                                                                           ibf_args.samples.begin()+i,0),
                                                                           ibf_args.samples[i]);
         get_minimizers(args, sequences, hash_table, genome_set_table, ibf_args.genome_file);
@@ -582,7 +587,7 @@ std::vector<uint32_t> insert(arguments const & args, ibf_arguments & ibf_args, s
     // Add minimizers to ibf
     for (unsigned i = 0; i < ibf_args.samples.size(); i++)
     {
-        get_sequences(ibf_args.sequence_files, sequences, std::accumulate(ibf_args.samples.begin(),
+        get_sequences(ibf_args.sequence_files, sequences, args.k, std::accumulate(ibf_args.samples.begin(),
                                                                           ibf_args.samples.begin()+i,0),
                                                                           ibf_args.samples[i]);
         get_minimizers(args, sequences, hash_table, genome_set_table, ibf_args.genome_file);
@@ -646,7 +651,7 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
     // Add minimizers to ibf
     for (unsigned i = 0; i < ibf_args.samples.size(); i++)
     {
-        get_sequences(ibf_args.sequence_files, sequences, seen_before, ibf_args.samples[i]);
+        get_sequences(ibf_args.sequence_files, sequences, args.k, seen_before, ibf_args.samples[i]);
         get_minimizers(args, sequences, hash_table, genome_set_table, ibf_args.genome_file);
 
         // Calculate normalized expression value in one experiment
