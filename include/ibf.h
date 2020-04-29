@@ -177,6 +177,10 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
     buffer.clear();
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
                                     std::ranges::back_inserter(buffer));
+    ibf_args.cutoffs.push_back(std::stoi(buffer));
+    buffer.clear();
+    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
+                                    std::ranges::back_inserter(buffer));
     ibf_args.normalization_method = buffer;
     buffer.clear();
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<'\n'>),
@@ -480,6 +484,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, st
         for (unsigned i = 0; i < statistic_results.size(); ++i)
             counts.push_back(std::get<1>(statistic_results[i])[2]); // Get maximum count of all files
 
+
         if (expression_levels.size() == 0) // If no expression levels are given
         {
             for (unsigned i = 0; i < statistic_results.size(); ++i)
@@ -503,9 +508,6 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, st
 					   seqan3::bin_count{minimizer_files.size()}, seqan3::bin_size{get_bin_size(counts[i], fpr,
                                                                                                 ibf_args.num_hash)},
 					   seqan3::hash_function_count{ibf_args.num_hash}));
-
-    // TODO: Take cutoffs from user?
-    ibf_args.cutoffs.assign(minimizer_files.size(),0);
 
     // Add minimizers to ibf
     for (unsigned i = 0; i < minimizer_files.size(); i++)
@@ -691,7 +693,7 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
         outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[seen_before].stem()}
                      + ".header");
         outfile << args.seed << " " << std::to_string(args.k) << " " << args.window_size << " " << args.shape << " "
-                << ibf_args.normalization_method << " " << mean << "\n";
+                << ibf_args.cutoffs[i] << " " << ibf_args.normalization_method << " " << mean << "\n";
         for (unsigned k = 0; k < counts.size(); k++)
             outfile  << ibf_args.expression_levels[k] << " ";
 

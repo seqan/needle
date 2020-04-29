@@ -279,6 +279,7 @@ TEST(needle_minimizer, small_example)
         EXPECT_EQ(4, args.window_size);
         EXPECT_EQ(0, args.seed);
         EXPECT_EQ(0, args.shape);
+        EXPECT_EQ(0, ibf_args.cutoffs[0]);
         EXPECT_EQ(expected_normalized_exp_values[i], normalized_exp_value);
         EXPECT_EQ("median", ibf_args.normalization_method);
         EXPECT_EQ(0, ibf_args.expression_levels[0]);
