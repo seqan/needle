@@ -1,5 +1,23 @@
 cmake_minimum_required (VERSION 3.8)
 
+# Set directories for test output files, input data and binaries.
+file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/output)
+add_definitions (-DOUTPUTDIR=\"${CMAKE_CURRENT_BINARY_DIR}/output/\")
+add_definitions (-DDATADIR=\"${CMAKE_CURRENT_BINARY_DIR}/data/\")
+add_definitions (-DBINDIR=\"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/\")
+
+# Build tests before execution because they are not built with "all" target.
+file (WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_test_targets.cmake"
+            "execute_process(COMMAND ${CMAKE_COMMAND} --build . --target api_test)\n"
+            "execute_process(COMMAND ${CMAKE_COMMAND} --build . --target cli_test)")
+set_directory_properties (PROPERTIES TEST_INCLUDE_FILE "${CMAKE_CURRENT_BINARY_DIR}/build_test_targets.cmake")
+
+include (data/datasources.cmake)
+
+# Define the test targets.
+add_custom_target (api_test)
+add_custom_target (cli_test)
+
 unset(CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
 unset(CMAKE_LIBRARY_OUTPUT_DIRECTORY)
 unset(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
@@ -18,6 +36,9 @@ macro (add_app_test test_filename test_alternative)
     # Add main application as a dependency for command line tests
     if (${test_alternative} STREQUAL "CLI_TEST")
         add_dependencies(${target} "${PROJECT_NAME}")
+        add_dependencies(cli_test ${target})
+    elseif (${test_alternative} STREQUAL "API_TEST")
+        add_dependencies(api_test ${target})
     endif()
 
     get_filename_component (target_relative_path "${source_file}" DIRECTORY)

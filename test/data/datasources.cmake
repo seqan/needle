@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-include (test/cmake/app_datasources.cmake)
+include (cmake/app_datasources.cmake)
 
 # copies file to <build>/data/in.fastq
 declare_datasource(FILE in.fastq
