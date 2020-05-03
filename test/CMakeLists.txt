@@ -12,43 +12,39 @@ file (WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_test_targets.cmake"
             "execute_process(COMMAND ${CMAKE_COMMAND} --build . --target cli_test)")
 set_directory_properties (PROPERTIES TEST_INCLUDE_FILE "${CMAKE_CURRENT_BINARY_DIR}/build_test_targets.cmake")
 
-include (data/datasources.cmake)
-
 # Define the test targets.
 add_custom_target (api_test)
 add_custom_target (cli_test)
 
-unset(CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
-unset(CMAKE_LIBRARY_OUTPUT_DIRECTORY)
-unset(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+unset (CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+unset (CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+unset (CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 
-# A macro that adds an api or cli test
+# A macro that adds an api or cli test.
 macro (add_app_test test_filename test_alternative)
-
+    # Extract the test target name.
     file (RELATIVE_PATH source_file "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_LIST_DIR}/${test_filename}")
-
     get_filename_component (target "${source_file}" NAME_WE)
 
+    # Create the test target.
     add_executable (${target} ${test_filename})
-
     target_link_libraries (${target} "${PROJECT_NAME}_lib" seqan3::seqan3 gmock gmock_main gtest pthread)
 
-    # Add main application as a dependency for command line tests
+    # Add the test to its general target (cli or api).
     if (${test_alternative} STREQUAL "CLI_TEST")
-        add_dependencies(${target} "${PROJECT_NAME}")
-        add_dependencies(cli_test ${target})
+        add_dependencies (${target} "${PROJECT_NAME}") # cli test needs the application executable
+        add_dependencies (cli_test ${target})
     elseif (${test_alternative} STREQUAL "API_TEST")
-        add_dependencies(api_test ${target})
-    endif()
+        add_dependencies (api_test ${target})
+    endif ()
 
+    # Generate and set the test name.
     get_filename_component (target_relative_path "${source_file}" DIRECTORY)
-
     if (target_relative_path)
         set (test_name "${target_relative_path}/${target}")
     else ()
         set (test_name "${target}")
     endif ()
-
     add_test (NAME "${test_name}" COMMAND ${target})
 
     unset (source_file)
@@ -56,16 +52,17 @@ macro (add_app_test test_filename test_alternative)
     unset (test_name)
 endmacro ()
 
-# A macro that adds an api test
+# A macro that adds an api test.
 macro (add_api_test test_filename)
-    add_app_test(${test_filename} API_TEST)
-endmacro()
+    add_app_test (${test_filename} API_TEST)
+endmacro ()
 
-# A macro that adds an cli test
+# A macro that adds a cli test.
 macro (add_cli_test test_filename)
-    add_app_test(${test_filename} CLI_TEST)
-endmacro()
+    add_app_test (${test_filename} CLI_TEST)
+endmacro ()
 
-# Add subdirectories
+# Fetch data and add the tests.
+include (data/datasources.cmake)
 add_subdirectory (api)
 add_subdirectory (cli)
