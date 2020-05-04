@@ -458,7 +458,6 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, std::filesystem::path header_file,
                           arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
 {
-
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for sequences in genome
@@ -476,7 +475,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, st
     {
         std::vector<std::filesystem::path> header_files{};
 
-        for (auto & elem : minimizer_files)
+        for (auto elem : minimizer_files)
             header_files.push_back(elem.replace_extension(".header"));
 
         statistic_results = statistics(args, ibf_args, header_files);
@@ -731,6 +730,7 @@ void test(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05, bool pri
         std::filesystem::create_directory(std::string(path_out/"Genome_")+m);
         auto start = std::chrono::high_resolution_clock::now();
         ibf_args.path_out = std::string(path_out/"Genome_")+m +"/";
+        ibf_args.genome_file = genome_file;
         ibf_args.normalization_method = m;
         build_ibf(args, ibf_args, fpr);
         auto stop = std::chrono::high_resolution_clock::now();
