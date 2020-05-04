@@ -84,15 +84,17 @@ void get_sequences(std::vector<std::filesystem::path> const & sequence_files,
 void get_minimizers(arguments const & args, seqan3::concatenated_sequences<seqan3::dna4_vector> const & sequences,
                     robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table,
                     robin_hood::unordered_set<uint64_t> const & genome_set_table,
-                    std::filesystem::path const & genome_file = "")
+                    std::filesystem::path const & genome_file = "", bool only_genome = false)
 {
     // Count minimizer in sequence file
     for (auto seq : sequences)
     {
         for (auto & minHash : compute_minimizer(seq, args.k, args.window_size, args.shape, args.seed))
         {
+            if (!only_genome)
+                hash_table[minHash]++;
             //TODO: Use unordered_set contains function instead of find, only works in C++20
-            if ((genome_file == "") || (genome_set_table.find(minHash) != genome_set_table.end()))
+            else if ((genome_file == "") || (genome_set_table.find(minHash) != genome_set_table.end()))
                 hash_table[minHash]++;
         }
     }
@@ -460,7 +462,6 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, st
 {
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
-    seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for sequences in genome
     uint32_t mean; // the normalized expression value
     std::vector<uint32_t> normal_expression_values;
     // For header file reading
