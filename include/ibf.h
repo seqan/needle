@@ -716,6 +716,8 @@ void build_ibf(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
         if (entry.path().extension() == ".minimizer")
             minimizer_files.push_back(entry.path());
     }
+    for (auto e : minimizer_files)
+        std::cout << e << "\n";
     ibf(minimizer_files, "", args, ibf_args, fpr);
     minimizer_files.clear();
 }
