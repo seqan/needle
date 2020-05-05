@@ -177,7 +177,7 @@ TEST(ibf, genom_median_no_match)
 
     EXPECT_EQ(expected, medians);
 }
-
+/*
 TEST(ibf, genom_mean)
 {
     arguments args{};
@@ -194,7 +194,7 @@ TEST(ibf, genom_mean)
 
     EXPECT_EQ(expected, means);
 }
-
+*/
 TEST(insert, example)
 {
     arguments args{};
@@ -279,6 +279,7 @@ TEST(needle_minimizer, small_example)
         EXPECT_EQ(4, args.window_size);
         EXPECT_EQ(0, args.seed);
         EXPECT_EQ(0, args.shape);
+        EXPECT_EQ(0, ibf_args.cutoffs[0]);
         EXPECT_EQ(expected_normalized_exp_values[i], normalized_exp_value);
         EXPECT_EQ("median", ibf_args.normalization_method);
         EXPECT_EQ(0, ibf_args.expression_levels[0]);
@@ -483,22 +484,73 @@ TEST(test, small_example)
     arguments args{};
     ibf_arguments ibf_args{};
     initialization_args(args);
+    std::vector<std::string> dirs{"Genome_median/", "median/", "Genome_mean/", "mean/"};
+    ibf_args.expression_levels = {0, 1};
     ibf_args.path_out = std::string(DATA_DIR);
     ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta",
-                                                       std::string(DATA_DIR) + "mini_example.fasta"};
+                               std::string(DATA_DIR) + "mini_example2.fasta"};
+    ibf_args.genome_file = std::string(DATA_DIR) + "mini_genom.fasta";
     test(args, ibf_args);
-    EXPECT_TRUE(std::filesystem::exists(std::string(DATA_DIR) + "Genome_median/"));
-    EXPECT_TRUE(std::filesystem::exists(std::string(DATA_DIR) + "Genome_mean/"));
-    EXPECT_TRUE(std::filesystem::exists(std::string(DATA_DIR) + "median/"));
-    EXPECT_TRUE(std::filesystem::exists(std::string(DATA_DIR) + "mean/"));
+    for (auto folder: dirs)
+        EXPECT_TRUE(std::filesystem::exists(std::string(DATA_DIR) + folder));
+
+    search_arguments search_args{};
+    search_args.search_file = std::string(DATA_DIR) + "mini_gen.fasta";
+    std::vector<uint32_t> expected_0{1, 0};
+    std::vector<uint32_t> expected_1{0, 0};
+    std::vector<uint32_t> results;
+    robin_hood::unordered_node_map<uint64_t,uint64_t> result_hash_table{};
+
+    for (auto folder: dirs)
+    {
+        search_args.path_in = std::string(DATA_DIR) + folder;
+        search_args.expression = 0;
+        results = search(args, search_args);
+        EXPECT_EQ(expected_0, results);
+        results.clear();
+        search_args.expression = 1;
+        results = search(args, search_args);
+        EXPECT_EQ(expected_1, results);
+        results.clear();
+        if (folder == "Genome_median/")
+            expected_1 = {1, 0};
+        std::filesystem::remove_all(search_args.path_in);
+    }
+}
+
+TEST(test, small_example_own_cutoffs)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    initialization_args(args);
+    std::vector<std::string> dirs{"Genome_median/", "median/", "Genome_mean/", "mean/"};
+    ibf_args.expression_levels = {0, 1};
+    ibf_args.path_out = std::string(DATA_DIR);
+    ibf_args.cutoffs = {2};
+    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
+    ibf_args.genome_file = std::string(DATA_DIR) + "mini_genom.fasta";
+    test(args, ibf_args);
+
+    for (auto folder: dirs)
+        EXPECT_TRUE(std::filesystem::exists(std::string(DATA_DIR) + folder));
 
     search_arguments search_args{};
     search_args.search_file = std::string(DATA_DIR) + "mini_gen3.fasta";
-    search_args.path_in = std::string(DATA_DIR) + "median/";
-    search_args.expression = 0;
+    std::vector<uint32_t> expected_0{1};
+    std::vector<uint32_t> expected_1{0};
+    std::vector<uint32_t> results;
 
-    std::vector<uint32_t> expected{0};
-    std::vector<uint32_t> results{search(args, search_args)};
-
-    EXPECT_EQ(expected, results);
+    for (auto folder: dirs)
+    {
+        search_args.path_in = std::string(DATA_DIR) + folder;
+        search_args.expression = 0;
+        results = search(args, search_args);
+        EXPECT_EQ(expected_0, results);
+        results.clear();
+        search_args.expression = 1;
+        results = search(args, search_args);
+        EXPECT_EQ(expected_1, results);
+        results.clear();
+        std::filesystem::remove_all(search_args.path_in);
+    }
 }

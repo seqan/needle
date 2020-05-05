@@ -84,15 +84,17 @@ void get_sequences(std::vector<std::filesystem::path> const & sequence_files,
 void get_minimizers(arguments const & args, seqan3::concatenated_sequences<seqan3::dna4_vector> const & sequences,
                     robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table,
                     robin_hood::unordered_set<uint64_t> const & genome_set_table,
-                    std::filesystem::path const & genome_file = "")
+                    std::filesystem::path const & genome_file = "", bool only_genome = false)
 {
     // Count minimizer in sequence file
     for (auto seq : sequences)
     {
         for (auto & minHash : compute_minimizer(seq, args.k, args.window_size, args.shape, args.seed))
         {
+            if (!only_genome)
+                hash_table[minHash]++;
             //TODO: Use unordered_set contains function instead of find, only works in C++20
-            if ((genome_file == "") || (genome_set_table.find(minHash) != genome_set_table.end()))
+            else if ((genome_file == "") || (genome_set_table.find(minHash) != genome_set_table.end()))
                 hash_table[minHash]++;
         }
     }
@@ -174,6 +176,10 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
                                     std::ranges::back_inserter(buffer));
     args.shape = std::stoull(buffer);
+    buffer.clear();
+    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
+                                    std::ranges::back_inserter(buffer));
+    ibf_args.cutoffs.push_back(std::stoi(buffer));
     buffer.clear();
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
                                     std::ranges::back_inserter(buffer));
@@ -454,10 +460,8 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, std::filesystem::path header_file,
                           arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
 {
-
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{}; // Storage for minimizers
-    seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for sequences in genome
     uint32_t mean; // the normalized expression value
     std::vector<uint32_t> normal_expression_values;
     // For header file reading
@@ -472,13 +476,14 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, st
     {
         std::vector<std::filesystem::path> header_files{};
 
-        for (auto & elem : minimizer_files)
+        for (auto elem : minimizer_files)
             header_files.push_back(elem.replace_extension(".header"));
 
         statistic_results = statistics(args, ibf_args, header_files);
 
         for (unsigned i = 0; i < statistic_results.size(); ++i)
             counts.push_back(std::get<1>(statistic_results[i])[2]); // Get maximum count of all files
+
 
         if (expression_levels.size() == 0) // If no expression levels are given
         {
@@ -503,9 +508,6 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimizer_files, st
 					   seqan3::bin_count{minimizer_files.size()}, seqan3::bin_size{get_bin_size(counts[i], fpr,
                                                                                                 ibf_args.num_hash)},
 					   seqan3::hash_function_count{ibf_args.num_hash}));
-
-    // TODO: Take cutoffs from user?
-    ibf_args.cutoffs.assign(minimizer_files.size(),0);
 
     // Add minimizers to ibf
     for (unsigned i = 0; i < minimizer_files.size(); i++)
@@ -691,7 +693,7 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
         outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[seen_before].stem()}
                      + ".header");
         outfile << args.seed << " " << std::to_string(args.k) << " " << args.window_size << " " << args.shape << " "
-                << ibf_args.normalization_method << " " << mean << "\n";
+                << ibf_args.cutoffs[i] << " " << ibf_args.normalization_method << " " << mean << "\n";
         for (unsigned k = 0; k < counts.size(); k++)
             outfile  << ibf_args.expression_levels[k] << " ";
 
@@ -714,6 +716,8 @@ void build_ibf(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05)
         if (entry.path().extension() == ".minimizer")
             minimizer_files.push_back(entry.path());
     }
+    // necessary, because std::filesystem::directory_iterator's order is unspecified
+    std::sort(minimizer_files.begin(), minimizer_files.end());
     ibf(minimizer_files, "", args, ibf_args, fpr);
     minimizer_files.clear();
 }
@@ -729,6 +733,7 @@ void test(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05, bool pri
         std::filesystem::create_directory(std::string(path_out/"Genome_")+m);
         auto start = std::chrono::high_resolution_clock::now();
         ibf_args.path_out = std::string(path_out/"Genome_")+m +"/";
+        ibf_args.genome_file = genome_file;
         ibf_args.normalization_method = m;
         build_ibf(args, ibf_args, fpr);
         auto stop = std::chrono::high_resolution_clock::now();
