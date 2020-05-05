@@ -107,6 +107,6 @@ before_script:
   - cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
 
 script:
-  - make -k -j2
+  - make -k -j2 api_test cli_test
   - ctest . --output-on-failure
 
