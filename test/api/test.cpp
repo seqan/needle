@@ -177,7 +177,7 @@ TEST(ibf, genom_median_no_match)
 
     EXPECT_EQ(expected, medians);
 }
-/*
+
 TEST(ibf, genom_mean)
 {
     arguments args{};
@@ -194,7 +194,7 @@ TEST(ibf, genom_mean)
 
     EXPECT_EQ(expected, means);
 }
-*/
+
 TEST(insert, example)
 {
     arguments args{};
@@ -484,7 +484,7 @@ TEST(test, small_example)
     arguments args{};
     ibf_arguments ibf_args{};
     initialization_args(args);
-    std::vector<std::string> dirs{"Genome_median/", "median/", "Genome_mean/", "mean/"};
+    std::vector<std::string> dirs{"Genome_median/", "Genome_mean/", "median/", "mean/"};
     ibf_args.expression_levels = {0, 1};
     ibf_args.path_out = std::string(DATA_DIR);
     ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta",
@@ -512,8 +512,8 @@ TEST(test, small_example)
         results = search(args, search_args);
         EXPECT_EQ(expected_1, results);
         results.clear();
-        if (folder == "Genome_median/")
-            expected_1 = {1, 0};
+        if (folder == "Genome_mean/")
+            expected_1 = {1, 0}; // For median and mean
         std::filesystem::remove_all(search_args.path_in);
     }
 }

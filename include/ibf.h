@@ -227,7 +227,8 @@ void store_ibf(IBFType const & ibf,
 // Calculate normalized expression value
 uint32_t normalization_method(arguments const & args, ibf_arguments const & ibf_args,
                               seqan3::concatenated_sequences<seqan3::dna4_vector> const & sequences,
-                              robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table, unsigned cutoff)
+                              robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table, unsigned cutoff,
+                              robin_hood::unordered_set<uint64_t> const & genome_set_table)
 {
     std::vector<uint32_t> counts;
     uint32_t mean; // the normalized expression value
@@ -261,7 +262,8 @@ uint32_t normalization_method(arguments const & args, ibf_arguments const & ibf_
         // Determine mean expression of one sample
         for (auto & elem : hash_table)
         {
-            if (elem.second > 0)
+            if ((elem.second > 0) && ((ibf_args.genome_file == "")
+                                       || (genome_set_table.find(elem.first) != genome_set_table.end())))
             {
                 sum = sum + (elem.second * elem.second);
                 sum_hash = sum_hash + elem.second;
@@ -411,9 +413,10 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
         // Calculate normalized expression value in one experiment
         // if genome file is given, calculation are based on genome sequences
         if (ibf_args.genome_file != "")
-            mean = normalization_method(args, ibf_args, genome_sequences, hash_table, ibf_args.cutoffs[i]);
+            mean = normalization_method(args, ibf_args, genome_sequences, hash_table, ibf_args.cutoffs[i],
+                                        genome_set_table);
         else
-            mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
+            mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i], genome_set_table);
 
         sequences.clear();
         normal_expression_values.push_back(mean);
@@ -597,9 +600,10 @@ std::vector<uint32_t> insert(arguments const & args, ibf_arguments & ibf_args, s
         // Calculate normalized expression value in one experiment
         // if genome file is given, calculation are based on genome sequences
         if (ibf_args.genome_file != "")
-            mean = normalization_method(args, ibf_args, genome_sequences, hash_table, ibf_args.cutoffs[i]);
+            mean = normalization_method(args, ibf_args, genome_sequences, hash_table, ibf_args.cutoffs[i],
+                                        genome_set_table);
         else
-            mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
+            mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i], genome_set_table);
 
         normal_expression_values.push_back(mean);
         sequences.clear();
@@ -659,9 +663,10 @@ void minimizer(arguments const & args, ibf_arguments & ibf_args)
         // Calculate normalized expression value in one experiment
         // if genome file is given, calculation are based on genome sequences
         if (ibf_args.genome_file != "")
-            mean = normalization_method(args, ibf_args, genome_sequences, hash_table, ibf_args.cutoffs[i]);
+            mean = normalization_method(args, ibf_args, genome_sequences, hash_table, ibf_args.cutoffs[i],
+                                        genome_set_table);
         else
-            mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
+            mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i], genome_set_table);
 
         counts.assign(ibf_args.expression_levels.size(),0);
         for (auto & elem : hash_table)
