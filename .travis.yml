@@ -1,78 +1,111 @@
 version: ~> 1.0
 dist: xenial
 language: cpp
-os: linux
 
 git:
   submodules: true
   quiet: true
+  depth: 3
 
-cache:
-  ccache: true
+addons:
+  apt:
+    sources:
+      - sourceline: 'ppa:ubuntu-toolchain-r/test'
+    packages:
+      - g++-7
+      - g++-8
+      - g++-9
 
-# https://docs.travis-ci.com/user/languages/c/#gcc-on-linux
+# https://docs.travis-ci.com/user/languages/c
 jobs:
   include:
-    # works on Precise and Trusty
     - os: linux
-      addons:
-        apt:
-          sources:
-            - sourceline: 'ppa:ubuntu-toolchain-r/test'
-          packages:
-            - g++-7
+      name: "Debug gcc7"
+      cache: ccache
       env:
-        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+        - CXX=g++-7
+        - CC=gcc-7
         - BUILD_TYPE=Release
-        - CMAKE_VERSION=3.8.2
     - os: linux
-      addons:
-        apt:
-          sources:
-            - sourceline: 'ppa:ubuntu-toolchain-r/test'
-          packages:
-            - g++-8
+      name: "Debug gcc8"
+      cache: ccache
       env:
-        - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
-        - BUILD_TYPE=Release
-        - CMAKE_VERSION=3.8.2
+        - CXX=g++-8
+        - CC=gcc-8
+        - BUILD_TYPE=Debug
     - os: linux
+      name: "Debug gcc9 std=c++2a"
+      cache: ccache
+      env:
+        - CXX=g++-9
+        - CC=gcc-9
+        - BUILD_TYPE=Debug
+        - CXXFLAGS=-std=c++2a
+    - os: linux
+      name: "Release gcc9"
+      cache: ccache
+      env:
+        - CXX=g++-9
+        - CC=gcc-9
+        - BUILD_TYPE=Release
+    - os: osx
+      name: "Debug gcc9"
+      osx_image: xcode11
+      env:
+        - CXX=g++-9
+        - CC=gcc-9
+        - BUILD_TYPE=Debug
+    - os: osx
+      name: "Release gcc9"
+      osx_image: xcode11
+      env:
+        - CXX=g++-9
+        - CC=gcc-9
+        - BUILD_TYPE=Release
+    - os: linux
+      name: "Documentation"
       addons:
         apt:
           sources:
             - sourceline: 'ppa:ubuntu-toolchain-r/test'
           packages:
             - g++-9
+            - doxygen
+            - doxygen-doc
+            - doxygen-latex
+            - graphviz
+      script:
+        - doxygen --version
+        - doxygen -u doc/Doxyfile
+        - make -j 2 doc 2>doxygen_warnings.txt
+        - cat doxygen_warnings.txt && test ! -s doxygen_warnings.txt
       env:
-        - MATRIX_EVAL="CC=gcc-9 && CXX=g++-9"
-        - BUILD_TYPE=Release
-        - CMAKE_VERSION=3.8.2
-        - CXXFLAGS="-std=c++2a"
-
-before_install:
-  - eval "${MATRIX_EVAL}"
+        - CXX=g++-9
+        - CC=gcc-9
+        - BUILD_TYPE=Debug
+  allow_failures:
+    - name: "Documentation"
+  fast_finish: true
 
 install:
   - |
-    HOME_BIN_PATH=`realpath ~/bin`
-    mkdir -p ${HOME_BIN_PATH}
-  - |
-    # install cmake
-    mkdir -p /tmp/cmake-download
-    wget --no-clobber --directory-prefix=/tmp/cmake-download/ https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz
-    tar -C /tmp/ -zxvf /tmp/cmake-download/cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz
-    export PATH="/tmp/cmake-${CMAKE_VERSION}-Linux-x86_64/bin:${PATH}"
-  - ccache --version
+    # install cmake 3.8.2 if we are on linux
+    if [ $TRAVIS_OS_NAME = linux ]
+    then
+      CMAKE_VERSION="3.8.2"
+      mkdir -p /tmp/cmake-download
+      wget --no-clobber --directory-prefix=/tmp/cmake-download/ https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz
+      tar -C /tmp/ -zxf /tmp/cmake-download/cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz
+      export PATH="/tmp/cmake-${CMAKE_VERSION}-Linux-x86_64/bin:${PATH}"
+    fi
   - $CXX -v
   - cmake --version
+
 before_script:
   - mkdir build
   - cd build
   - cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
+
 script:
   - make -k -j2
-  - |
-    ctest . --output-on-failure
-after_script:
-  - ccache -s
-
+  - ctest . --output-on-failure
