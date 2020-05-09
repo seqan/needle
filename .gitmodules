@@ -2,6 +2,3 @@
 	path = lib/seqan3
 	url = https://github.com/seqan/seqan3.git
 	branch = master
-[submodule "gtest"]
-	path = lib/gtest
-	url = https://github.com/google/googletest.git
