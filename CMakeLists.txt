@@ -31,7 +31,5 @@ add_subdirectory (doc EXCLUDE_FROM_ALL)
 
 ## TEST
 
-add_subdirectory (lib/gtest EXCLUDE_FROM_ALL)
 enable_testing ()
 add_subdirectory (test EXCLUDE_FROM_ALL)
-message (STATUS "${FontBold}You can run `make test` to build and run tests.${FontReset}")
