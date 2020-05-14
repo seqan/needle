@@ -70,7 +70,7 @@ Results: 0 1
 ```
 
 ## Insert
-After an IBF is created, it is possible to add further experiments with the insert function, but only if it is an uncompressed IBF. In order to have a consistent IBF the same parameters (k-mer size, window size, normalization method, ...) should be chosen. 
+After an IBF is created, it is possible to add further experiments with the insert function, but only if it is an uncompressed IBF. In order to have a consistent IBF the same parameters (k-mer size, window size, normalization method, ...) should be chosen.
 
 ```
 ./needle ibf ../needle/test/data/exp_0*.fasta -m 2 -e 0.5 -b 100000 // Create IBF with one experiment
