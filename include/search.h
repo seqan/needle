@@ -1,26 +1,24 @@
 #pragma once
 
-#include <algorithm>
-#include <deque>
-#include <iostream>
-#include <math.h>
-#include <numeric>
-
-#if SEQAN3_WITH_CEREAL
-#include <cereal/archives/binary.hpp>
-#endif // SEQAN3_WITH_CEREAL
-
-#include <seqan3/alphabet/nucleotide/dna4.hpp>
-#include <seqan3/core/concept/cereal.hpp>
-#include <seqan3/core/debug_stream.hpp>
-#include <seqan3/io/sequence_file/all.hpp>
 #include <seqan3/search/dream_index/interleaved_bloom_filter.hpp>
 #include <seqan3/std/filesystem>
-#include <seqan3/std/ranges>
 
-#include "minimizer.h"
+#include "minimiser.h"
 
-// specific arguments needed for the search
+/*!\brief The arguments necessary for a search.
+ * \param std::filesystem::path search_file The sequence file containing the transcripts to be searched for.
+ * \param std::filesystem::path exp_file    The expression file (a tab seperated file containing expression information
+ *                                          per transcript given). Optimally, it is ordered by the expression levels.
+ *                                          Does not need to be specified.
+ * \param std::filesystem::path path_in     The path to the directory where the IBFs can be found. Default: Current
+ *                                          directory.
+ * \param float expression                  The expression level that should be used when searching for a transcript
+ *                                          (if no expression file is given to specify this individually for
+ *                                          different transcripts).
+ * \param float threshold                   The percentage of how many minimisers of a transcript need to be found in an
+ *                                          IBF to be considered as contained in a certain IBF.
+ *
+ */
 struct search_arguments
 {
     std::filesystem::path search_file;
@@ -31,100 +29,21 @@ struct search_arguments
 
 };
 
-// loads compressed and uncompressed ibfs
+/*! \brief Function, loading compressed and uncompressed ibfs
+ *  \param ibf   ibf to load
+ *  \param ipath Path, where the ibf can be found.
+ */
 template <class IBFType>
-void load_ibf(IBFType & ibf,
-               std::filesystem::path ipath)
-{
-    std::ifstream is{ipath, std::ios::binary};
-    cereal::BinaryInputArchive iarchive{is};
-    iarchive(ibf);
-}
+void load_ibf(IBFType & ibf, std::filesystem::path ipath);
 
-// Actual search
+/*! \brief Function, which searches for transcripts in IBF of a given expression level.
+*  \param ibf The IBF.
+*  \param args The arguments of
+*
+*  Simple function, converting fastq files to fasta files using the seqan3 library.
+*  For more information about the SeqAn Library functions see https://docs.seqan.de/seqan/3-master-user/.
+*/
 template <class IBFType>
-std::vector<uint32_t> do_search(IBFType & ibf, arguments const & args, search_arguments const & search_args)
-{
-    std::vector<uint32_t> counter;
-    std::vector<float> expression;
-    std::vector<seqan3::dna4_vector> seqs;
-    std::vector<uint32_t> results;
+std::vector<uint32_t> do_search(IBFType & ibf, arguments const & args, search_arguments const & search_args);
 
-    seqan3::sequence_file_input<my_traits> fin{search_args.search_file};
-    for (auto & [seq, id, qual] : fin)
-    {
-        seqs.push_back(seq);
-    }
-
-    if (search_args.exp_file != "")
-    {
-        std::ifstream file{search_args.exp_file.string()};
-        if (file.is_open())
-        {
-            std::string line;
-            while (std::getline(file, line))
-            {
-                size_t exp_start = line.find_first_not_of('\t', line.find('\t', 0));
-                size_t exp_end = line.find('\n', 0);
-                expression.push_back(std::stod(line.substr(exp_start, exp_end-exp_start)));
-            }
-
-            if (expression.size() != seqs.size())
-                throw std::invalid_argument{"Error! Number of given expression levels do not match number of sequences."};
-        }
-    }
-    else
-    {
-        expression.assign(seqs.size(),search_args.expression);
-    }
-    load_ibf(ibf, search_args.path_in.string() + "IBF_" + std::to_string(expression[0]));
-
-    uint32_t minimizer_length;
-    counter.resize(ibf.bin_count(), 0);
-    results.resize(ibf.bin_count(), 0);
-    for (unsigned i = 0; i < expression.size(); i++)
-    {
-        // If the expression level changes a different ibf needs to be loaded.
-        // In order to keep the number of changes low, it is adviseable to perform all searches in one ibf and then
-        // move on to the next expression level.
-        if ((i > 0) && (expression[i] != expression[i-1]))
-        {
-            std::ifstream is{"IBF_" + std::to_string(expression[i]), std::ios::binary};
-            //seqan3::debug_stream << "IBF_" + std::to_string(expression[i])<< "\n";
-            cereal::BinaryInputArchive iarchive{is};
-            iarchive(ibf);
-        }
-
-        minimizer_length = 0;
-        for (auto & minHash : compute_minimizer(seqs[i], args.k, args.window_size, args.shape, args.seed))
-        {
-            std::transform (counter.begin(), counter.end(), ibf.bulk_contains(minHash).begin(), counter.begin(),
-                            std::plus<int>());
-            ++minimizer_length;
-        }
-
-        for(unsigned j = 0; j < counter.size(); j++)
-        {
-            if (counter[j] >= (minimizer_length * search_args.threshold))
-                results[j] = results[j] + 1;
-        }
-        counter.clear();
-        counter.assign(ibf.bin_count(), 0);
-    }
-
-    return results;
-}
-
-std::vector<uint32_t> search(arguments const & args, search_arguments const & search_args)
-{
-    if (args.compressed)
-    {
-        seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-        return do_search(ibf, args, search_args);
-    }
-    else
-    {
-        seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
-        return do_search(ibf, args, search_args);
-    }
-}
+std::vector<uint32_t> search(arguments const & args, search_arguments const & search_args);
