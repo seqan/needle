@@ -4,6 +4,7 @@
 #include <robin_hood.h>
 
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
+#include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/range/views/minimiser_hash.hpp>
 #include <seqan3/search/kmer_index/shape.hpp>
 
