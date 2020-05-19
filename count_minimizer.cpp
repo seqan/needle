@@ -33,7 +33,7 @@ void initialize_argument_parser(seqan3::argument_parser & parser, cmd_arguments 
     parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_option(args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be equal"
                       " to number of sequence files. Default: Every sequence file is one sample from one experiment.");
-    parser.add_flag(args.paired, 'p', "paired", "If experiments are paired. Default: Not paired.");
+    parser.add_flag(args.paired, 'q', "paired", "If experiments are paired. Default: Not paired.");
     parser.add_option(args.k, 'k', "kmer", "Define kmer size.");
     parser.add_option(args.window_size, 'w', "window", "Define window size.");
     parser.add_option(args.shape, 'p', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
