@@ -7,80 +7,29 @@
 #include <seqan3/core/debug_stream.hpp>
 
 #include "ibf.h"
-#include "minimizer.h"
+#include "minimiser.h"
 #include "search.h"
 
-#ifndef DATA_DIR
-#  define DATA_DIR @DATA_DIR@
+#ifndef DATA_INPUT_DIR
+#  define DATA_INPUT_DIR @DATA_INPUT_DIR@
 #endif
+
+using seqan3::operator""_shape;
 
 void initialization_args(arguments & args)
 {
     args.compressed = true;
     args.k = 4;
-    args.window_size = 4;
-    args.seed = 0;
+    args.shape = seqan3::ungapped{args.k};
+    args.w_size = window_size{4};
+    args.s = seed{0};
 }
 
 void initialization_ibf_args(ibf_arguments & args)
 {
     args.expression_levels = {1};
     args.bin_size = {1000};
-    args.path_out = DATA_DIR;
-}
-
-TEST(minimizer, small_example)
-{
-    using seqan3::operator""_dna4;
-
-    std::vector<seqan3::dna4_vector> seq = {"ACGTCGACGTTTAG"_dna4};
-    std::vector<uint32_t> expected{2,2,2,1,2,2,2,1,1,1,1};
-
-    auto hash_table = compute_occurrences(seq, 4, 4, 0, 0);
-
-    std::vector<uint32_t> minimizer_occurences;
-    for (auto & minHash : compute_minimizer(seq[0], 4, 4, 0, 0))
-    {
-        minimizer_occurences.push_back(hash_table[minHash]);
-    }
-
-    EXPECT_EQ(expected,  minimizer_occurences);
-}
-
-TEST(minimizer, small_example_k_w_unequal)
-{
-    using seqan3::operator""_dna4;
-
-    std::vector<seqan3::dna4_vector> seq = {"ACGTCGACGTTTAG"_dna4};
-    std::vector<uint32_t> expected{2,1,2,1,1};
-
-    auto hash_table = compute_occurrences(seq, 4, 8, 0, 0);
-
-    std::vector<uint32_t> minimizer_occurences;
-    for (auto & minHash : compute_minimizer(seq[0], 4, 8, 0, 0))
-    {
-        minimizer_occurences.push_back(hash_table[minHash]);
-    }
-
-    EXPECT_EQ(expected, minimizer_occurences);
-}
-
-TEST(minimizer, small_example_gaps)
-{
-    using seqan3::operator""_dna4;
-
-    std::vector<seqan3::dna4_vector> seq = {"ACGTCGACGTTTAG"_dna4};
-    std::vector<uint32_t> expected{2,1,2,1,1};
-
-    auto hash_table = compute_occurrences(seq, 5, 8, 0b10101, 0);
-
-    std::vector<uint32_t> minimizer_occurences;
-    for (auto & minHash : compute_minimizer(seq[0], 5, 8, 0b10101, 0))
-    {
-        minimizer_occurences.push_back(hash_table[minHash]);
-    }
-
-    EXPECT_EQ(expected, minimizer_occurences);
+    args.path_out = DATA_INPUT_DIR;
 }
 
 TEST(ibf, median)
@@ -89,7 +38,7 @@ TEST(ibf, median)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
     std::vector<uint32_t> expected{3};
 
@@ -104,12 +53,12 @@ TEST(ibfmin, median)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    std::vector<std::filesystem::path> minimizer_file = {std::string(DATA_DIR) + "mini_example.minimizer"};
+    std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
     std::filesystem::path header_file = "";
 
     std::vector<uint32_t> expected{3};
 
-    std::vector<uint32_t> medians = ibf(minimizer_file, header_file, args, ibf_args);
+    std::vector<uint32_t> medians = ibf(minimiser_file, header_file, args, ibf_args);
 
     EXPECT_EQ(expected, medians);
 }
@@ -120,7 +69,7 @@ TEST(ibf, mean)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     ibf_args.normalization_method = "mean";
 
     std::vector<uint32_t> expected{3};
@@ -136,7 +85,7 @@ TEST(ibf, random)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     ibf_args.normalization_method = "random";
     ibf_args.random = 40;
 
@@ -151,8 +100,8 @@ TEST(ibf, genom_median)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
-    ibf_args.genome_file = std::string(DATA_DIR) + "mini_genom.fasta";
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    ibf_args.genome_file = std::string(DATA_INPUT_DIR) + "mini_genom.fasta";
 
     std::vector<uint32_t> expected{4};
 
@@ -161,15 +110,15 @@ TEST(ibf, genom_median)
     EXPECT_EQ(expected, medians);
 }
 
-// Test a genome which has so different minimizers that some minimizers in seq can not be found
+// Test a genome which has so different minimisers that some minimisers in seq can not be found
 TEST(ibf, genom_median_no_match)
 {
     arguments args{};
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example2.fasta"};
-    ibf_args.genome_file = std::string(DATA_DIR) + "mini_genom.fasta";
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    ibf_args.genome_file = std::string(DATA_INPUT_DIR) + "mini_genom.fasta";
 
     std::vector<uint32_t> expected{1};
 
@@ -184,8 +133,8 @@ TEST(ibf, genom_mean)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
-    ibf_args.genome_file = std::string(DATA_DIR) + "mini_genom.fasta";
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    ibf_args.genome_file = std::string(DATA_INPUT_DIR) + "mini_genom.fasta";
     ibf_args.normalization_method = "mean";
 
     std::vector<uint32_t> expected{4};
@@ -199,37 +148,35 @@ TEST(insert, example)
 {
     arguments args{};
     ibf_arguments ibf_args{};
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "exp_01.fasta", std::string(DATA_DIR) + "exp_02.fasta",
-                               std::string(DATA_DIR) + "exp_11.fasta", std::string(DATA_DIR) + "exp_12.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
+                               std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     ibf_args.samples = {2,2};
     ibf_args.expression_levels = {2};
     ibf_args.bin_size = {100000};
-    ibf_args.path_out = std::string(DATA_DIR);
+    ibf_args.path_out = std::string(DATA_INPUT_DIR);
     args.compressed = false;
     ibf(args, ibf_args);
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> expected_ibf;
-    load_ibf(expected_ibf, std::string(DATA_DIR) + "IBF_" + std::to_string(ibf_args.expression_levels[0]));
-
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "exp_01.fasta", std::string(DATA_DIR) + "exp_02.fasta"};
+    load_ibf(expected_ibf, std::string(DATA_INPUT_DIR) + "IBF_" + std::to_string(ibf_args.expression_levels[0]));
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta"};
     ibf_args.samples = {2};
     ibf(args, ibf_args);
-
     seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> inserted_ibf;
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "exp_11.fasta", std::string(DATA_DIR) + "exp_12.fasta"};
-    insert(args, ibf_args, DATA_DIR);
-    load_ibf(inserted_ibf, std::string(DATA_DIR) + "IBF_" + std::to_string(ibf_args.expression_levels[0]));
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
+    insert(args, ibf_args, DATA_INPUT_DIR);
+    load_ibf(inserted_ibf, std::string(DATA_INPUT_DIR) + "IBF_" + std::to_string(ibf_args.expression_levels[0]));
 
     EXPECT_EQ(expected_ibf, inserted_ibf);
 }
 
-TEST(needle_minimizer, small_example)
+TEST(minimiser, small_example)
 {
     arguments args{};
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    std::vector<robin_hood::unordered_node_map<uint64_t,uint64_t>> expected_hash_tables{   // Minimizers:
+    std::vector<robin_hood::unordered_node_map<uint64_t,uint64_t>> expected_hash_tables{   // minimisers:
                                                                                  {{0,2},   // AAAA
                                                                                   {1,4},   // AAAC
                                                                                   {6,4},   // AACG
@@ -259,14 +206,15 @@ TEST(needle_minimizer, small_example)
     std::vector<uint32_t> expected_normalized_exp_values{3,19};
 
     ibf_args.expression_levels = {0};
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta",
-                               std::string(DATA_DIR) + "mini_example2.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
+                               std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
 
-    minimizer(args, ibf_args);
+    minimiser(args, ibf_args);
     std::vector<uint64_t> counts{};
     uint32_t normalized_exp_value{};
     robin_hood::unordered_node_map<uint64_t,uint64_t> result_hash_table{};
-    std::vector<std::filesystem::path> minimizer_files{};
+    std::vector<std::filesystem::path> minimiser_files{};
+    seqan3::shape expected_shape = seqan3::ungapped{args.k};
 
     for (int i = 0; i < ibf_args.sequence_files.size(); ++i)
     {
@@ -276,9 +224,9 @@ TEST(needle_minimizer, small_example)
                     std::string{ibf_args.sequence_files[i].stem()} + ".header", counts, normalized_exp_value);
 
         EXPECT_EQ(4, args.k);
-        EXPECT_EQ(4, args.window_size);
-        EXPECT_EQ(0, args.seed);
-        EXPECT_EQ(0, args.shape);
+        EXPECT_EQ(4, args.w_size.get());
+        EXPECT_EQ(0, args.s.get());
+        EXPECT_EQ(15, args.shape.to_ulong());
         EXPECT_EQ(0, ibf_args.cutoffs[0]);
         EXPECT_EQ(expected_normalized_exp_values[i], normalized_exp_value);
         EXPECT_EQ("median", ibf_args.normalization_method);
@@ -290,15 +238,15 @@ TEST(needle_minimizer, small_example)
 
         // Test binary file
         read_binary(result_hash_table, std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[i].stem()}
-                    + ".minimizer");
-        minimizer_files.push_back(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[i].stem()}
-                                  + ".minimizer");
+                    + ".minimiser");
+        minimiser_files.push_back(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[i].stem()}
+                                  + ".minimiser");
         EXPECT_EQ(expected_hash_tables[i], result_hash_table);
 
         result_hash_table.clear();
     }
 
-    std::vector<uint32_t> medians = ibf(minimizer_files, "", args, ibf_args);
+    std::vector<uint32_t> medians = ibf(minimiser_files, "", args, ibf_args);
     EXPECT_EQ(expected_normalized_exp_values, medians);
 }
 
@@ -310,11 +258,11 @@ TEST(search, small_example)
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     std::vector<uint32_t> expected{1};
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
     ibf(args, ibf_args);
 
-    search_args.search_file = std::string(DATA_DIR) + "mini_gen.fasta";
+    search_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen.fasta";
     search_args.path_in = ibf_args.path_out;
     search_args.expression = 1;
 
@@ -331,12 +279,12 @@ TEST(search, small_example_uncompressed)
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     std::vector<uint32_t> expected{1};
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     args.compressed = false;
 
     ibf(args, ibf_args);
 
-    search_args.search_file = std::string(DATA_DIR) + "mini_gen.fasta";
+    search_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen.fasta";
     search_args.path_in = ibf_args.path_out;
     search_args.expression = 1;
 
@@ -353,11 +301,11 @@ TEST(search, small_example_gene_not_found)
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     std::vector<uint32_t> expected{0};
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
     ibf(args, ibf_args);
 
-    search_args.search_file = std::string(DATA_DIR) + "mini_gen2.fasta";
+    search_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen2.fasta";
     search_args.path_in = ibf_args.path_out;
     search_args.expression = 1;
 
@@ -374,13 +322,13 @@ TEST(search, small_example_own_cutoffs)
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     std::vector<uint32_t> expected{0};
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     ibf_args.expression_levels = {0};
     ibf_args.cutoffs = {2};
 
     ibf(args, ibf_args);
 
-    search_args.search_file = std::string(DATA_DIR) + "mini_gen3.fasta";
+    search_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen3.fasta";
     search_args.path_in = ibf_args.path_out;
     search_args.expression = 1;
 
@@ -398,11 +346,11 @@ TEST(search, threshold)
     initialization_ibf_args(ibf_args);
     std::vector<uint32_t> expected_05{1};
     std::vector<uint32_t> expected_07{0};
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
     ibf(args, ibf_args);
 
-    search_args.search_file = std::string(DATA_DIR) + "mini_gen4.fasta";
+    search_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen4.fasta";
     search_args.path_in = ibf_args.path_out;
     search_args.expression = 1;
 
@@ -423,15 +371,15 @@ TEST(search, expression_file)
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     std::vector<uint32_t> expected{1};
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     ibf_args.expression_levels = {1};
     ibf_args.cutoffs = {2};
 
     ibf(args, ibf_args);
 
-    search_args.search_file = std::string(DATA_DIR) + "mini_genes.fasta";
+    search_args.search_file = std::string(DATA_INPUT_DIR) + "mini_genes.fasta";
     search_args.path_in = ibf_args.path_out;
-    search_args.exp_file  = {std::string(DATA_DIR) + "mini_example_exp.tsv"};
+    search_args.exp_file  = {std::string(DATA_INPUT_DIR) + "mini_example_exp.tsv"};
 
     std::vector<uint32_t> results{search(args, search_args)};
 
@@ -444,17 +392,17 @@ TEST(search, example)
     ibf_arguments ibf_args{};
     search_arguments search_args{};
     std::vector<uint32_t> expected{0,1};
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "exp_01.fasta", std::string(DATA_DIR) + "exp_02.fasta",
-                               std::string(DATA_DIR) + "exp_11.fasta", std::string(DATA_DIR) + "exp_12.fasta"};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
+                               std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     ibf_args.samples = {2,2};
     ibf_args.expression_levels = {0.5};
     ibf_args.bin_size = {100000};
-    ibf_args.path_out = std::string(DATA_DIR);
+    ibf_args.path_out = std::string(DATA_INPUT_DIR);
     args.compressed = false;
     ibf(args, ibf_args);
 
-    // ./needle-search DATA_DIR"+"/gene.fasta -i DATA_DIR"+"/ -e 0.5 -c
-    search_args.search_file = std::string(DATA_DIR) + "gene.fasta";
+    // ./needle-search DATA_INPUT_DIR"+"/gene.fasta -i DATA_INPUT_DIR"+"/ -e 0.5 -c
+    search_args.search_file = std::string(DATA_INPUT_DIR) + "gene.fasta";
     search_args.path_in = ibf_args.path_out;
     search_args.expression = 0.5;
 
@@ -467,14 +415,14 @@ TEST(stats, example)
 {
     arguments args{};
     ibf_arguments ibf_args{};
-    std::vector<std::filesystem::path> minimizer_files{std::string(DATA_DIR) + "exp_01.header",
-                                                       std::string(DATA_DIR) + "exp_11.header"};
+    std::vector<std::filesystem::path> minimiser_files{std::string(DATA_INPUT_DIR) + "exp_01.header",
+                                                       std::string(DATA_INPUT_DIR) + "exp_11.header"};
 
     std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> expected{{{0.0, 29.0}, {62496, 63053, 63053}},
                                                                                 {{1.0, 29.0}, {6116, 6359, 6359}},
                                                                                 {{4.0, 29.0}, {7, 25, 25}}};
 
-    std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> results = statistics(args, ibf_args, minimizer_files);
+    std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> results = statistics(args, ibf_args, minimiser_files);
 
     EXPECT_EQ(expected, results);
 }
@@ -486,16 +434,16 @@ TEST(test, small_example)
     initialization_args(args);
     std::vector<std::string> dirs{"Genome_median/", "Genome_mean/", "median/", "mean/"};
     ibf_args.expression_levels = {0, 1};
-    ibf_args.path_out = std::string(DATA_DIR);
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta",
-                               std::string(DATA_DIR) + "mini_example2.fasta"};
-    ibf_args.genome_file = std::string(DATA_DIR) + "mini_genom.fasta";
+    ibf_args.path_out = std::string(DATA_INPUT_DIR);
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
+                               std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    ibf_args.genome_file = std::string(DATA_INPUT_DIR) + "mini_genom.fasta";
     test(args, ibf_args);
     for (auto folder: dirs)
-        EXPECT_TRUE(std::filesystem::exists(std::string(DATA_DIR) + folder));
+        EXPECT_TRUE(std::filesystem::exists(std::string(DATA_INPUT_DIR) + folder));
 
     search_arguments search_args{};
-    search_args.search_file = std::string(DATA_DIR) + "mini_gen.fasta";
+    search_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen.fasta";
     std::vector<uint32_t> expected_0{1, 0};
     std::vector<uint32_t> expected_1{0, 0};
     std::vector<uint32_t> results;
@@ -503,7 +451,7 @@ TEST(test, small_example)
 
     for (auto folder: dirs)
     {
-        search_args.path_in = std::string(DATA_DIR) + folder;
+        search_args.path_in = std::string(DATA_INPUT_DIR) + folder;
         search_args.expression = 0;
         results = search(args, search_args);
         EXPECT_EQ(expected_0, results);
@@ -525,24 +473,24 @@ TEST(test, small_example_own_cutoffs)
     initialization_args(args);
     std::vector<std::string> dirs{"Genome_median/", "median/", "Genome_mean/", "mean/"};
     ibf_args.expression_levels = {0, 1};
-    ibf_args.path_out = std::string(DATA_DIR);
+    ibf_args.path_out = std::string(DATA_INPUT_DIR);
     ibf_args.cutoffs = {2};
-    ibf_args.sequence_files = {std::string(DATA_DIR) + "mini_example.fasta"};
-    ibf_args.genome_file = std::string(DATA_DIR) + "mini_genom.fasta";
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    ibf_args.genome_file = std::string(DATA_INPUT_DIR) + "mini_genom.fasta";
     test(args, ibf_args);
 
     for (auto folder: dirs)
-        EXPECT_TRUE(std::filesystem::exists(std::string(DATA_DIR) + folder));
+        EXPECT_TRUE(std::filesystem::exists(std::string(DATA_INPUT_DIR) + folder));
 
     search_arguments search_args{};
-    search_args.search_file = std::string(DATA_DIR) + "mini_gen3.fasta";
+    search_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen3.fasta";
     std::vector<uint32_t> expected_0{1};
     std::vector<uint32_t> expected_1{0};
     std::vector<uint32_t> results;
 
     for (auto folder: dirs)
     {
-        search_args.path_in = std::string(DATA_DIR) + folder;
+        search_args.path_in = std::string(DATA_INPUT_DIR) + folder;
         search_args.expression = 0;
         results = search(args, search_args);
         EXPECT_EQ(expected_0, results);
