@@ -10,12 +10,12 @@
 #include <seqan3/std/filesystem>
 #include <seqan3/std/ranges>
 
-#include "minimizer.h"
+#include "minimiser.h"
 
 uint8_t num_bins;
 
 uint64_t constexpr num_possible_kmers{274877906944}; // 4**k
-uint8_t constexpr min_num_minimizer_per_read{3}; // per read
+uint8_t constexpr min_num_minimiser_per_read{3}; // per read
 
 uint8_t k;
 size_t window_size;
@@ -35,7 +35,7 @@ struct cmd_arguments
 void initialize_argument_parser(seqan3::argument_parser & parser, cmd_arguments & args)
 {
     parser.info.author = "Mitra Darvish";
-    parser.info.short_description = "Calculates Minimizer.";
+    parser.info.short_description = "Calculates minimiser.";
     parser.add_positional_option(args.file_path_fasta, "Please provide a fasta file.");
     parser.add_option(args.file_path_gene, 'g', "gene", "Fasta file with gene information.");
     parser.add_option(args.file_path_out, 'o', "out", "File to which the output is saved to.");
@@ -49,7 +49,7 @@ void initialize_argument_parser(seqan3::argument_parser & parser, cmd_arguments 
 int main(int const argc, char const ** argv)
 {
 
-    seqan3::argument_parser miniparser("Minimizer", argc, argv);
+    seqan3::argument_parser miniparser("minimiser", argc, argv);
     cmd_arguments args{};
     initialize_argument_parser(miniparser, args);
 
@@ -88,7 +88,7 @@ int main(int const argc, char const ** argv)
 
     std::cerr << "Window size used for this set: " << args.window_size << std::endl;
 
-    std::cerr << "Computing minimizers in all sequences." << std::endl;
+    std::cerr << "Computing minimisers in all sequences." << std::endl;
 
     start = std::chrono::steady_clock::now();
     auto hash_table = compute_occurrences(seqs, k, window_size, args.shape, seed);
@@ -101,7 +101,7 @@ int main(int const argc, char const ** argv)
     size_t seq_idx{0};
     for (auto & seq : seqs)
     {
-        for (auto & minHash : compute_minimizer(seq, k, window_size, args.shape, seed))
+        for (auto & minHash : compute_minimiser(seq, k, window_size, args.shape, seed))
         {
             counts.push_back(hash_table[minHash]);
         }
@@ -126,7 +126,7 @@ int main(int const argc, char const ** argv)
         for (size_t idx = 0; idx < gene_ids.size(); ++idx)
         {
             outfile << gene_ids[idx] << "\t" << idx << "\t[";
-            for (auto hash : compute_minimizer(gene_seqs[idx], k, window_size, args.shape, seed))
+            for (auto hash : compute_minimiser(gene_seqs[idx], k, window_size, args.shape, seed))
             {
                 outfile << hash_table[hash] << ",";
                 counts.push_back(hash_table[hash]);

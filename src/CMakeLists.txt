@@ -1,10 +1,9 @@
-cmake_minimum_required (VERSION 3.4)
+cmake_minimum_required (VERSION 3.8)
 
-## DEPENDENCIES
+add_library ("${PROJECT_NAME}_lib" STATIC ibf.cpp search.cpp)
+target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC seqan3::seqan3)
+target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC robin_hood)
+target_include_directories ("${PROJECT_NAME}_lib" PUBLIC ../include)
 
-# Dependency: SeqAn3.
-find_package (SeqAn3 REQUIRED HINTS ../lib/seqan3/build_system)
-add_executable (count count.cpp)
-target_link_libraries (count seqan3::seqan3)
-target_link_libraries (count robin_hood)
-target_include_directories (count PUBLIC ../include)
+add_executable ("${PROJECT_NAME}" main.cpp)
+target_link_libraries ("${PROJECT_NAME}" "${PROJECT_NAME}_lib")
