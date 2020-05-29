@@ -1,6 +1,5 @@
 #pragma once
 
-#include <seqan3/search/dream_index/interleaved_bloom_filter.hpp>
 #include <seqan3/std/filesystem>
 
 #include "minimiser.h"
@@ -29,21 +28,18 @@ struct search_arguments
 
 };
 
-/*! \brief Function, loading compressed and uncompressed ibfs
- *  \param ibf   ibf to load
- *  \param ipath Path, where the ibf can be found.
- */
-template <class IBFType>
-void load_ibf(IBFType & ibf, std::filesystem::path ipath);
-
 /*! \brief Function, which searches for transcripts in IBF of a given expression level.
-*  \param ibf The IBF.
-*  \param args The arguments of
-*
-*  Simple function, converting fastq files to fasta files using the seqan3 library.
-*  For more information about the SeqAn Library functions see https://docs.seqan.de/seqan/3-master-user/.
+*  \param ibf         The IBF.
+*  \param args        The arguments.
+*  \param search_args The search arguments.
+* \returns result vector.
 */
 template <class IBFType>
 std::vector<uint32_t> do_search(IBFType & ibf, arguments const & args, search_arguments const & search_args);
 
+/*! \brief Function, which calls the search functions.
+*  \param args        The arguments.
+*  \param search_args The search arguments.
+* \returns result vector.
+*/
 std::vector<uint32_t> search(arguments const & args, search_arguments const & search_args);

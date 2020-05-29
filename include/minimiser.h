@@ -6,6 +6,7 @@
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 #include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/range/views/minimiser_hash.hpp>
+#include <seqan3/search/dream_index/interleaved_bloom_filter.hpp>
 #include <seqan3/search/kmer_index/shape.hpp>
 
 //!\brief arguments used for construction of the IBF as well as the search
@@ -14,7 +15,7 @@ struct arguments
     bool compressed = false;
     uint8_t k{20};
     window_size w_size{60};
-    seqan3::shape shape;
+    seqan3::shape shape = seqan3::ungapped{k};
     seed s{0x8F3F73B5CF1C9ADE};
 
 };
@@ -28,26 +29,27 @@ struct my_traits : seqan3::sequence_file_input_default_traits_dna
     //using sequence_container = seqan3::bitcompressed_vector<alph>;
 };
 
-
-/*! \brief Function, that calculates all minimisers for a set of sequences.
- *  \param seqs        A std::vector of sequences.
- *  \param window_size The window size to use.
- *  \param shape       The shape to use.
- *  \param seed        The seed to use.
+/*! \brief Function, loading compressed and uncompressed ibfs
+ *  \param ibf   ibf to load
+ *  \param ipath Path, where the ibf can be found.
  */
-auto compute_occurrences(const std::vector<seqan3::dna4_vector> & seqs, window_size window_size, seqan3::shape shape,
-                         seed seed)
+template <class IBFType>
+void load_ibf(IBFType & ibf, std::filesystem::path ipath)
 {
-    robin_hood::unordered_map<uint64_t, uint32_t> occurring_kmers{};
-    unsigned total_count{0};
+    std::ifstream is{ipath, std::ios::binary};
+    cereal::BinaryInputArchive iarchive{is};
+    iarchive(ibf);
+}
 
-    for (auto & seq : seqs)
-    {
-        for (auto minHash : seqan3::views::minimiser_hash(seq, shape, window_size, seed))
-        {
-            ++occurring_kmers[minHash];
-        }
-    }
-
-    return occurring_kmers;
+/*! \brief Function, which stored compressed and uncompressed ibfs
+ *  \param ibf   The IBF to store.
+ *  \param opath Path, where the IBF can be found.
+ */
+template <class IBFType>
+void store_ibf(IBFType const & ibf,
+               std::filesystem::path opath)
+{
+    std::ofstream os{opath, std::ios::binary};
+    cereal::BinaryOutputArchive oarchive{os};
+    oarchive(seqan3::interleaved_bloom_filter(ibf));
 }
