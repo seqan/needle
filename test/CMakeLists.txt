@@ -5,6 +5,7 @@ file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/output)
 add_definitions (-DOUTPUTDIR=\"${CMAKE_CURRENT_BINARY_DIR}/output/\")
 add_definitions (-DDATADIR=\"${CMAKE_CURRENT_BINARY_DIR}/data/\")
 add_definitions (-DBINDIR=\"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/\")
+add_definitions (-DDATA_INPUT_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/\")
 
 # Download and build Googletest module. The interface target 'gtest_all' contains all libs and header paths.
 message (STATUS "Configuring tests. Googletest will be downloaded on demand only.")

@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.8)
 
 add_cli_test (needle_options_test.cpp)
 add_cli_test (ibf_options_test.cpp)
-target_use_datasources (ibf_options_test FILES exp_01.fasta mini_example.fasta mini_example.header mini_example.minimizer)
+target_use_datasources (ibf_options_test FILES exp_01.fasta mini_example.fasta mini_example.header mini_example.minimiser)
 add_cli_test (insert_options_test.cpp)
 add_cli_test (minimiser_options_test.cpp)
 target_use_datasources (minimiser_options_test FILES mini_example.fasta)
