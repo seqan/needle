@@ -32,9 +32,9 @@
 *.app
 
 # Files from testing
-test/data/IBF_*
-test/data/*.header
-test/data/*.minimizer
+test/data/IBF_0.000000
+test/data/IBF_0.500000
+test/data/IBF_2.000000
 test/data/Genome_mean/
 test/data/Genome_median/
 test/data/mean/

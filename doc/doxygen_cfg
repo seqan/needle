@@ -23,13 +23,13 @@
 # title of most generated pages and in a few other places.
 # The default value is: My Project.
 
-PROJECT_NAME           = "fastq_to_fasta"
+PROJECT_NAME           = "Needle"
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description
 # for a project that appears at the top of each page and should give viewer a
 # quick idea about the purpose of the project. Keep the description short.
 
-PROJECT_BRIEF          = "A template for creation of SeqAn3 apps, with a FASTQ to FASTA example app."
+PROJECT_BRIEF          = "An application for fast and efficient searches of NGS data."
 
 # If the EXTRACT_ALL tag is set to YES, doxygen will assume all entities in
 # documentation are documented, even if no documentation was available. Private
