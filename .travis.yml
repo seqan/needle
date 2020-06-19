@@ -59,6 +59,21 @@ jobs:
         - BUILD_TYPE=Release
         - CXXFLAGS="-std=c++17 -fconcepts"
     - os: osx
+      name: "Debug gcc9 Xcode11"
+      osx_image: xcode11
+      env:
+        - CXX=g++-9
+        - CC=gcc-9
+        - BUILD_TYPE=Debug
+    - os: linux
+      name: "Release gcc10"
+      cache: [ccache, apt]
+      env:
+        - CXX=g++-10
+        - CC=gcc-10
+        - BUILD_TYPE=Release
+        - CXXFLAGS="-std=c++17 -fconcepts"
+    - os: osx
       name: "Release gcc9 Xcode11"
       osx_image: xcode11
       env:
