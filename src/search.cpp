@@ -73,7 +73,8 @@ std::vector<uint32_t> do_search(IBFType & ibf, arguments const & args, search_ar
         minimiser_length = 0;
         for (auto minHash : seqan3::views::minimiser_hash(seqs[i], args.shape, args.w_size, args.s))
         {
-            std::transform (counter.begin(), counter.end(), ibf.bulk_contains(minHash).begin(), counter.begin(),
+            auto agent = ibf.membership_agent();
+            std::transform (counter.begin(), counter.end(), agent.bulk_contains(minHash).begin(), counter.begin(),
                             std::plus<int>());
             ++minimiser_length;
         }

@@ -21,8 +21,8 @@ void initialization_args(arguments & args)
     args.compressed = true;
     args.k = 4;
     args.shape = seqan3::ungapped{args.k};
-    args.w_size = window_size{4};
-    args.s = seed{0};
+    args.w_size = seqan3::window_size{4};
+    args.s = seqan3::seed{0};
 }
 
 void initialization_ibf_args(ibf_arguments & args)

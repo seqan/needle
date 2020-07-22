@@ -6,7 +6,7 @@
 #include "search.h"
 
 uint32_t w_size;
-uint64_t shape;
+uint64_t shape{};
 uint64_t se;
 
 void initialise_argument_parser(seqan3::argument_parser & parser, arguments & args)
@@ -21,13 +21,15 @@ void initialise_argument_parser(seqan3::argument_parser & parser, arguments & ar
 
 void parsing(seqan3::argument_parser & parser, arguments & args)
 {
+    w_size = args.w_size.get();
+    se = args.s.get();
     parser.parse();
-    args.w_size = window_size{w_size};
+    args.w_size = seqan3::window_size{w_size};
     if (shape == 0)
             args.shape = seqan3::ungapped{args.k};
-        else
+    else
             args.shape = seqan3::bin_literal{shape};
-    args.s = seed{se};
+    args.s = seqan3::seed{se};
 }
 
 // Initialize arguments for ibf and minimiser
