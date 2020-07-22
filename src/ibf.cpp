@@ -124,19 +124,19 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
     // Read first line
     std::string buffer;
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
-                                    std::ranges::back_inserter(buffer));
-    args.s = seed{(uint64_t) std::stoull(buffer)};
+                                    std::cpp20::back_inserter(buffer));
+    args.s = seqan3::seed{(uint64_t) std::stoull(buffer)};
     buffer.clear();
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
-                                    std::ranges::back_inserter(buffer));
+                                    std::cpp20::back_inserter(buffer));
     args.k = std::stoi(buffer);
     buffer.clear();
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
-                                    std::ranges::back_inserter(buffer));
-    args.w_size = window_size{(uint32_t) std::stoi(buffer)};
+                                    std::cpp20::back_inserter(buffer));
+    args.w_size = seqan3::window_size{(uint32_t) std::stoi(buffer)};
     buffer.clear();
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
-                                    std::ranges::back_inserter(buffer));
+                                    std::cpp20::back_inserter(buffer));
     uint64_t shape = (uint64_t) std::stoull(buffer);
     buffer.clear();
     if (shape == 0)
@@ -145,15 +145,15 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
             args.shape = seqan3::bin_literal{shape};
 
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
-                                    std::ranges::back_inserter(buffer));
+                                    std::cpp20::back_inserter(buffer));
     ibf_args.cutoffs.push_back(std::stoi(buffer));
     buffer.clear();
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
-                                    std::ranges::back_inserter(buffer));
+                                    std::cpp20::back_inserter(buffer));
     ibf_args.normalization_method = buffer;
     buffer.clear();
     std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<'\n'>),
-                                    std::ranges::back_inserter(buffer));
+                                    std::cpp20::back_inserter(buffer));
     normalized_exp_value = std::stoi(buffer);
 
     // Read second line = expression levels
@@ -161,7 +161,7 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
     {
         buffer.clear();
         std::ranges::copy(stream_view | seqan3::views::take_until_or_throw(seqan3::is_char<' '> || seqan3::is_char<'\n'>),
-                                        std::ranges::back_inserter(buffer));
+                                        std::cpp20::back_inserter(buffer));
         ibf_args.expression_levels.push_back(std::stof(buffer));
         if (*stream_it != '\n')
             ++stream_it;
@@ -173,7 +173,7 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
     {
         buffer.clear();
         std::ranges::copy(stream_view | seqan3::views::take_until_or_throw(seqan3::is_char<' '>),
-                                        std::ranges::back_inserter(buffer));
+                                        std::cpp20::back_inserter(buffer));
         counts.push_back(std::stoull(buffer));
         if (*stream_it != '\n')
             ++stream_it;

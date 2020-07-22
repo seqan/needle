@@ -14,9 +14,9 @@ struct arguments
 {
     bool compressed = false;
     uint8_t k{20};
-    window_size w_size{60};
+    seqan3::window_size w_size{60};
     seqan3::shape shape = seqan3::ungapped{k};
-    seed s{0x8F3F73B5CF1C9ADE};
+    seqan3::seed s{0x8F3F73B5CF1C9ADE};
 
 };
 
