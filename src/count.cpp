@@ -2,7 +2,7 @@
 #include <chrono>
 #include <numeric>
 #include <string>
-#include <algorithm>
+#include <algorithm> //reorded because of this error:https://github.com/Homebrew/homebrew-core/issues/44579
 
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 #include <seqan3/argument_parser/all.hpp>

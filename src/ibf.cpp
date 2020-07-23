@@ -4,7 +4,8 @@
 #include <math.h>
 #include <numeric>
 #include <string>
-#include <algorithm>
+#include <algorithm> //reorded because of this error:https://github.com/Homebrew/homebrew-core/issues/44579
+
 
 #if SEQAN3_WITH_CEREAL
 #include <cereal/archives/binary.hpp>
