@@ -100,7 +100,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     ibf_arguments ibf_args{};
     std::vector<std::filesystem::path> minimiser_files{};
     std::filesystem::path header_file = ""; // if only one header file should be used
-    float fpr; // False Positive Rate
+    float fpr{0.05}; // False Positive Rate
 
     parser.info.short_description = "Constructs an IBF from the minimiser and header files created by needle minimiser.";
     parser.add_flag(args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
