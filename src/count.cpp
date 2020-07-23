@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <numeric>
+#include <string>
 #include <algorithm>
 
 #include <seqan3/alphabet/nucleotide/dna4.hpp>

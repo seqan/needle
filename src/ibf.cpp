@@ -1,10 +1,10 @@
-#include <algorithm>
 #include <chrono>
 #include <deque>
 #include <iostream>
 #include <math.h>
 #include <numeric>
 #include <string>
+#include <algorithm>
 
 #if SEQAN3_WITH_CEREAL
 #include <cereal/archives/binary.hpp>
