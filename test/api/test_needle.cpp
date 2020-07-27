@@ -502,3 +502,43 @@ TEST(test, small_example_own_cutoffs)
         std::filesystem::remove_all(search_args.path_in);
     }
 }
+
+TEST(test, small_example_different_threshold)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    initialization_args(args);
+    std::vector<std::string> dirs{"Genome_median/", "Genome_mean/", "median/", "mean/"};
+    ibf_args.expression_levels = {0, 1};
+    ibf_args.path_out = std::string(DATA_INPUT_DIR);
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
+                               std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    ibf_args.genome_file = std::string(DATA_INPUT_DIR) + "mini_genom.fasta";
+    test(args, ibf_args);
+    for (auto folder: dirs)
+        EXPECT_TRUE(std::filesystem::exists(std::string(DATA_INPUT_DIR) + folder));
+
+    search_arguments search_args{};
+    search_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen.fasta";
+    search_args.threshold = 0.7;
+    std::vector<uint32_t> expected_0{1, 0};
+    std::vector<uint32_t> expected_1{0, 0};
+    std::vector<uint32_t> results;
+    robin_hood::unordered_node_map<uint64_t,uint64_t> result_hash_table{};
+
+    for (auto folder: dirs)
+    {
+        search_args.path_in = std::string(DATA_INPUT_DIR) + folder;
+        search_args.expression = 0;
+        results = search(args, search_args);
+        EXPECT_EQ(expected_0, results);
+        results.clear();
+        search_args.expression = 1;
+        results = search(args, search_args);
+        EXPECT_EQ(expected_1, results);
+        results.clear();
+        if (folder == "Genome_mean/")
+            expected_1 = {1, 0}; // For median and mean
+        std::filesystem::remove_all(search_args.path_in);
+    }
+}
