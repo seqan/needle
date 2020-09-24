@@ -71,6 +71,16 @@ int run_needle_ibf(seqan3::argument_parser & parser)
                                                       "one IBF.");
     parser.add_option(ibf_args.experiment_names, 'f', "experiment-names", "If set, names of the experiments are stored"
                                                                           " in a txt file.");
+    float start{0.0};
+    float end{0.0};
+    float steps{0.0};
+
+    parser.add_option(start, '\0', "start", "Start expression value");
+    parser.add_option(end, '\0', "end", "End expression value");
+    parser.add_option(start, '\0', "step", "Step expression value");
+
+     for(float i = start; i < end;i = i + steps)
+         ibf_args.expression_levels.push_back(i);
 
     try
     {

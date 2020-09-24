@@ -153,14 +153,16 @@ TEST(insert, example)
     ibf_args.samples = {2,2};
     ibf_args.expression_levels = {2};
     ibf_args.bin_size = {100000};
+    ibf_args.normalization_method = "median";
     ibf_args.path_out = std::string(DATA_INPUT_DIR);
     args.compressed = false;
     ibf(args, ibf_args);
-
     seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> expected_ibf;
     load_ibf(expected_ibf, std::string(DATA_INPUT_DIR) + "IBF_" + std::to_string(ibf_args.expression_levels[0]));
+
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta"};
     ibf_args.samples = {2};
+    ibf_args.path_out = std::string(DATA_INPUT_DIR);
     ibf(args, ibf_args);
     seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> inserted_ibf;
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
@@ -281,7 +283,6 @@ TEST(search, small_example_uncompressed)
     std::vector<uint32_t> expected{1};
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     args.compressed = false;
-
     ibf(args, ibf_args);
 
     search_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen.fasta";
