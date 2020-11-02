@@ -18,6 +18,79 @@
 
 #include "search.h"
 
+
+// Check if one sequence is present in a given ibf
+template <class IBFType>
+std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vector<uint32_t> & counter, seqan3::dna4_vector const seq, float threshold)
+{
+    uint64_t minimiser_length = 0;
+    for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
+    {
+        auto agent = ibf.membership_agent();
+        std::transform (counter.begin(), counter.end(), agent.bulk_contains(minHash).begin(), counter.begin(),
+                        std::plus<int>());
+        ++minimiser_length;
+    }
+
+    std::vector<uint32_t> results{};
+    results.assign(ibf.bin_count(), 0);
+    for(unsigned j = 0; j < counter.size(); j++)
+    {
+        if (counter[j] >= (minimiser_length * threshold))
+            results[j] = results[j] + 1;
+    }
+    return results;
+}
+
+template <class IBFType>
+void estimate(arguments const & args, search_arguments const & search_args, IBFType & ibf, std::vector<float> & expressions, std::filesystem::path file_out,
+              std::filesystem::path search_file, std::filesystem::path path_in)
+{
+    std::vector<std::string> ids;
+    std::vector<seqan3::dna4_vector> seqs;
+    
+    uint64_t minimiser_length{};
+
+    seqan3::sequence_file_input<my_traits> fin{search_file};
+    for (auto & [seq, id, qual] : fin)
+    {
+        ids.push_back(id);
+        seqs.push_back(seq);
+    }
+
+
+    std::vector<uint32_t> counter;
+    std::vector<uint32_t> results;
+    std::vector<std::vector<uint32_t>> estimations;
+    for (auto & expression : expressions)
+    {
+        load_ibf(ibf, path_in.string() + "IBF_" + std::to_string(expression));
+        for (int i = 0; i < seqs.size(); ++i)
+        {
+            counter.assign(ibf.bin_count(), 0);
+            if (estimations.size() <= i)
+                estimations.push_back(counter);
+            results = check_ibf(args, ibf, counter, seqs[i], search_args.threshold);
+            for(unsigned j = 0; j < counter.size(); j++)
+                estimations[i][j] = std::max(estimations[i][j], (uint32_t) ( results[j] *  expression));
+
+            counter.clear();
+        }
+    }
+    std::ofstream outfile;
+    outfile.open(std::string{file_out});
+    for (int i = 0; i <  seqs.size(); ++i)
+    {
+        outfile << ids[i] << "\t";
+        for (int j = 0; j < ibf.bin_count(); ++j)
+             outfile << estimations[i][j] << "\t";
+
+        outfile << "\n";
+    }
+    outfile.close();
+
+}
+
 // Actual search
 template <class IBFType>
 std::vector<uint32_t> do_search(IBFType & ibf, arguments const & args, search_arguments const & search_args)
@@ -91,6 +164,21 @@ std::vector<uint32_t> do_search(IBFType & ibf, arguments const & args, search_ar
     }
 
     return results;
+}
+
+void call_estimate(arguments const & args, search_arguments const & search_args, std::vector<float> & expressions, std::filesystem::path file_out,
+              std::filesystem::path search_file, std::filesystem::path path_in)
+{
+    if (args.compressed)
+    {
+        seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+        estimate(args, search_args, ibf, expressions, file_out, search_file, path_in);
+    }
+    else
+    {
+        seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
+        estimate(args, search_args, ibf, expressions, file_out, search_file, path_in);
+    }
 }
 
 std::vector<uint32_t> search(arguments const & args, search_arguments const & search_args)

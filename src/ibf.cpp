@@ -422,6 +422,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, st
     std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> statistic_results;
     // Store what user might have entered
     std::vector<float> expression_levels = ibf_args.expression_levels;
+    std::vector<float> ibf_expression_levels_begin = ibf_args.expression_levels;
     std::string normalization_method = ibf_args.normalization_method;
 
     if (header_file == "") // If all header files should be considered
@@ -451,66 +452,62 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, st
             expression_levels = ibf_args.expression_levels;
     }
 
-    // Create IBFs
-    std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
     // TODO: if expression levels given does not match the expression levels in header file, get_bin_size gives
     // incorrect results or even an error, if more expression levels are added
-    for (unsigned i = 0; i < expression_levels.size(); i++)
-        ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
-					   seqan3::bin_count{minimiser_files.size()}, seqan3::bin_size{get_bin_size(counts[i], fpr,
-                                                                                                ibf_args.num_hash)},
-					   seqan3::hash_function_count{ibf_args.num_hash}));
-
-    // Add minimisers to ibf
-    for (unsigned i = 0; i < minimiser_files.size(); i++)
+    for (unsigned j = 0; j < expression_levels.size(); j++)
     {
-        read_binary(hash_table, minimiser_files[i]);
+        seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf =
+        seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
+					   seqan3::bin_count{minimiser_files.size()}, seqan3::bin_size{31261786422 /*get_bin_size(counts[j], fpr,
+                                                                                                ibf_args.num_hash)*/},
+					   seqan3::hash_function_count{ibf_args.num_hash});
+       // Add minimisers to ibf
+       for (unsigned i = 0; i < minimiser_files.size(); i++)
+       {
+           read_binary(hash_table, minimiser_files[i].replace_extension(".minimiser"));
 
-        // Get normalized expression value from header file or recalculate it when other method is asked for
-        if ((normalization_method == ibf_args.normalization_method) | normalization_method == "")
-        {
-            read_header(args, ibf_args, minimiser_files[i].replace_extension(".header"), counts, mean);
-        }
-        // TODO: Add sequences to use - only genome sequences ???
-        /*else
-        {
-            mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
-        }
-        sequences.clear();*/
+           // Get normalized expression value from header file or recalculate it when other method is asked for
+           if ((normalization_method == ibf_args.normalization_method) | normalization_method == "")
+           {
+               read_header(args, ibf_args, minimiser_files[i].replace_extension(".header"), counts, mean);
+           }
+           // TODO: Add sequences to use - only genome sequences ???
+           /*else
+           {
+               mean = normalization_method(args, ibf_args, sequences, hash_table, ibf_args.cutoffs[i]);
+           }
+           sequences.clear();*/
 
-        normal_expression_values.push_back(mean);
+           normal_expression_values.push_back(mean);
 
-        // Every minimiser is stored in IBF, if it occurence divided by the mean is greater or equal expression level
-        for (auto & elem : hash_table)
-        {
-            for (unsigned j = 0; j < expression_levels.size(); j++)
-            {
-                if ((expression_levels[j] == 0) & (elem.second > ibf_args.cutoffs[i])) // for comparison with mantis, SBT
-                    ibfs[j].emplace(elem.first,seqan3::bin_index{i});
-                else if ((((double) elem.second/mean)) >= expression_levels[j])
-                    ibfs[j].emplace(elem.first,seqan3::bin_index{i});
-                else //If elem is not expressed at this level, it won't be expressed at a higher level
-                    break;
-            }
-        }
-        hash_table.clear();
-    }
+           // Every minimiser is stored in IBF, if it occurence divided by the mean is greater or equal expression level
+           for (auto & elem : hash_table)
+           {
+                 if ((expression_levels[j] == 0) & (elem.second > ibf_args.cutoffs[i])) // for comparison with mantis, SBT
+                     ibf.emplace(elem.first,seqan3::bin_index{i});
+                 else if ((((double) elem.second/mean)) >= expression_levels[j])
+                     ibf.emplace(elem.first,seqan3::bin_index{i});
 
-    // Store IBFs
-    for (unsigned i = 0; i < expression_levels.size(); i++)
-    {
-        std::filesystem::path filename{ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[i])};
-        if (args.compressed)
-        {
-            seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf{ibfs[i]};
-		    store_ibf(ibf, filename);
-        }
-        else
-        {
-            store_ibf(ibfs[i], filename);
-        }
+           }
+           hash_table.clear();
+       }
+
+       // Store IBFs
+       std::filesystem::path filename{ibf_args.path_out.string() + "IBF_" + std::to_string(expression_levels[j])};
+       if (args.compressed)
+       {
+           seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf2{ibf};
+		    store_ibf(ibf2, filename);
+       }
+       else
+       {
+           store_ibf(ibf, filename);
+       }
+
 
     }
+    ibf_args.expression_levels = ibf_expression_levels_begin;
+
 
 	return normal_expression_values;
 }

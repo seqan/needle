@@ -252,6 +252,25 @@ TEST(minimiser, small_example)
     EXPECT_EQ(expected_normalized_exp_values, medians);
 }
 
+
+TEST(estimate, small_example)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    search_arguments search_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+    search_args.threshold = 0.8;
+    ibf_args.expression_levels = {0.5, 1, 2};
+    std::vector<uint32_t> expected{1};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+
+    ibf(args, ibf_args);
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    estimate(args, search_args, ibf, ibf_args.expression_levels, std::string(DATA_INPUT_DIR) + "expression.out",
+             std::string(DATA_INPUT_DIR) + "mini_gen.fasta", ibf_args.path_out);
+}
+
 TEST(search, small_example)
 {
     arguments args{};
@@ -536,6 +555,7 @@ TEST(test, small_example_different_threshold)
         results.clear();
         search_args.expression = 1;
         results = search(args, search_args);
+        seqan3::debug_stream << folder;
         EXPECT_EQ(expected_1, results);
         results.clear();
         if (folder == "Genome_mean/")
