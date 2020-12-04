@@ -7,6 +7,14 @@ add_definitions (-DDATADIR=\"${CMAKE_CURRENT_BINARY_DIR}/data/\")
 add_definitions (-DBINDIR=\"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/\")
 add_definitions (-DDATA_INPUT_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/data/\")
 
+# Define cmake configuration flags to configure and build external projects with the same flags as specified for
+# this project.
+set (APP_TEMPLATE_EXTERNAL_PROJECT_CMAKE_ARGS "")
+list (APPEND APP_TEMPLATE_EXTERNAL_PROJECT_CMAKE_ARGS "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
+list (APPEND APP_TEMPLATE_EXTERNAL_PROJECT_CMAKE_ARGS "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
+list (APPEND APP_TEMPLATE_EXTERNAL_PROJECT_CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}")
+list (APPEND APP_TEMPLATE_EXTERNAL_PROJECT_CMAKE_ARGS "-DCMAKE_VERBOSE_MAKEFILE=${CMAKE_VERBOSE_MAKEFILE}")
+
 # Download and build Googletest module. The interface target 'gtest_all' contains all libs and header paths.
 message (STATUS "Configuring tests. Googletest will be downloaded on demand only.")
 include (cmake/build_googletest.cmake)
