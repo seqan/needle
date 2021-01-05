@@ -23,7 +23,7 @@ struct search_arguments
     std::filesystem::path search_file;
     std::filesystem::path exp_file;
     std::filesystem::path path_in{"./"};
-    float expression{1.0};
+    uint64_t expression{1};
     float threshold{0.5};
 
 };
@@ -37,7 +37,7 @@ struct search_arguments
 *  \param path_in     The directory where the ibfs can be found.
 */
 template <class IBFType>
-void estimate(arguments const & args, search_arguments const & search_args, IBFType & ibf, std::vector<float> & expressions, std::filesystem::path file_out,
+void estimate(arguments const & args, search_arguments const & search_args, IBFType & ibf, std::vector<uint64_t> & expressions, std::filesystem::path file_out,
               std::filesystem::path search_file, std::filesystem::path path_in);
 
 /*! \brief Function, which calls the estimate function.
@@ -47,7 +47,7 @@ void estimate(arguments const & args, search_arguments const & search_args, IBFT
 *  \param search_file The sequence file with the sequences which expression value should be estimated.
 *  \param path_in     The directory where the ibfs can be found.
 */
-void call_estimate(arguments const & args, search_arguments const & search_args, std::vector<float> & expressions, std::filesystem::path file_out,
+void call_estimate(arguments const & args, search_arguments const & search_args, std::vector<uint64_t> & expressions, std::filesystem::path file_out,
             std::filesystem::path search_file, std::filesystem::path path_in);
 
 /*! \brief Function, which searches for transcripts in IBF of a given expression level.
