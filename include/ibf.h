@@ -14,18 +14,21 @@
 struct ibf_arguments
 {
     std::vector<std::filesystem::path> sequence_files;
-    std::filesystem::path genome_file; // Needs to be defined when normalization_method should only use the genome sequence
+    std::filesystem::path include_file; // Needs to be defined when only minimizers appearing in this file should be stored
+    std::filesystem::path exclude_file; // Needs to be defined when minimizers appearing in this file should NOT be stored
     std::vector<size_t> bin_size{}; // The bin size of one IBF, can be different for different expression levels
     size_t num_hash{1}; // Number of hash functions to use, default 1
-    std::filesystem::path path_out{"./"}; // Path where ibf should be stored
-    std::vector<float> expression_levels{}; // 0.5,1,2,4 are default, expression levels which should be created
+    std::filesystem::path path_out{"./"}; // Path where IBFs should be stored
+    std::vector<uint64_t> expression_levels{}; // Expression levels which should be created
     std::vector<int> samples{}; // Can be used to indicate that sequence files belong to the same experiment
     bool paired = false; // If true, than experiments are seen as paired-end experiments
     // Which expression values should be ignored during calculation of the normalization_method, default is zero
-    std::vector<int> cutoffs{};
+    std::vector<uint32_t> cutoffs{};
     std::string normalization_method{"median"}; // Method to calculate normalized expression value
-    size_t random{10}; // What percentage of sequences should be used when using normalization_method random
+    std::string expression_method{"median"}; // Method to calculate expression levels
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
+    uint8_t number_expression_levels{};
+    bool set_expression_levels{false};
 };
 
 //!\brief Generates a random integer not greater than a given maximum
@@ -127,7 +130,7 @@ uint32_t normalization_method(arguments const & args, ibf_arguments const & ibf_
  *  \returns A tuple of vector, where first contains the expression levels and their average normalized expression value
  *           and the second vector, the minimum, median and maximum number of counts per expression level.
  */
-std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> statistics(arguments & args, ibf_arguments & ibf_args,
+std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> statistics(arguments & args, ibf_arguments & ibf_args,
 std::vector<std::filesystem::path> const & header_files);
 
 /*! \brief Create IBF.
@@ -150,10 +153,6 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args);
 std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, std::filesystem::path header_file,
                           arguments & args, ibf_arguments & ibf_args, float fpr = 0.05);
 
-std::vector<uint32_t> insert(arguments const & args, ibf_arguments & ibf_args, std::filesystem::path path_in);
-
 void minimiser(arguments const & args, ibf_arguments & ibf_args);
 
 void build_ibf(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05);
-
-void test(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05, bool print = false);

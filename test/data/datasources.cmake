@@ -2,12 +2,12 @@ cmake_minimum_required (VERSION 3.8)
 
 include (cmake/app_datasources.cmake)
 
-# copies file to <build>/data/in.fastq
+# copies file to <build>/data/<file>
 declare_datasource (FILE exp_01.fasta
                     URL ${CMAKE_SOURCE_DIR}/test/data/exp_01.fasta
                     URL_HASH SHA256=e7236e7b86303d84a86a4454044125005433857416183cdaac0f4cdf7ac34e06)
-declare_datasource (FILE IBF_1.000000
-                    URL ${CMAKE_SOURCE_DIR}/test/data/IBF_1.000000
+declare_datasource (FILE IBF_1
+                    URL ${CMAKE_SOURCE_DIR}/test/data/IBF_1
                     URL_HASH SHA256=d43e898adada7a656cbfdcc8b88c024f8e1a4ad6ee31d355ddac11e04c896aac)
 declare_datasource (FILE mini_example.fasta
                     URL ${CMAKE_SOURCE_DIR}/test/data/mini_example.fasta
@@ -20,7 +20,7 @@ declare_datasource (FILE mini_example.minimiser
                     URL_HASH SHA256=98927a56465368db8c8a557f0ad5b83c25f57fb1820ba997be23b69fb4fe9244)
 declare_datasource (FILE mini_example2.header
                     URL ${CMAKE_SOURCE_DIR}/test/data/mini_example2.header
-                    URL_HASH SHA256=9cd8e62254bfd8313930845d52ca95fbaaf2cdb70b45367b6d04ce9b25382403)
+                    URL_HASH SHA256=095762f665803679c6149e0dbad2462526f68c52f477a4aaf21386ad82aaea07)
 declare_datasource (FILE mini_gen.fasta
                     URL ${CMAKE_SOURCE_DIR}/test/data/mini_gen.fasta
                     URL_HASH SHA256=6e9da2f6693938586c902f5e4445f2df1f1ac94cff8c23dea9e02b58759a8998)
