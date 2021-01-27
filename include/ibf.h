@@ -79,6 +79,15 @@ void get_minimisers(arguments const & args, seqan3::concatenated_sequences<seqan
                     robin_hood::unordered_set<uint64_t> const & genome_set_table,
                     std::filesystem::path const & genome_file = "", bool only_genome = false);
 
+/*!\brief Get the concrete expression values (= median of all counts of one transcript).
+* \param args               The minimiser arguments to use (seed, shape, window size).
+* \param sequence_file      The sequence file, which contains the reads.
+* \param genome_file        A file containing the transcripts which expression values should be determined.
+* \param output_file        The output file, where results are stored
+*/
+void count(arguments const & args, std::filesystem::path sequence_file, std::filesystem::path genome_file,
+           std::filesystem::path out_file);
+
 /*!\brief Set arguments for creating IBF.
 * \param args               The minimiser arguments to use (seed, shape, window size).
 * \param ibf_args           The IBF specific arguments to use (bin size, number of hash functions, ...). See

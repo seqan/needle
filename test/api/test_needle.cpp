@@ -32,6 +32,27 @@ void initialization_ibf_args(ibf_arguments & args)
     args.path_out = DATA_INPUT_DIR;
 }
 
+TEST(count, small_example)
+{
+    arguments args{};
+    initialization_args(args);
+
+    count(args, std::string(DATA_INPUT_DIR) + "mini_example.fasta", std::string(DATA_INPUT_DIR) + "mini_gen.fasta",
+          std::string(DATA_INPUT_DIR) + "count_expression.out");
+
+    std::ifstream output_file(std::string(DATA_INPUT_DIR) + "count_expression.out");
+    std::string line;
+    std::string expected{"gen1\t3"};
+    if (output_file.is_open())
+    {
+        while ( std::getline (output_file,line) )
+        {
+            EXPECT_EQ(expected,line);
+        }
+    output_file.close();
+    }
+}
+
 TEST(ibf, median)
 {
     arguments args{};
@@ -217,15 +238,26 @@ TEST(estimate, small_example)
     search_arguments search_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    search_args.threshold = 0.8;
+    search_args.threshold = 0.5;
     ibf_args.expression_levels = {1, 2};
-    std::vector<uint32_t> expected{1};
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
     ibf(args, ibf_args);
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
     estimate(args, search_args, ibf, ibf_args.expression_levels, std::string(DATA_INPUT_DIR) + "expression.out",
              std::string(DATA_INPUT_DIR) + "mini_gen.fasta", ibf_args.path_out);
+
+    std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
+    std::string line;
+    std::string expected{"gen1\t2\t"};
+    if (output_file.is_open())
+    {
+        while ( std::getline (output_file,line) )
+        {
+            EXPECT_EQ(expected,line);
+        }
+    output_file.close();
+    }
 }
 
 TEST(search, small_example)

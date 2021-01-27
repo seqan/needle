@@ -22,21 +22,21 @@ TEST_F(cli_test, fail_no_argument)
     std::string expected
     {
         "terminate called after throwing an instance of 'seqan3::too_few_arguments'\n"
-        "  what():  Please specify which sub program you want to use (one of [estimate,ibf,ibfmin,minimiser,search,"
+        "  what():  Please specify which sub program you want to use (one of [count,estimate,ibf,ibfmin,minimiser,search,"
         "stats]). Use -h/--help for more information.\nAborted\n"
     };
     // For Travis Linux builds, which adds core dumped.
     std::string expected2
     {
         "terminate called after throwing an instance of 'seqan3::too_few_arguments'\n"
-        "  what():  Please specify which sub program you want to use (one of [estimate,ibf,ibfmin,minimiser,search,"
+        "  what():  Please specify which sub program you want to use (one of [count,estimate,ibf,ibfmin,minimiser,search,"
         "stats]). Use -h/--help for more information.\nAborted (core dumped)\n"
     };
     // For Travis OSX builds, which does not include Aborted.
     std::string expected3
     {
         "terminate called after throwing an instance of 'seqan3::too_few_arguments'\n"
-        "  what():  Please specify which sub program you want to use (one of [estimate,ibf,ibfmin,minimiser,search,"
+        "  what():  Please specify which sub program you want to use (one of [count,estimate,ibf,ibfmin,minimiser,search,"
         "stats]). Use -h/--help for more information.\n"
     };
     EXPECT_NE(result.exit_code, 0);

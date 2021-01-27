@@ -54,6 +54,41 @@ void initialise_ibf_argument_parser(seqan3::argument_parser & parser, ibf_argume
                                                                                   " median or random. Default: median.");
 }
 
+int run_needle_count(seqan3::argument_parser & parser)
+{
+    arguments args;
+    initialise_argument_parser(parser, args);
+    std::filesystem::path sequence_file;
+    std::filesystem::path genome_file;
+    std::filesystem::path out_file = "counts.out";
+
+    parser.info.short_description = "Get expression value depending on minimizers.";
+    parser.add_positional_option(sequence_file, "Please provide one sequence file.");
+    parser.add_positional_option(genome_file, "Please provide one sequence file with transcripts.");
+    parser.add_option(out_file, 'o', "out", "Please provide an output file.");
+
+    try
+    {
+        parsing(parser, args);
+    }
+    catch (seqan3::argument_parser_error const & ext)
+    {
+        seqan3::debug_stream << "Error. Incorrect command line input for ibf. " << ext.what() << "\n";
+        return -1;
+    }
+    try
+    {
+        count(args, sequence_file, genome_file, out_file);
+    }
+    catch (const std::invalid_argument & e)
+    {
+        std::cerr << e.what() << std::endl;
+        return -1;
+    }
+
+    return 0;
+}
+
 int run_needle_estimate(seqan3::argument_parser & parser)
 {
     arguments args{};
@@ -320,8 +355,8 @@ int run_needle_stats(seqan3::argument_parser & parser)
 
 int main(int argc, char const ** argv)
 {
-    seqan3::argument_parser needle_parser{"needle", argc, argv, true, {"estimate", "ibf", "ibfmin", "minimiser", "search",
-                                                                       "stats"}};
+    seqan3::argument_parser needle_parser{"needle", argc, argv, true, {"count", "estimate", "ibf", "ibfmin", "minimiser",
+                                                                       "search","stats"}};
     needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
                                              "command ibf or search an IBF with the search command.");
     needle_parser.info.version = "1.0.0";
@@ -337,7 +372,9 @@ int main(int argc, char const ** argv)
         return -1;
     }
     seqan3::argument_parser & sub_parser = needle_parser.get_sub_parser(); // hold a reference to the sub_parser
-    if (sub_parser.info.app_name == std::string_view{"needle-estimate"})
+    if (sub_parser.info.app_name == std::string_view{"needle-count"})
+        run_needle_count(sub_parser);
+    else if (sub_parser.info.app_name == std::string_view{"needle-estimate"})
         run_needle_estimate(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-ibf"})
         run_needle_ibf(sub_parser);

@@ -63,6 +63,57 @@ void get_minimisers(arguments const & args, seqan3::concatenated_sequences<seqan
     }
 }
 
+void count(arguments const & args, std::filesystem::path sequence_file, std::filesystem::path genome_file,
+           std::filesystem::path out_file)
+{
+    seqan3::concatenated_sequences<seqan3::dna4_vector> sequences{};
+    robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{};
+    std::vector<std::string> ids{};
+    seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences{};
+
+    seqan3::sequence_file_input<my_traits> fin{sequence_file};
+    for (auto & [seq, id, qual]: fin)
+    {
+        if (seq.size() >= args.w_size.get())
+            sequences.push_back(seq);
+    }
+
+    for (auto seq : sequences)
+    {
+        for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
+            hash_table[minHash]++;
+    }
+    sequences.clear();
+
+    seqan3::sequence_file_input<my_traits> fin2{genome_file};
+    for (auto & [seq, id, qual]: fin2)
+    {
+        if (seq.size() >= args.w_size.get())
+        {
+            ids.push_back(id);
+            genome_sequences.push_back(seq);
+        }
+    }
+
+    std::vector<uint64_t> counter{};
+    uint64_t exp{};
+    std::ofstream outfile;
+    outfile.open(std::string{out_file});
+    int i = 0;
+    for (auto seq : genome_sequences)
+    {
+        for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
+            counter.push_back(hash_table[minHash]);
+        std::nth_element(counter.begin(), counter.begin() + counter.size()/2, counter.end());
+        exp =  counter[counter.size()/2];
+        counter.clear();
+        outfile << ids[i] << "\t" << exp << "\n";
+        ++i;
+
+    }
+    outfile.close();
+}
+
 // Set arguments that ibf and minimiser use
 void set_arguments(arguments const & args, ibf_arguments & ibf_args,
                    seqan3::concatenated_sequences<seqan3::dna4_vector> & genome_sequences,
