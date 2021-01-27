@@ -32,6 +32,27 @@ void initialization_ibf_args(ibf_arguments & args)
     args.path_out = DATA_INPUT_DIR;
 }
 
+TEST(count, small_example)
+{
+    arguments args{};
+    initialization_args(args);
+
+    count(args, std::string(DATA_INPUT_DIR) + "mini_example.fasta", std::string(DATA_INPUT_DIR) + "mini_gen.fasta",
+          std::string(DATA_INPUT_DIR) + "count_expression.out");
+
+    std::ifstream output_file(std::string(DATA_INPUT_DIR) + "count_expression.out");
+    std::string line;
+    std::string expected{"gen1\t3"};
+    if (output_file.is_open())
+    {
+        while ( std::getline (output_file,line) )
+        {
+            EXPECT_EQ(expected,line);
+        }
+    output_file.close();
+    }
+}
+
 TEST(ibf, median)
 {
     arguments args{};
