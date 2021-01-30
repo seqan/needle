@@ -37,10 +37,10 @@ TEST(count, small_example)
     arguments args{};
     initialization_args(args);
 
-    count(args, std::string(DATA_INPUT_DIR) + "mini_example.fasta", std::string(DATA_INPUT_DIR) + "mini_gen.fasta",
-          std::string(DATA_INPUT_DIR) + "count_expression.out");
+    count(args, {std::string(DATA_INPUT_DIR) + "mini_example.fasta"}, std::string(DATA_INPUT_DIR) + "mini_gen.fasta",
+          std::string(DATA_INPUT_DIR));
 
-    std::ifstream output_file(std::string(DATA_INPUT_DIR) + "count_expression.out");
+    std::ifstream output_file(std::string(DATA_INPUT_DIR) + "mini_example.count.out");
     std::string line;
     std::string expected{"gen1\t3"};
     if (output_file.is_open())
