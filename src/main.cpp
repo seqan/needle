@@ -58,14 +58,14 @@ int run_needle_count(seqan3::argument_parser & parser)
 {
     arguments args;
     initialise_argument_parser(parser, args);
-    std::filesystem::path sequence_file;
+    std::vector<std::filesystem::path> sequence_files;
     std::filesystem::path genome_file;
-    std::filesystem::path out_file = "counts.out";
+    std::filesystem::path out_path = "./";
 
     parser.info.short_description = "Get expression value depending on minimizers.";
-    parser.add_positional_option(sequence_file, "Please provide one sequence file.");
-    parser.add_positional_option(genome_file, "Please provide one sequence file with transcripts.");
-    parser.add_option(out_file, 'o', "out", "Please provide an output file.");
+    parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
+    parser.add_option(genome_file, 'g', "genome", "Please provide one sequence file with transcripts.");
+    parser.add_option(out_path, 'o', "out", "Please provide an output path.");
 
     try
     {
@@ -78,7 +78,7 @@ int run_needle_count(seqan3::argument_parser & parser)
     }
     try
     {
-        count(args, sequence_file, genome_file, out_file);
+        count(args, sequence_files, genome_file, out_path);
     }
     catch (const std::invalid_argument & e)
     {

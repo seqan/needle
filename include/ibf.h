@@ -81,12 +81,12 @@ void get_minimisers(arguments const & args, seqan3::concatenated_sequences<seqan
 
 /*!\brief Get the concrete expression values (= median of all counts of one transcript).
 * \param args               The minimiser arguments to use (seed, shape, window size).
-* \param sequence_file      The sequence file, which contains the reads.
+* \param sequence_files     The sequence files, which contains the reads.
 * \param genome_file        A file containing the transcripts which expression values should be determined.
-* \param output_file        The output file, where results are stored
+* \param output_path        The output path, where results are stored
 */
-void count(arguments const & args, std::filesystem::path sequence_file, std::filesystem::path genome_file,
-           std::filesystem::path out_file);
+void count(arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,
+           std::filesystem::path out_path);
 
 /*!\brief Set arguments for creating IBF.
 * \param args               The minimiser arguments to use (seed, shape, window size).
