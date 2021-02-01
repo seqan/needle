@@ -38,11 +38,33 @@ TEST(count, small_example)
     initialization_args(args);
 
     count(args, {std::string(DATA_INPUT_DIR) + "mini_example.fasta"}, std::string(DATA_INPUT_DIR) + "mini_gen.fasta",
-          std::string(DATA_INPUT_DIR));
+          std::string(DATA_INPUT_DIR), false);
 
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "mini_example.count.out");
     std::string line;
     std::string expected{"gen1\t3"};
+    if (output_file.is_open())
+    {
+        while ( std::getline (output_file,line) )
+        {
+            EXPECT_EQ(expected,line);
+        }
+    output_file.close();
+    }
+}
+
+TEST(count, small_example_paired)
+{
+    arguments args{};
+    initialization_args(args);
+
+    count(args, {std::string(DATA_INPUT_DIR) + "mini_example.fasta", std::string(DATA_INPUT_DIR) + "mini_example.fasta"},
+          std::string(DATA_INPUT_DIR) + "mini_gen.fasta",
+          std::string(DATA_INPUT_DIR), true);
+
+    std::ifstream output_file(std::string(DATA_INPUT_DIR) + "mini_example.count.out");
+    std::string line;
+    std::string expected{"gen1\t6"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
