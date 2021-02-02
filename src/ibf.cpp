@@ -64,7 +64,7 @@ void get_minimisers(arguments const & args, seqan3::concatenated_sequences<seqan
 }
 
 void count(arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,
-           std::filesystem::path out_path)
+           std::filesystem::path out_path, bool paired)
 {
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences{};
     robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{};
@@ -87,7 +87,17 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
 
     for (unsigned i = 0; i < sequence_files.size(); i++)
     {
-        get_sequences(sequence_files, sequences, args.k, i, 1);
+
+        if (paired)
+        {
+            get_sequences(sequence_files, sequences, args.k, i, 2);
+            i++;
+        }
+        else
+        {
+            get_sequences(sequence_files, sequences, args.k, i, 1);
+        }
+
 
         for (auto seq : sequences)
         {
