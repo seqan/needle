@@ -45,10 +45,12 @@ macro (add_app_test test_filename test_alternative)
     add_executable (${target} ${test_filename})
     target_link_libraries (${target} "${PROJECT_NAME}_lib" seqan3::seqan3 gtest_all pthread)
 
+    # Make seqan3::test available for both cli and api tests.
+    target_include_directories(${target} PUBLIC "${SEQAN3_CLONE_DIR}/test/include")
+
     # Add the test to its general target (cli or api).
     if (${test_alternative} STREQUAL "CLI_TEST")
         add_dependencies (${target} "${PROJECT_NAME}") # cli test needs the application executable
-        target_include_directories(${target} PUBLIC "${SEQAN3_CLONE_DIR}/test/include")
         add_dependencies (cli_test ${target})
     elseif (${test_alternative} STREQUAL "API_TEST")
         add_dependencies (api_test ${target})
