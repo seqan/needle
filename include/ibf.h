@@ -14,18 +14,21 @@
 struct ibf_arguments
 {
     std::vector<std::filesystem::path> sequence_files;
-    std::filesystem::path genome_file; // Needs to be defined when normalization_method should only use the genome sequence
+    std::filesystem::path include_file; // Needs to be defined when only minimizers appearing in this file should be stored
+    std::filesystem::path exclude_file; // Needs to be defined when minimizers appearing in this file should NOT be stored
     std::vector<size_t> bin_size{}; // The bin size of one IBF, can be different for different expression levels
     size_t num_hash{1}; // Number of hash functions to use, default 1
-    std::filesystem::path path_out{"./"}; // Path where ibf should be stored
-    std::vector<float> expression_levels{}; // 0.5,1,2,4 are default, expression levels which should be created
+    std::filesystem::path path_out{"./"}; // Path where IBFs should be stored
+    std::vector<uint64_t> expression_levels{}; // Expression levels which should be created
     std::vector<int> samples{}; // Can be used to indicate that sequence files belong to the same experiment
     bool paired = false; // If true, than experiments are seen as paired-end experiments
     // Which expression values should be ignored during calculation of the normalization_method, default is zero
-    std::vector<int> cutoffs{};
+    std::vector<uint32_t> cutoffs{};
     std::string normalization_method{"median"}; // Method to calculate normalized expression value
-    size_t random{10}; // What percentage of sequences should be used when using normalization_method random
+    std::string expression_method{"median"}; // Method to calculate expression levels
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
+    uint8_t number_expression_levels{};
+    bool set_expression_levels{false};
 };
 
 //!\brief Generates a random integer not greater than a given maximum
@@ -75,6 +78,16 @@ void get_minimisers(arguments const & args, seqan3::concatenated_sequences<seqan
                     robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table,
                     robin_hood::unordered_set<uint64_t> const & genome_set_table,
                     std::filesystem::path const & genome_file = "", bool only_genome = false);
+
+/*!\brief Get the concrete expression values (= median of all counts of one transcript).
+* \param args               The minimiser arguments to use (seed, shape, window size).
+* \param sequence_files     The sequence files, which contains the reads.
+* \param genome_file        A file containing the transcripts which expression values should be determined.
+* \param output_path        The output path, where results are stored
+* \param paired             Flag to indicate if input data is paired or not.
+*/
+void count(arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,
+           std::filesystem::path out_path, bool paired);
 
 /*!\brief Set arguments for creating IBF.
 * \param args               The minimiser arguments to use (seed, shape, window size).
@@ -127,7 +140,7 @@ uint32_t normalization_method(arguments const & args, ibf_arguments const & ibf_
  *  \returns A tuple of vector, where first contains the expression levels and their average normalized expression value
  *           and the second vector, the minimum, median and maximum number of counts per expression level.
  */
-std::vector<std::tuple<std::vector<float>, std::vector<uint64_t>>> statistics(arguments & args, ibf_arguments & ibf_args,
+std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> statistics(arguments & args, ibf_arguments & ibf_args,
 std::vector<std::filesystem::path> const & header_files);
 
 /*! \brief Create IBF.
@@ -150,10 +163,6 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args);
 std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, std::filesystem::path header_file,
                           arguments & args, ibf_arguments & ibf_args, float fpr = 0.05);
 
-std::vector<uint32_t> insert(arguments const & args, ibf_arguments & ibf_args, std::filesystem::path path_in);
-
 void minimiser(arguments const & args, ibf_arguments & ibf_args);
 
 void build_ibf(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05);
-
-void test(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05, bool print = false);

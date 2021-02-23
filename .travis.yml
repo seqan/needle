@@ -1,5 +1,6 @@
 version: ~> 1.0
-dist: xenial
+os: linux
+dist: bionic
 language: cpp
 
 git:
@@ -15,48 +16,50 @@ addons:
       - g++-7
       - g++-8
       - g++-9
+      - g++-10
 
 # https://docs.travis-ci.com/user/languages/c
 jobs:
   include:
     - os: linux
-      name: "Debug gcc7"
-      cache: ccache
+      name: "Release gcc7"
+      cache: [ccache, apt]
       env:
         - CXX=g++-7
         - CC=gcc-7
         - BUILD_TYPE=Release
     - os: linux
-      name: "Debug gcc8"
-      cache: ccache
+      name: "Release gcc8"
+      cache: [ccache, apt]
       env:
         - CXX=g++-8
         - CC=gcc-8
-        - BUILD_TYPE=Debug
+        - BUILD_TYPE=Release
     - os: linux
-      name: "Debug gcc9 std=c++2a"
-      cache: ccache
-      env:
-        - CXX=g++-9
-        - CC=gcc-9
-        - BUILD_TYPE=Debug
-        - CXXFLAGS=-std=c++2a
-    - os: linux
-      name: "Release gcc9"
-      cache: ccache
+      name: "Release gcc9 std=c++2a"
+      cache: [ccache, apt]
       env:
         - CXX=g++-9
         - CC=gcc-9
         - BUILD_TYPE=Release
-    - os: osx
+        - CXXFLAGS=-std=c++2a
+    - os: linux
       name: "Debug gcc9"
-      osx_image: xcode11
+      cache: [ccache, apt]
       env:
         - CXX=g++-9
         - CC=gcc-9
         - BUILD_TYPE=Debug
+    - os: linux
+      name: "Release gcc10"
+      cache: [ccache, apt]
+      env:
+        - CXX=g++-10
+        - CC=gcc-10
+        - BUILD_TYPE=Release
+        - CXXFLAGS="-std=c++17 -fconcepts"
     - os: osx
-      name: "Release gcc9"
+      name: "Release gcc9 Xcode11"
       osx_image: xcode11
       env:
         - CXX=g++-9

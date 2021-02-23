@@ -44,3 +44,13 @@ TEST_F(cli_test, with_argument_gene_not_found)
     EXPECT_EQ(result.out, "Results:\n0 \n");
     EXPECT_EQ(result.err, std::string{});
 }
+
+// https://github.com/MitraDarja/needle/issues/33
+TEST_F(cli_test, issue33)
+{
+    cli_test_result result = execute_app("needle search -k 4 -w 4 -s 0 -t 0.7 -e 1 -c -i ", data(""),
+                                         data("mini_gen.fasta"));
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, "Results:\n1 \n");
+    EXPECT_EQ(result.err, std::string{});
+}
