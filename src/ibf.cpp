@@ -20,6 +20,7 @@
 #include <seqan3/io/stream/detail/fast_istreambuf_iterator.hpp>
 #include <seqan3/std/filesystem>
 #include <seqan3/std/ranges>
+#include <seqan3/range/container/concatenated_sequences.hpp>
 #include <seqan3/range/container/dynamic_bitset.hpp>
 #include <seqan3/range/views/take_until.hpp>
 
