@@ -4,8 +4,6 @@ cmake_minimum_required (VERSION 3.8)
 
 # Define the application name and version.
 project (needle VERSION 1.0.0)
-set (CMAKE_CXX_STANDARD 17)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 ## BUILD
 

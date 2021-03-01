@@ -357,8 +357,8 @@ int run_needle_stats(seqan3::argument_parser & parser)
 
 int main(int argc, char const ** argv)
 {
-    seqan3::argument_parser needle_parser{"needle", argc, argv, true, {"count", "estimate", "ibf", "ibfmin", "minimiser",
-                                                                       "search","stats"}};
+    seqan3::argument_parser needle_parser{"needle", argc, argv, seqan3::update_notifications::on,
+    {"count", "estimate", "ibf", "ibfmin", "minimiser", "search","stats"}};
     needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
                                              "command ibf or search an IBF with the search command.");
     needle_parser.info.version = "1.0.0";

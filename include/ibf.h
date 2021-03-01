@@ -83,7 +83,7 @@ void get_minimisers(arguments const & args, seqan3::concatenated_sequences<seqan
 * \param args               The minimiser arguments to use (seed, shape, window size).
 * \param sequence_files     The sequence files, which contains the reads.
 * \param genome_file        A file containing the transcripts which expression values should be determined.
-* \param output_path        The output path, where results are stored
+* \param out_path        The output path, where results are stored
 * \param paired             Flag to indicate if input data is paired or not.
 */
 void count(arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,

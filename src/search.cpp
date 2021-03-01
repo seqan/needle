@@ -15,6 +15,7 @@
 #include <seqan3/core/debug_stream.hpp>
 #include <seqan3/io/sequence_file/all.hpp>
 #include <seqan3/std/ranges>
+#include <seqan3/range/container/concatenated_sequences.hpp>
 
 #include "search.h"
 
