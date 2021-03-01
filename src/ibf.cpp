@@ -17,7 +17,7 @@
 #include <seqan3/core/concept/cereal.hpp>
 #include <seqan3/core/debug_stream.hpp>
 #include <seqan3/io/sequence_file/all.hpp>
-#include <seqan3/io/stream/iterator.hpp>
+#include <seqan3/io/stream/detail/fast_istreambuf_iterator.hpp>
 #include <seqan3/std/filesystem>
 #include <seqan3/std/ranges>
 #include <seqan3/range/container/dynamic_bitset.hpp>
