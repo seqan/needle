@@ -50,8 +50,6 @@ void initialise_ibf_argument_parser(seqan3::argument_parser & parser, ibf_argume
                                                          "should be considered the result of a sequencing error and "
                                                          "therefore be ignored. Default: Every sample has a cut off of "
                                                          "zero.");
-    parser.add_option(ibf_args.normalization_method, 'a', "normalization-method", "Choose a normalization method: mean,"
-                                                                                  " median or random. Default: median.");
 }
 
 int run_needle_count(seqan3::argument_parser & parser)
@@ -196,8 +194,6 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_option(ibf_args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
                                                       "one IBF.");
-    parser.add_option(ibf_args.normalization_method, 'a', "normalization-method", "Choose a normalization method: mean,"
-                                                                                  " median or random. Default: median.");
 
     try
     {

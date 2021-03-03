@@ -19,13 +19,12 @@ struct ibf_arguments
     std::vector<size_t> bin_size{}; // The bin size of one IBF, can be different for different expression levels
     size_t num_hash{1}; // Number of hash functions to use, default 1
     std::filesystem::path path_out{"./"}; // Path where IBFs should be stored
-    std::vector<uint64_t> expression_levels{}; // Expression levels which should be created
+    std::vector<uint32_t> expression_levels{}; // Expression levels which should be created
     std::vector<int> samples{}; // Can be used to indicate that sequence files belong to the same experiment
     bool paired = false; // If true, than experiments are seen as paired-end experiments
     // Which expression values should be ignored during calculation of the normalization_method, default is zero
     std::vector<uint32_t> cutoffs{};
-    std::string normalization_method{"median"}; // Method to calculate normalized expression value
-    std::string expression_method{"median"}; // Method to calculate expression levels
+    //std::string expression_method{"median"}; // Method to calculate expression levels
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
     uint8_t number_expression_levels{};
     bool set_expression_levels{false};
@@ -112,25 +111,9 @@ void read_binary(robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table
 *                             struct ibf_arguments.
 * \param filename             The filename of the binary file.
 * \param counts               Vector, where the number of minimiser at a certain expression level should be stored into.
-* \param normalized_exp_value Variable, where the normalized expression value should be stored into.
 */
 void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::path filename,
-                 std::vector<uint64_t> & counts, uint32_t & normalized_exp_value);
-
-/*! \brief Calculate normalized expression value
- * \param args               The minimiser arguments to use (seed, shape, window size).
- * \param ibf_args           The IBF specific arguments to use (bin size, number of hash functions, ...). See
- *                           struct ibf_arguments.
- * \param sequences          The data strucuture, where the sequenecs are stored.
- * \param hash_table         The hash table, where minimisers should be stored.
- * \param cutoff             The cutoff to use, expression value below this value are ignored.
- * \param genome_set_table   Data structure, where the minimisers found in a genome mask are stored.
- *  \returns The normalized expression value of one experiment.
- */
-uint32_t normalization_method(arguments const & args, ibf_arguments const & ibf_args,
-                              seqan3::concatenated_sequences<seqan3::dna4_vector> const & sequences,
-                              robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table, unsigned cutoff,
-                              robin_hood::unordered_set<uint64_t> const & genome_set_table);
+                 std::vector<uint64_t> & counts);
 
 /*! \brief Calculates statistics from header files created by minimiser
  * \param args               The minimiser arguments to use (seed, shape, window size).
