@@ -96,7 +96,7 @@ TEST(ibf, no_given_expression_levels)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.set_expression_levels = true;
+    ibf_args.set_expression_levels_samplewise = true;
     ibf_args.number_expression_levels = 2;
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
@@ -129,7 +129,7 @@ TEST(ibf, throws)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.set_expression_levels = true;
+    ibf_args.set_expression_levels_samplewise = true;
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
     EXPECT_THROW(ibf(args, ibf_args), std::invalid_argument);

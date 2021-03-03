@@ -157,7 +157,7 @@ void set_arguments(arguments const & args, ibf_arguments & ibf_args,
 
     // If the expression levels are not supposed to be set automatically and no number of expression levels are given,
     // throw.
-    if (ibf_args.set_expression_levels & (ibf_args.number_expression_levels == 0))
+    if (ibf_args.set_expression_levels_samplewise & (ibf_args.number_expression_levels == 0))
     {
         throw std::invalid_argument{"Error. Please set the expression levels or give the number of expression levels."};
     }
@@ -165,7 +165,7 @@ void set_arguments(arguments const & args, ibf_arguments & ibf_args,
     {
         ibf_args.number_expression_levels = ibf_args.expression_levels.size();
     }
-    else if (!ibf_args.set_expression_levels & ibf_args.expression_levels.size() == 0)
+    else if (!ibf_args.set_expression_levels_samplewise & ibf_args.expression_levels.size() == 0)
     {
         std::uint64_t level{2};
         for (std::size_t c = 0; c < ibf_args.number_expression_levels; c++)
@@ -385,7 +385,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 
         sequences.clear();
 
-        if (ibf_args.set_expression_levels)
+        if (ibf_args.set_expression_levels_samplewise)
         {
            get_expression_levels(args,
                                  ibf_args,
@@ -460,7 +460,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, st
         for (unsigned i = 0; i < statistic_results.size(); ++i)
             counts.push_back(std::get<1>(statistic_results[i])[2]); // Get maximum count of all files
 
-        if (ibf_args.set_expression_levels & (ibf_args.number_expression_levels == 0))
+        if (ibf_args.set_expression_levels_samplewise & (ibf_args.number_expression_levels == 0))
         {
             throw std::invalid_argument{"Error. Please set the expression levels or give the number of expression levels."};
         }
@@ -473,7 +473,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, st
     {
         read_header(args, ibf_args, header_file, counts);
 
-        if (ibf_args.set_expression_levels & (ibf_args.number_expression_levels == 0))
+        if (ibf_args.set_expression_levels_samplewise & (ibf_args.number_expression_levels == 0))
             throw std::invalid_argument{"Error. Please set the expression levels or give the number of expression levels."},
     }
 
@@ -492,7 +492,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, st
            read_binary(hash_table, minimiser_files[i].replace_extension(".minimiser"));
 
            // Get normalized expression value from header file or recalculate it when other method is asked for
-           if (!ibf_args.set_expression_levels)
+           if (!ibf_args.set_expression_levels_samplewise)
            {
                read_header(args, ibf_args, minimiser_files[i].replace_extension(".header"), counts);
            }
@@ -510,7 +510,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, st
        }
        // Store IBFs
        std::filesystem::path filename{ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[j])};
-       if (!ibf_args.set_expression_levels)
+       if (!ibf_args.set_expression_levels_samplewise)
             filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(j);
        if (args.compressed)
        {
@@ -547,7 +547,7 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
         get_minimisers(args, sequences, hash_table, genome_set_table, ibf_args.include_file);
 
         //If no expression values given, determine them
-        if (ibf_args.set_expression_levels)
+        if (ibf_args.set_expression_levels_samplewise)
         {
            get_expression_levels(args,
                                  ibf_args,

@@ -27,7 +27,8 @@ struct ibf_arguments
     //std::string expression_method{"median"}; // Method to calculate expression levels
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
     uint8_t number_expression_levels{};
-    bool set_expression_levels{false};
+    // Flag, if true the "median" approach is used to determine the expression_levels individually for a sample
+    bool set_expression_levels_samplewise{false};
 };
 
 //!\brief Generates a random integer not greater than a given maximum
