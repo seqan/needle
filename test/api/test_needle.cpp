@@ -148,12 +148,13 @@ TEST(ibfmin, given_expression_levels)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
+    ibf_args.expression_levels = {1, 2};
+    ibf_args.bin_size = {1000, 1000};
     std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
-    std::filesystem::path header_file = "";
 
-    std::vector<uint32_t> expected{0};
+    std::vector<uint32_t> expected{1, 2};
 
-    std::vector<uint32_t> medians = ibf(minimiser_file, header_file, args, ibf_args);
+    std::vector<uint32_t> medians = ibf(minimiser_file, args, ibf_args);
 
     EXPECT_EQ(expected, medians);
 }

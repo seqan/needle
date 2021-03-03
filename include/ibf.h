@@ -96,9 +96,15 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
 * \param genome_sequences   Data structure, where the sequences of the genome file are stored.
 * \param genome_set_table   Data structure, where the minimisers found in a genome mask are stored.
 */
-void set_arguments(arguments const & args, ibf_arguments & ibf_args,
+void set_arguments_ibf(arguments const & args, ibf_arguments & ibf_args,
                    seqan3::concatenated_sequences<seqan3::dna4_vector> & genome_sequences,
                    robin_hood::unordered_set<uint64_t> & genome_set_table);
+
+/*!\brief Set arguments for creating IBF.
+* \param ibf_args           The IBF specific arguments to use (bin size, number of hash functions, ...). See
+*                           struct ibf_arguments.
+*/
+void set_arguments(ibf_arguments & ibf_args);
 
 /*!\brief Reads a binary file function minimiser creates
 * \param hash_table         The hash table to store minimisers into.
@@ -137,15 +143,13 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args);
 
 /*! \brief Create IBF based on the minimiser and header files
  * \param minimiser_files  A vector of minimiser file paths.
- * \param header_file      A path to a header file.
  * \param args             The minimiser arguments to use (seed, shape, window size).
  * \param ibf_args         The IBF specific arguments to use (bin size, number of hash functions, ...). See
  *                         struct ibf_arguments.
- * \param fpr              The false positive rate. Default: 0.05.
  *  \returns The normalized expression values per experiment.
  */
-std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, std::filesystem::path header_file,
-                          arguments & args, ibf_arguments & ibf_args, float fpr = 0.05);
+std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, arguments & args,
+                          ibf_arguments & ibf_args);
 
 void minimiser(arguments const & args, ibf_arguments & ibf_args);
 
