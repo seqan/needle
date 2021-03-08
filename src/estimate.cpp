@@ -58,7 +58,7 @@ uint64_t prev_expression, bool last_exp)
 }
 
 template <class IBFType>
-void estimate(arguments const & args, estimate_arguments const & search_args, IBFType & ibf, std::vector<uint32_t> & expressions, std::filesystem::path file_out,
+void estimate(arguments const & args, estimate_arguments const & estimate_args, IBFType & ibf, std::filesystem::path file_out,
               std::filesystem::path search_file, std::filesystem::path path_in)
 {
     std::vector<std::string> ids;
@@ -80,9 +80,9 @@ void estimate(arguments const & args, estimate_arguments const & search_args, IB
     std::vector<uint32_t> counter;
     std::vector<uint32_t> results;
     std::vector<std::vector<uint32_t>> estimations;
-    for (auto & expression : expressions)
+    for (auto & expression : estimate_arguments.expressions)
     {
-        if (expression == expressions[expressions.size()-1])
+        if (expression == estimate_arguments.expressions[estimate_arguments.expressions.size()-1])
         	last_exp = true;
         load_ibf(ibf, path_in.string() + "IBF_" + std::to_string(expression));
         for (int i = 0; i < seqs.size(); ++i)
@@ -94,7 +94,7 @@ void estimate(arguments const & args, estimate_arguments const & search_args, IB
                 prev_counts.push_back(counter);
             }
 
-            results = check_ibf(args, ibf, counter, seqs[i], search_args.threshold, prev_counts[i],
+            results = check_ibf(args, ibf, counter, seqs[i], estimate_args.threshold, prev_counts[i],
                                 expression, prev_expression, last_exp);
             for(unsigned j = 0; j < counter.size(); j++)
                 estimations[i][j] = std::max(estimations[i][j], (uint32_t) results[j]);
@@ -118,17 +118,17 @@ void estimate(arguments const & args, estimate_arguments const & search_args, IB
 
 }
 
-void call_estimate(arguments const & args, estimate_arguments const & search_args, std::vector<uint32_t> & expressions, std::filesystem::path file_out,
+void call_estimate(arguments const & args, estimate_arguments const & estimate_args, std::filesystem::path file_out,
               std::filesystem::path search_file, std::filesystem::path path_in)
 {
     if (args.compressed)
     {
         seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-        estimate(args, search_args, ibf, expressions, file_out, search_file, path_in);
+        estimate(args, estimate_args, ibf, file_out, search_file, path_in);
     }
     else
     {
         seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
-        estimate(args, search_args, ibf, expressions, file_out, search_file, path_in);
+        estimate(args, estimate_args, ibf, file_out, search_file, path_in);
     }
 }

@@ -92,7 +92,7 @@ int run_needle_count(seqan3::argument_parser & parser)
 int run_needle_estimate(seqan3::argument_parser & parser)
 {
     arguments args{};
-    estimate_arguments search_args{};
+    estimate_arguments estimate_args{};
     parser.info.short_description = "Estimate expression value of transcript based on IBFs.";
     parser.info.version = "1.0.0";
     parser.info.author = "Mitra Darvish";
@@ -103,10 +103,10 @@ int run_needle_estimate(seqan3::argument_parser & parser)
 
     parser.add_positional_option(search_file, "Please provide a sequence file.");
     parser.add_option(file_out, 'o', "out", "File where output should be stored.");
-    parser.add_option(expressions, 'e', "expression", "Which expression levels should be considered during a "
+    parser.add_option(estimate_args.expressions, 'e', "expression", "Which expression levels should be considered during a "
                                                       "search.");
     parser.add_option(path_in, 'i', "in", "Directory where input files can be found.");
-    parser.add_option(search_args.threshold, 't', "threshold", "The minimal amount of minimisers found in a transcript"
+    parser.add_option(estimate_args.threshold, 't', "threshold", "The minimal amount of minimisers found in a transcript"
                                                                 " to consider it as found in an IBF. Default: 0.5");
     initialise_argument_parser(parser, args);
 
@@ -122,7 +122,7 @@ int run_needle_estimate(seqan3::argument_parser & parser)
 
     try
     {
-        call_estimate(args, search_args, expressions, file_out, search_file, path_in);
+        call_estimate(args, estimate_args, file_out, search_file, path_in);
     }
     catch (const std::invalid_argument & e)
     {
