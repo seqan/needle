@@ -149,17 +149,6 @@ void set_arguments(ibf_arguments & ibf_args)
             level = level *2;
         }
     }
-
-
-    // If no bin size is given or not the right amount, throw error.
-    if (ibf_args.bin_size.empty())
-        throw std::invalid_argument{"Error. Please give a size for the IBFs in bit."};
-    else if (ibf_args.bin_size.size() == 1)
-        ibf_args.bin_size.assign(ibf_args.number_expression_levels,ibf_args.bin_size[0]);
-    else if (ibf_args.bin_size.size() != ibf_args.number_expression_levels)
-        throw std::invalid_argument{"Error. Length of sizes for IBFs in bin_size is not equal to length of expression "
-                                    "levels."};
-
 }
 
 // Set arguments that ibf use
@@ -192,6 +181,18 @@ void set_arguments_ibf(arguments const & args, ibf_arguments & ibf_args,
                 genome_set_table.insert(minHash);
         }
     }
+}
+
+void check_bin_size(ibf_arguments & ibf_args)
+{
+    // If no bin size is given or not the right amount, throw error.
+    if (ibf_args.bin_size.empty())
+        throw std::invalid_argument{"Error. Please give a size for the IBFs in bit."};
+    else if (ibf_args.bin_size.size() == 1)
+        ibf_args.bin_size.assign(ibf_args.number_expression_levels,ibf_args.bin_size[0]);
+    else if (ibf_args.bin_size.size() != ibf_args.number_expression_levels)
+        throw std::invalid_argument{"Error. Length of sizes for IBFs in bin_size is not equal to length of expression "
+                                    "levels."};
 }
 
 // Reads a binary file minimiser creates
@@ -360,6 +361,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
 
     set_arguments_ibf(args, ibf_args, genome_sequences, genome_set_table);
+    check_bin_size(ibf_args);
 
     // Store experiment names
     if (ibf_args.experiment_names)
@@ -450,6 +452,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
     robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{}; // Storage for minimisers
 
     set_arguments(ibf_args);
+    check_bin_size(ibf_args);
     if (ibf_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
         ibf_args.cutoffs.assign(minimiser_files.size(),0);
 

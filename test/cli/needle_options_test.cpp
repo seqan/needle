@@ -22,7 +22,7 @@ TEST_F(cli_test, fail_no_argument)
     std::string expected
     {
         "Error. Incorrect command. See needle help for more information.You either forgot or misspelled the subcommand!"
-        " Please specify which sub-program you want to use: one of [count,estimate,ibf,ibfmin,minimiser,search,stats]. "
+        " Please specify which sub-program you want to use: one of [count,estimate,ibf,ibfmin,minimiser,stats]. "
         "Use -h/--help for more information.\n"
     };
     EXPECT_NE(result.exit_code, 0);

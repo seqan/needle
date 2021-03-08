@@ -22,7 +22,6 @@ TEST_F(cli_test, with_argument)
     std::string expected
     {
         "For expression level 0:\n"
-        "Average normalized expression value: 2\n"
         "Minimum of Counts: 12\n"
         "Median of Counts: 12\n"
         "Maximum of Counts: 12\n\n\n"

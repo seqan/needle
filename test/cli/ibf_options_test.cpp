@@ -74,7 +74,7 @@ TEST_F(cli_test, ibfmin_fail_no_argument)
 
 TEST_F(cli_test, ibfmin_with_argument)
 {
-    cli_test_result result = execute_app("needle ibfmin", data("mini_example.minimiser"));
+    cli_test_result result = execute_app("needle ibfmin -b 1000", data("mini_example.minimiser"));
     EXPECT_EQ(result.exit_code, 0);
     EXPECT_EQ(result.out, "");
     EXPECT_EQ(result.err, std::string{});
