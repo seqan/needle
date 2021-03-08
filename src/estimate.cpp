@@ -80,9 +80,9 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
     std::vector<uint32_t> counter;
     std::vector<uint32_t> results;
     std::vector<std::vector<uint32_t>> estimations;
-    for (auto & expression : estimate_arguments.expressions)
+    for (auto & expression : estimate_args.expressions)
     {
-        if (expression == estimate_arguments.expressions[estimate_arguments.expressions.size()-1])
+        if (expression == estimate_args.expressions[estimate_args.expressions.size()-1])
         	last_exp = true;
         load_ibf(ibf, path_in.string() + "IBF_" + std::to_string(expression));
         for (int i = 0; i < seqs.size(); ++i)

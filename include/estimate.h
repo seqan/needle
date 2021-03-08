@@ -29,7 +29,7 @@ struct estimate_arguments
 
 /*! \brief Function to estimate expression value.
 *  \param args        The arguments.
-*  \param search_args The search arguments.
+*  \param estimate_args The search arguments.
 *  \param ibf         The ibf determing what kind ibf is used (compressed or uncompressed).
 *  \param file_out    The file where results should be stored to.
 *  \param search_file The sequence file with the sequences which expression value should be estimated.
@@ -41,7 +41,7 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
 
 /*! \brief Function, which calls the estimate function.
 *  \param args        The arguments.
-*  \param search_args The search arguments.
+*  \param estimate_args The search arguments.
 *  \param file_out    The file where results should be stored to.
 *  \param search_file The sequence file with the sequences which expression value should be estimated.
 *  \param path_in     The directory where the ibfs can be found.
