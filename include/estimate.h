@@ -18,52 +18,33 @@
  *                                          IBF to be considered as contained in a certain IBF.
  *
  */
-struct search_arguments
+struct estimate_arguments
 {
     std::filesystem::path search_file;
-    std::filesystem::path exp_file;
     std::filesystem::path path_in{"./"};
-    uint64_t expression{1};
+    std::vector<uint32_t> expressions{};
     float threshold{0.5};
 
 };
 
 /*! \brief Function to estimate expression value.
 *  \param args        The arguments.
-*  \param search_args The search arguments.
+*  \param estimate_args The search arguments.
 *  \param ibf         The ibf determing what kind ibf is used (compressed or uncompressed).
-*  \param expressions The expression levels to consider.
 *  \param file_out    The file where results should be stored to.
 *  \param search_file The sequence file with the sequences which expression value should be estimated.
 *  \param path_in     The directory where the ibfs can be found.
 */
 template <class IBFType>
-void estimate(arguments const & args, search_arguments const & search_args, IBFType & ibf, std::vector<uint64_t> & expressions, std::filesystem::path file_out,
+void estimate(arguments const & args, estimate_arguments const & estimate_args, IBFType & ibf, std::filesystem::path file_out,
               std::filesystem::path search_file, std::filesystem::path path_in);
 
 /*! \brief Function, which calls the estimate function.
 *  \param args        The arguments.
-*  \param search_args The search arguments.
-*  \param expressions The expression levels to consider.
+*  \param estimate_args The search arguments.
 *  \param file_out    The file where results should be stored to.
 *  \param search_file The sequence file with the sequences which expression value should be estimated.
 *  \param path_in     The directory where the ibfs can be found.
 */
-void call_estimate(arguments const & args, search_arguments const & search_args, std::vector<uint64_t> & expressions, std::filesystem::path file_out,
+void call_estimate(arguments const & args, estimate_arguments const & estimate_args, std::filesystem::path file_out,
             std::filesystem::path search_file, std::filesystem::path path_in);
-
-/*! \brief Function, which searches for transcripts in IBF of a given expression level.
-*  \param ibf         The IBF.
-*  \param args        The arguments.
-*  \param search_args The search arguments.
-* \returns result vector.
-*/
-template <class IBFType>
-std::vector<uint32_t> do_search(IBFType & ibf, arguments const & args, search_arguments const & search_args);
-
-/*! \brief Function, which calls the search functions.
-*  \param args        The arguments.
-*  \param search_args The search arguments.
-* \returns result vector.
-*/
-std::vector<uint32_t> search(arguments const & args, search_arguments const & search_args);

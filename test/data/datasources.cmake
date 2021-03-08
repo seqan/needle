@@ -8,19 +8,19 @@ declare_datasource (FILE exp_01.fasta
                     URL_HASH SHA256=e7236e7b86303d84a86a4454044125005433857416183cdaac0f4cdf7ac34e06)
 declare_datasource (FILE IBF_1
                     URL ${CMAKE_SOURCE_DIR}/test/data/IBF_1
-                    URL_HASH SHA256=d43e898adada7a656cbfdcc8b88c024f8e1a4ad6ee31d355ddac11e04c896aac)
+                    URL_HASH SHA256=e752c7d281ffa8a5104c6c6bdfd0c4868d39cf98bb26e95c4adbfe52c9eb6784)
 declare_datasource (FILE mini_example.fasta
                     URL ${CMAKE_SOURCE_DIR}/test/data/mini_example.fasta
                     URL_HASH SHA256=f872221632e7423b071d1aedaf4c4e9da2a659e843fcafac12cd65632b904b93)
 declare_datasource (FILE mini_example.header
                     URL ${CMAKE_SOURCE_DIR}/test/data/mini_example.header
-                    URL_HASH SHA256=685797f30f29436e74b4e373329dba61afcb88b6d73e490754aba8b3f3d78002)
+                    URL_HASH SHA256=54644375bf8e1d3d9d8ba556762afd3f88f5eba5ca4324629b79517b7aea36a1)
 declare_datasource (FILE mini_example.minimiser
                     URL ${CMAKE_SOURCE_DIR}/test/data/mini_example.minimiser
                     URL_HASH SHA256=98927a56465368db8c8a557f0ad5b83c25f57fb1820ba997be23b69fb4fe9244)
 declare_datasource (FILE mini_example2.header
                     URL ${CMAKE_SOURCE_DIR}/test/data/mini_example2.header
-                    URL_HASH SHA256=095762f665803679c6149e0dbad2462526f68c52f477a4aaf21386ad82aaea07)
+                    URL_HASH SHA256=54644375bf8e1d3d9d8ba556762afd3f88f5eba5ca4324629b79517b7aea36a1)
 declare_datasource (FILE mini_gen.fasta
                     URL ${CMAKE_SOURCE_DIR}/test/data/mini_gen.fasta
                     URL_HASH SHA256=6e9da2f6693938586c902f5e4445f2df1f1ac94cff8c23dea9e02b58759a8998)

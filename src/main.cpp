@@ -4,7 +4,7 @@
 
 #include "minimiser.h"
 #include "ibf.h"
-#include "search.h"
+#include "estimate.h"
 
 uint32_t w_size;
 uint64_t shape{};
@@ -50,8 +50,6 @@ void initialise_ibf_argument_parser(seqan3::argument_parser & parser, ibf_argume
                                                          "should be considered the result of a sequencing error and "
                                                          "therefore be ignored. Default: Every sample has a cut off of "
                                                          "zero.");
-    parser.add_option(ibf_args.normalization_method, 'a', "normalization-method", "Choose a normalization method: mean,"
-                                                                                  " median or random. Default: median.");
 }
 
 int run_needle_count(seqan3::argument_parser & parser)
@@ -94,21 +92,21 @@ int run_needle_count(seqan3::argument_parser & parser)
 int run_needle_estimate(seqan3::argument_parser & parser)
 {
     arguments args{};
-    search_arguments search_args{};
+    estimate_arguments estimate_args{};
     parser.info.short_description = "Estimate expression value of transcript based on IBFs.";
     parser.info.version = "1.0.0";
     parser.info.author = "Mitra Darvish";
     std::filesystem::path search_file;
     std::filesystem::path path_in{"./"};
     std::filesystem::path file_out{"expressions.out"};
-    std::vector<uint64_t> expressions{};
+    std::vector<uint32_t> expressions{};
 
     parser.add_positional_option(search_file, "Please provide a sequence file.");
     parser.add_option(file_out, 'o', "out", "File where output should be stored.");
-    parser.add_option(expressions, 'e', "expression", "Which expression levels should be considered during a "
+    parser.add_option(estimate_args.expressions, 'e', "expression", "Which expression levels should be considered during a "
                                                       "search.");
     parser.add_option(path_in, 'i', "in", "Directory where input files can be found.");
-    parser.add_option(search_args.threshold, 't', "threshold", "The minimal amount of minimisers found in a transcript"
+    parser.add_option(estimate_args.threshold, 't', "threshold", "The minimal amount of minimisers found in a transcript"
                                                                 " to consider it as found in an IBF. Default: 0.5");
     initialise_argument_parser(parser, args);
 
@@ -118,13 +116,13 @@ int run_needle_estimate(seqan3::argument_parser & parser)
     }
     catch (seqan3::argument_parser_error const & ext)                     // catch user errors
     {
-        seqan3::debug_stream << "Error. Incorrect command line input for search. " << ext.what() << "\n";
+        seqan3::debug_stream << "Error. Incorrect command line input for estimate. " << ext.what() << "\n";
         return -1;
     }
 
     try
     {
-        call_estimate(args, search_args, expressions, file_out, search_file, path_in);
+        call_estimate(args, estimate_args, file_out, search_file, path_in);
     }
     catch (const std::invalid_argument & e)
     {
@@ -181,14 +179,13 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     arguments args{};
     ibf_arguments ibf_args{};
     std::vector<std::filesystem::path> minimiser_files{};
-    std::filesystem::path header_file = ""; // if only one header file should be used
-    float fpr{0.05}; // False Positive Rate
 
     parser.info.short_description = "Constructs an IBF from the minimiser and header files created by needle minimiser.";
+    parser.add_option(ibf_args.bin_size, 'b', "bin-size", "List of bin sizes per expression level. If only one is given"
+                                                          ", then that bin size is used for all expression levels.");
     parser.add_flag(args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
     parser.add_positional_option(minimiser_files, "Please provide at least one minimiser file. It is assumed that the "
                                                   "header file exits in the same directory.");
-    parser.add_option(fpr, 'f', "fpr", "False positive rate for the IBF. Default: 0.05.");
     parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
                                                                             " constructing the IBFs. Default: The "
                                                                             "expression levels found in the header files.");
@@ -196,8 +193,6 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_option(ibf_args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
                                                       "one IBF.");
-    parser.add_option(ibf_args.normalization_method, 'a', "normalization-method", "Choose a normalization method: mean,"
-                                                                                  " median or random. Default: median.");
 
     try
     {
@@ -211,7 +206,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
 
     try
     {
-        ibf(minimiser_files, header_file, args, ibf_args, fpr);
+        ibf(minimiser_files, args, ibf_args);
     }
     catch (const std::invalid_argument & e)
     {
@@ -259,55 +254,6 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
     return 0;
 }
 
-int run_needle_search(seqan3::argument_parser & parser)
-{
-    arguments args{};
-    search_arguments search_args{};
-    parser.info.short_description = "Search through an IBF.";
-    parser.info.version = "1.0.0";
-    parser.info.author = "Mitra Darvish";
-
-    parser.add_positional_option(search_args.search_file, "Please provide a sequence file.");
-    parser.add_option(search_args.exp_file, 'x', "expression_file", "A tab seperated file containing expression "
-                                                                    "information per transcript given. By Default: "
-                                                                    "Search for Existence in experiments",
-                      seqan3::option_spec::DEFAULT, seqan3::input_file_validator{{"tsv"}});
-    parser.add_option(search_args.path_in, 'i', "in", "Directory where input files can be found.");
-    parser.add_option(search_args.expression, 'e', "expression", "Which expression level should be considered during a "
-                                                                 "search.");
-    parser.add_option(search_args.threshold, 't', "threshold", "The minimal amount of minimisers found in a transcript"
-                                                                " to consider it as found in an IBF. Default: 0.5");
-
-    initialise_argument_parser(parser, args);
-
-    try
-    {
-        parsing(parser, args);
-    }
-    catch (seqan3::argument_parser_error const & ext)                     // catch user errors
-    {
-        seqan3::debug_stream << "Error. Incorrect command line input for search. " << ext.what() << "\n";
-        return -1;
-    }
-
-    std::vector<uint32_t> results;
-    try
-    {
-        results = search(args, search_args);
-    }
-    catch (const std::invalid_argument & e)
-    {
-        std::cerr << e.what() << std::endl;
-        return -1;
-    }
-
-    std::cout << "Results:\n";
-    for( auto & elem : results)
-        std::cout << elem << " ";
-    std::cout << "\n";
-    return 0;
-}
-
 int run_needle_stats(seqan3::argument_parser & parser)
 {
     arguments args{};
@@ -345,7 +291,6 @@ int run_needle_stats(seqan3::argument_parser & parser)
     for (unsigned i = 0; i < results.size(); ++i)
     {
         std::cout << "For expression level " << std::get<0>(results[i])[0] << ":\n";
-        std::cout << "Average normalized expression value: " << std::get<0>(results[i])[1] <<"\n";
         std::cout << "Minimum of Counts: " << std::get<1>(results[i])[0] << "\n";
         std::cout << "Median of Counts: " << std::get<1>(results[i])[1] << "\n";
         std::cout << "Maximum of Counts: " << std::get<1>(results[i])[2] << "\n\n\n";
@@ -358,9 +303,10 @@ int run_needle_stats(seqan3::argument_parser & parser)
 int main(int argc, char const ** argv)
 {
     seqan3::argument_parser needle_parser{"needle", argc, argv, seqan3::update_notifications::on,
-    {"count", "estimate", "ibf", "ibfmin", "minimiser", "search","stats"}};
+    {"count", "estimate", "ibf", "ibfmin", "minimiser", "stats"}};
     needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
-                                             "command ibf or search an IBF with the search command.");
+                                             "command ibf or estimate the expression of transcripts with the command "
+                                             "estimate.");
     needle_parser.info.version = "1.0.0";
     needle_parser.info.author = "Mitra Darvish";
 
@@ -384,8 +330,6 @@ int main(int argc, char const ** argv)
         run_needle_ibf_min(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-minimiser"})
         run_needle_minimiser(sub_parser);
-    else if (sub_parser.info.app_name == std::string_view{"needle-search"})
-        run_needle_search(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-stats"})
         run_needle_stats(sub_parser);
     else
