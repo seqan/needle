@@ -244,13 +244,14 @@ TEST(estimate, small_example)
     estimate_arguments estimate_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    estimate_args.threshold = 0.5;
     ibf_args.expression_levels = {1, 2, 4};
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    estimate_args.threshold = 0.5;
+    estimate_args.expressions = ibf_args.expression_levels;
 
     ibf(args, ibf_args);
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    estimate(args, estimate_args, ibf, ibf_args.expression_levels, std::string(DATA_INPUT_DIR) + "expression.out",
+    estimate(args, estimate_args, ibf, std::string(DATA_INPUT_DIR) + "expression.out",
              std::string(DATA_INPUT_DIR) + "mini_gen.fasta", ibf_args.path_out);
 
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
@@ -274,13 +275,14 @@ TEST(estimate, small_example_uncompressed)
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     args.compressed = false;
-    estimate_args.threshold = 0.5;
     ibf_args.expression_levels = {1, 2};
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    estimate_args.threshold = 0.5;
+    estimate_args.expressions = ibf_args.expression_levels;
 
     ibf(args, ibf_args);
     seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
-    estimate(args, estimate_args, ibf, ibf_args.expression_levels, std::string(DATA_INPUT_DIR) + "expression.out",
+    estimate(args, estimate_args, ibf, std::string(DATA_INPUT_DIR) + "expression.out",
              std::string(DATA_INPUT_DIR) + "mini_gen.fasta", ibf_args.path_out);
 
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
@@ -305,11 +307,12 @@ TEST(estimate, small_example_gene_not_found)
     initialization_ibf_args(ibf_args);
     estimate_args.threshold = 0.5;
     ibf_args.expression_levels = {2, 4};
+    estimate_args.expressions = ibf_args.expression_levels;
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
     ibf(args, ibf_args);
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    estimate(args, estimate_args, ibf, ibf_args.expression_levels, std::string(DATA_INPUT_DIR) + "expression.out",
+    estimate(args, estimate_args, ibf, std::string(DATA_INPUT_DIR) + "expression.out",
              std::string(DATA_INPUT_DIR) + "mini_gen2.fasta", ibf_args.path_out);
 
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
@@ -335,10 +338,11 @@ TEST(estimate, threshold)
     estimate_args.threshold = 0.6;
     ibf_args.expression_levels = {1, 2};
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    estimate_args.expressions = ibf_args.expression_levels;
 
     ibf(args, ibf_args);
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    estimate(args, estimate_args, ibf, ibf_args.expression_levels, std::string(DATA_INPUT_DIR) + "expression.out",
+    estimate(args, estimate_args, ibf, std::string(DATA_INPUT_DIR) + "expression.out",
              std::string(DATA_INPUT_DIR) + "mini_gen3.fasta", ibf_args.path_out);
 
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
@@ -369,10 +373,11 @@ TEST(estimate, example)
     ibf_args.bin_size = {100000};
     ibf_args.path_out = std::string(DATA_INPUT_DIR);
     args.compressed = false;
+    estimate_args.expressions = ibf_args.expression_levels;
     ibf(args, ibf_args);
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
-    estimate(args, estimate_args, ibf, ibf_args.expression_levels, std::string(DATA_INPUT_DIR) + "expression.out",
+    estimate(args, estimate_args, ibf, std::string(DATA_INPUT_DIR) + "expression.out",
     std::string(DATA_INPUT_DIR) + "gene.fasta", ibf_args.path_out);
 
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
