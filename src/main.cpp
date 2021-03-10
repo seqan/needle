@@ -50,6 +50,8 @@ void initialise_ibf_argument_parser(seqan3::argument_parser & parser, ibf_argume
                                                          "should be considered the result of a sequencing error and "
                                                          "therefore be ignored. Default: Every sample has a cut off of "
                                                          "zero.");
+    parser.add_flag(ibf_args.paired, 'y', "individual", "If set, every sample gets its own expression level. Default: false.");
+    parser.add_option(ibf_args.number_expression_levels, 'l', "number_expression_levels", "Number of expression levels.");
 }
 
 int run_needle_count(seqan3::argument_parser & parser)
