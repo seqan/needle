@@ -529,6 +529,39 @@ TEST(estimate, threshold)
     }
 }
 
+TEST(estimate, small_example_different_expressions_per_level)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    estimate_arguments estimate_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+    ibf_args.number_expression_levels = 3;
+    ibf_args.set_expression_levels_samplewise = true;
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    estimate_args.threshold = 0.5;
+
+    minimiser(args, ibf_args);
+    std::vector<std::filesystem::path> minimiser_files{std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
+    ibf_args.expression_levels = {};
+    ibf(minimiser_files, args, ibf_args);
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    estimate_args.expressions = {0, 1, 2};
+    estimate(args, estimate_args, ibf, std::string(DATA_INPUT_DIR) + "expression.out",
+             std::string(DATA_INPUT_DIR) + "mini_gen.fasta", ibf_args.path_out, {std::string(DATA_INPUT_DIR) + "mini_example.header"});
+
+    std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
+    std::string line;
+    std::string expected{"gen1\t4\t"};
+    if (output_file.is_open())
+    {
+        while ( std::getline (output_file,line) )
+        {
+            EXPECT_EQ(expected,line);
+        }
+    output_file.close();
+    }
+}
 
 TEST(estimate, example)
 {
@@ -562,6 +595,42 @@ TEST(estimate, example)
     }
 }
 
+TEST(estimate, example_different_expressions_per_level)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    estimate_arguments estimate_args{};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
+                               std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
+    ibf_args.samples = {2,2};
+    ibf_args.number_expression_levels = 3;
+    ibf_args.set_expression_levels_samplewise = true;
+    ibf_args.bin_size = {100000};
+    ibf_args.path_out = std::string(DATA_INPUT_DIR);
+    args.compressed = false;
+    estimate_args.expressions = {0, 1, 2};
+    minimiser(args, ibf_args);
+    std::vector<std::filesystem::path> minimiser_files{std::string(DATA_INPUT_DIR) + "exp_01.minimiser", std::string(DATA_INPUT_DIR) + "exp_11.minimiser"};
+    ibf_args.expression_levels = {};
+    ibf(minimiser_files, args, ibf_args);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
+    estimate(args, estimate_args, ibf, std::string(DATA_INPUT_DIR) + "expression.out",
+    std::string(DATA_INPUT_DIR) + "gene.fasta", ibf_args.path_out, {std::string(DATA_INPUT_DIR) + "exp_01.header", std::string(DATA_INPUT_DIR) + "exp_11.header"});
+
+    std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
+    std::string line;
+    std::string expected{"GeneA\t18\t26\t"};
+    if (output_file.is_open())
+    {
+        while ( std::getline (output_file,line) )
+        {
+             EXPECT_EQ(expected,line);
+        }
+        output_file.close();
+    }
+}
+
 TEST(stats, example)
 {
     arguments args{};
@@ -569,9 +638,9 @@ TEST(stats, example)
     std::vector<std::filesystem::path> minimiser_files{std::string(DATA_INPUT_DIR) + "exp_01.header",
                                                        std::string(DATA_INPUT_DIR) + "exp_11.header"};
 
-    std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> expected{{{0}, {62496, 63053, 63053}},
-                                                                                {{1}, {6116, 6359, 6359}},
-                                                                                {{4}, {7, 25, 25}}};
+    std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> expected{{{1}, {46745, 47204, 47204}},
+                                                                                {{11}, {7284, 7502, 7502}},
+                                                                                {{26}, {8249, 8565, 8565}}};
 
     std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> results = statistics(args, ibf_args, minimiser_files);
 
