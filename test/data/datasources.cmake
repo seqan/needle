@@ -14,7 +14,7 @@ declare_datasource (FILE mini_example.fasta
                     URL_HASH SHA256=f872221632e7423b071d1aedaf4c4e9da2a659e843fcafac12cd65632b904b93)
 declare_datasource (FILE mini_example.header
                     URL ${CMAKE_SOURCE_DIR}/test/data/mini_example.header
-                    URL_HASH SHA256=54644375bf8e1d3d9d8ba556762afd3f88f5eba5ca4324629b79517b7aea36a1)
+                    URL_HASH SHA256=6c890b155f21eaa1854949da6f1625d0ba153f67495995b7627f00b9c528e095)
 declare_datasource (FILE mini_example.minimiser
                     URL ${CMAKE_SOURCE_DIR}/test/data/mini_example.minimiser
                     URL_HASH SHA256=98927a56465368db8c8a557f0ad5b83c25f57fb1820ba997be23b69fb4fe9244)
