@@ -21,8 +21,8 @@ TEST_F(cli_test, with_argument)
     cli_test_result result = execute_app("needle stats", data("mini_example.header"), data( "mini_example2.header"));
     std::string expected
     {
-        "For expression level 0:\n"
-        "Minimum of Counts: 12\n"
+        "For expression level 3:\n"
+        "Minimum of Counts: 7\n"
         "Median of Counts: 12\n"
         "Maximum of Counts: 12\n\n\n"
     };

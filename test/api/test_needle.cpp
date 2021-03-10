@@ -16,6 +16,34 @@
 
 using seqan3::operator""_shape;
 
+std::vector<robin_hood::unordered_node_map<uint64_t,uint64_t>> expected_hash_tables{   // minimisers:
+                                                                             {{0,2},   // AAAA
+                                                                              {1,4},   // AAAC
+                                                                              {6,4},   // AACG
+                                                                              {24,1},  // ACGA
+                                                                              {27,5},  // ACGT
+                                                                              {97,3},  // CGAC
+                                                                              {108,2}, // CGTA
+                                                                              {109,3}, // CGTC
+                                                                              {112,3}, // CTAA
+                                                                              {177,1}, // GTAC
+                                                                              {192,3}, // TAAA
+                                                                              {216,1}, // TCGA
+                                                                                     },
+                                                                             {{27,1},  // ACGT
+                                                                              {42,1},  // AGGG
+                                                                              {74,1},  // CAGG
+                                                                              {82,1},  // CCAG
+                                                                              {84,1},  // CCCA
+                                                                              {85,19}, // CCCC
+                                                                              {86,1},  // CCCG
+                                                                              {109,1}, // CGTC
+                                                                              {149,2}, // GCCC
+                                                                              {161,1}, // GGAC
+                                                                              {165,1}, // GGCC
+                                                                              {168,1}, // GGGA
+                                                                                     },};
+
 void initialization_args(arguments & args)
 {
     args.compressed = true;
@@ -88,6 +116,15 @@ TEST(ibf, given_expression_levels)
     std::vector<uint32_t> medians = ibf(args, ibf_args);
 
     EXPECT_EQ(expected, medians);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    load_ibf(ibf, std::string{ibf_args.path_out} + "IBF_1");
+    auto agent = ibf.membership_agent();
+
+    sdsl::bit_vector expected_result(1, 0);
+    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(24));
 }
 
 TEST(ibf, no_given_expression_levels)
@@ -105,6 +142,15 @@ TEST(ibf, no_given_expression_levels)
     std::vector<uint32_t> medians = ibf(args, ibf_args);
 
     EXPECT_EQ(expected, medians);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    load_ibf(ibf, std::string{ibf_args.path_out} + "IBF_3");
+    auto agent = ibf.membership_agent();
+
+    sdsl::bit_vector expected_result(1, 0);
+    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(97));
 }
 
 TEST(ibf, no_given_expression_levels_auto)
@@ -121,6 +167,15 @@ TEST(ibf, no_given_expression_levels_auto)
     std::vector<uint32_t> medians = ibf(args, ibf_args);
 
     EXPECT_EQ(expected, medians);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    load_ibf(ibf, std::string{ibf_args.path_out} + "IBF_2");
+    auto agent = ibf.membership_agent();
+
+    sdsl::bit_vector expected_result(1, 0);
+    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(97));
 }
 
 TEST(ibf, throws)
@@ -157,6 +212,15 @@ TEST(ibfmin, given_expression_levels)
     std::vector<uint32_t> medians = ibf(minimiser_file, args, ibf_args);
 
     EXPECT_EQ(expected, medians);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    load_ibf(ibf, std::string{ibf_args.path_out} + "IBF_1");
+    auto agent = ibf.membership_agent();
+
+    sdsl::bit_vector expected_result(1, 0);
+    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(97));
 }
 
 TEST(minimiser, small_example)
@@ -165,35 +229,6 @@ TEST(minimiser, small_example)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    std::vector<robin_hood::unordered_node_map<uint64_t,uint64_t>> expected_hash_tables{   // minimisers:
-                                                                                 {{0,2},   // AAAA
-                                                                                  {1,4},   // AAAC
-                                                                                  {6,4},   // AACG
-                                                                                  {24,1},  // ACGA
-                                                                                  {27,5},  // ACGT
-                                                                                  {97,3},  // CGAC
-                                                                                  {108,2}, // CGTA
-                                                                                  {109,3}, // CGTC
-                                                                                  {112,3}, // CTAA
-                                                                                  {177,1}, // GTAC
-                                                                                  {192,3}, // TAAA
-                                                                                  {216,1}, // TCGA
-                                                                                         },
-                                                                                 {{27,1},  // ACGT
-                                                                                  {42,1},  // AGGG
-                                                                                  {74,1},  // CAGG
-                                                                                  {82,1},  // CCAG
-                                                                                  {84,1},  // CCCA
-                                                                                  {85,19}, // CCCC
-                                                                                  {86,1},  // CCCG
-                                                                                  {109,1}, // CGTC
-                                                                                  {149,2}, // GCCC
-                                                                                  {161,1}, // GGAC
-                                                                                  {165,1}, // GGCC
-                                                                                  {168,1}, // GGGA
-                                                                                         },};
-    std::vector<uint32_t> expected_normalized_exp_values{3,1};
-
     ibf_args.expression_levels = {0};
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
                                std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
@@ -234,8 +269,142 @@ TEST(minimiser, small_example)
     }
 
     EXPECT_EQ(ibf_args.expression_levels, ibf(minimiser_files, args, ibf_args));
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    load_ibf(ibf, std::string{ibf_args.path_out} + "IBF_0");
+    auto agent = ibf.membership_agent();
+
+    sdsl::bit_vector expected_result(2, 0);
+    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(0));
+    expected_result[1] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(27));
 }
 
+TEST(minimiser, small_example_auto_expression_level)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+    ibf_args.number_expression_levels = 2;
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
+                               std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+
+    minimiser(args, ibf_args);
+    std::vector<uint64_t> counts{};
+    uint32_t normalized_exp_value{};
+    std::vector<std::vector<uint64_t>> expected_counts{{6, 3}, {1, 1}};
+    std::vector<uint64_t> expected_levels{2, 4};
+    robin_hood::unordered_node_map<uint64_t,uint64_t> result_hash_table{};
+    std::vector<std::filesystem::path> minimiser_files{};
+    seqan3::shape expected_shape = seqan3::ungapped{args.k};
+
+    for (int i = 0; i < ibf_args.sequence_files.size(); ++i)
+    {
+        // Test Header file
+        ibf_args.expression_levels = {};
+        read_header(args, ibf_args, std::string{ibf_args.path_out}  +
+                    std::string{ibf_args.sequence_files[i].stem()} + ".header", counts);
+        EXPECT_EQ(4, args.k);
+        EXPECT_EQ(4, args.w_size.get());
+        EXPECT_EQ(0, args.s.get());
+        EXPECT_EQ(15, args.shape.to_ulong());
+        EXPECT_EQ(0, ibf_args.cutoffs[0]);
+        EXPECT_EQ(expected_levels[0], ibf_args.expression_levels[0]);
+        EXPECT_EQ(expected_levels[1], ibf_args.expression_levels[1]);
+        EXPECT_EQ(2, ibf_args.expression_levels.size());
+        EXPECT_EQ(expected_counts[i][0], counts[0]);
+        EXPECT_EQ(expected_counts[i][1], counts[1]);
+        EXPECT_EQ(2, counts.size());
+        counts.clear();
+
+        // Test binary file
+        read_binary(result_hash_table, std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[i].stem()}
+                    + ".minimiser");
+        minimiser_files.push_back(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[i].stem()}
+                                  + ".minimiser");
+        EXPECT_EQ(expected_hash_tables[i], result_hash_table);
+
+        result_hash_table.clear();
+    }
+
+    EXPECT_EQ(ibf_args.expression_levels, ibf(minimiser_files, args, ibf_args));
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    load_ibf(ibf, std::string{ibf_args.path_out} + "IBF_2");
+    auto agent = ibf.membership_agent();
+
+    sdsl::bit_vector expected_result(2, 0);
+    EXPECT_EQ(expected_result, agent.bulk_contains(2));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result, agent.bulk_contains(0));
+    EXPECT_EQ(expected_result, agent.bulk_contains(27));
+}
+
+TEST(minimiser, small_example_samplewise)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+
+    ibf_args.number_expression_levels = 1;
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
+                               std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    ibf_args.set_expression_levels_samplewise = true;
+
+    minimiser(args, ibf_args);
+    std::vector<uint64_t> counts{};
+    uint32_t normalized_exp_value{};
+    std::vector<std::vector<uint64_t>> expected_counts{{7}, {12}};
+    std::vector<uint64_t> expected_levels{3, 1};
+    robin_hood::unordered_node_map<uint64_t,uint64_t> result_hash_table{};
+    std::vector<std::filesystem::path> minimiser_files{};
+    seqan3::shape expected_shape = seqan3::ungapped{args.k};
+
+    for (int i = 0; i < ibf_args.sequence_files.size(); ++i)
+    {
+        // Test Header file
+        ibf_args.expression_levels = {};
+        read_header(args, ibf_args, std::string{ibf_args.path_out}  +
+                    std::string{ibf_args.sequence_files[i].stem()} + ".header", counts);
+        EXPECT_EQ(4, args.k);
+        EXPECT_EQ(4, args.w_size.get());
+        EXPECT_EQ(0, args.s.get());
+        EXPECT_EQ(15, args.shape.to_ulong());
+        EXPECT_EQ(0, ibf_args.cutoffs[0]);
+        EXPECT_EQ(expected_levels[i], ibf_args.expression_levels[0]);
+        EXPECT_EQ(1, ibf_args.expression_levels.size());
+        EXPECT_EQ(expected_counts[i][0], counts[0]);
+        EXPECT_EQ(1, counts.size());
+        counts.clear();
+
+        // Test binary file
+        read_binary(result_hash_table, std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[i].stem()}
+                    + ".minimiser");
+        minimiser_files.push_back(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[i].stem()}
+                                  + ".minimiser");
+        EXPECT_EQ(expected_hash_tables[i], result_hash_table);
+
+        result_hash_table.clear();
+        expected_levels = {1, 1};
+    }
+
+    EXPECT_EQ(ibf_args.expression_levels, ibf(minimiser_files, args, ibf_args));
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    load_ibf(ibf, std::string{ibf_args.path_out} + "IBF_Level_0");
+    auto agent = ibf.membership_agent();
+
+    sdsl::bit_vector expected_result(2, 0);
+    EXPECT_EQ(expected_result, agent.bulk_contains(2));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result, agent.bulk_contains(0));
+    expected_result[1] = 1;
+    EXPECT_EQ(expected_result, agent.bulk_contains(27));
+}
 
 TEST(estimate, small_example)
 {
