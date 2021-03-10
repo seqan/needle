@@ -406,18 +406,19 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
         }
 
         // Every minimiser is stored in IBF, if it occurence is greater than or equal to the expression level
-        for (int j = ibf_args.number_expression_levels - 1; j >= 0 ; --j)
+        for (auto & elem : hash_table)
         {
-            for (auto & elem : hash_table)
+            for (int j = ibf_args.number_expression_levels - 1; j >= 0 ; --j)
             {
                 if ((ibf_args.expression_levels[j] == 0) & (elem.second > ibf_args.cutoffs[i])) // for comparison with mantis, SBT
                 {
                     ibfs[j].emplace(elem.first,seqan3::bin_index{i});
+                    break;
                 }
                 else if (elem.second >= ibf_args.expression_levels[j])
                 {
                     ibfs[j].emplace(elem.first,seqan3::bin_index{i});
-                    hash_table.erase(elem.first);
+                    break;
                 }
             }
         }
@@ -429,6 +430,8 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
     for (unsigned i = 0; i < ibf_args.expression_levels.size(); i++)
     {
         std::filesystem::path filename{ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[i])};
+        if (ibf_args.set_expression_levels_samplewise) // TODO: If this option is choosen the expressions need to be stored
+             filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(i);
         if (args.compressed)
         {
             seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf{ibfs[i]};
@@ -483,7 +486,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
 
        // Store IBFs
        std::filesystem::path filename{ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[j])};
-       if (!ibf_args.set_expression_levels_samplewise)
+       if (ibf_args.set_expression_levels_samplewise)
             filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(j);
        if (args.compressed)
        {
@@ -522,6 +525,7 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
         //If no expression values given, determine them
         if (ibf_args.set_expression_levels_samplewise)
         {
+           ibf_args.expression_levels.clear();
            get_expression_levels(args,
                                  ibf_args,
                                  hash_table,
@@ -539,11 +543,12 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
                 if ((ibf_args.expression_levels[j] == 0) & (elem.second > ibf_args.cutoffs[i])) // for comparison with mantis, SBT
                 {
                     counts[j]++;
+                    break;
                 }
                 else if ((((elem.second)) >= ibf_args.expression_levels[j]))
                 {
                     counts[j]++;
-                    hash_table.erase(elem.first);
+                    break;
                 }
             }
         }
