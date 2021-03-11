@@ -223,6 +223,60 @@ TEST(ibfmin, given_expression_levels)
     EXPECT_EQ(expected_result,  agent.bulk_contains(97));
 }
 
+
+TEST(ibfmin, no_given_expression_levels)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+    ibf_args.set_expression_levels_samplewise = true;
+    ibf_args.number_expression_levels = 2;
+    ibf_args.bin_size = {1000, 1000};
+    std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
+
+    std::vector<uint32_t> expected{3, 4};
+
+    std::vector<uint32_t> medians = ibf(minimiser_file, args, ibf_args);
+
+    EXPECT_EQ(expected, medians);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    load_ibf(ibf, std::string{ibf_args.path_out} + "IBF_1");
+    auto agent = ibf.membership_agent();
+
+    sdsl::bit_vector expected_result(1, 0);
+    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(97));
+}
+
+TEST(ibfmin, no_given_expression_levels_auto)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+    ibf_args.number_expression_levels = 2;
+    ibf_args.bin_size = {1000, 1000};
+    std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
+
+    std::vector<uint32_t> expected{2, 4};
+
+    std::vector<uint32_t> medians = ibf(minimiser_file, args, ibf_args);
+
+    EXPECT_EQ(expected, medians);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    load_ibf(ibf, std::string{ibf_args.path_out} + "IBF_1");
+    auto agent = ibf.membership_agent();
+
+    sdsl::bit_vector expected_result(1, 0);
+    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(97));
+}
+
 TEST(minimiser, small_example)
 {
     arguments args{};
@@ -400,8 +454,8 @@ TEST(minimiser, small_example_samplewise)
 
     sdsl::bit_vector expected_result(2, 0);
     EXPECT_EQ(expected_result, agent.bulk_contains(2));
-    expected_result[0] = 1;
     EXPECT_EQ(expected_result, agent.bulk_contains(0));
+    expected_result[0] = 1;
     expected_result[1] = 1;
     EXPECT_EQ(expected_result, agent.bulk_contains(27));
 }

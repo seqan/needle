@@ -151,9 +151,27 @@ void set_arguments(ibf_arguments & ibf_args)
     }
 }
 
+void set_include_file(arguments const & args, ibf_arguments & ibf_args,
+                   robin_hood::unordered_set<uint64_t> & genome_set_table)
+{
+    // Generate genome mask
+    if (ibf_args.include_file != "")
+    {
+        seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for genome sequences
+		get_sequences({ibf_args.include_file}, genome_sequences, args.k);
+
+        // Count minimiser in sequence file
+        for (auto seq : genome_sequences)
+        {
+            for (auto minHash :  seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
+                genome_set_table.insert(minHash);
+        }
+        genome_sequences.clear();
+    }
+}
+
 // Set arguments that ibf use
 void set_arguments_ibf(arguments const & args, ibf_arguments & ibf_args,
-                   seqan3::concatenated_sequences<seqan3::dna4_vector> & genome_sequences,
                    robin_hood::unordered_set<uint64_t> & genome_set_table)
 {
     if (ibf_args.paired) // If paired is true, a pair is seen as one sample
@@ -169,18 +187,7 @@ void set_arguments_ibf(arguments const & args, ibf_arguments & ibf_args,
 
     set_arguments(ibf_args);
 
-    // Generate genome mask
-    if (ibf_args.include_file != "")
-    {
-		get_sequences({ibf_args.include_file}, genome_sequences, args.k);
-
-        // Count minimiser in sequence file
-        for (auto seq : genome_sequences)
-        {
-            for (auto minHash :  seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-                genome_set_table.insert(minHash);
-        }
-    }
+    set_include_file(args, ibf_args, genome_set_table);
 }
 
 void check_bin_size(ibf_arguments & ibf_args)
@@ -276,7 +283,7 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
 // Calculate expression levels
 void get_expression_levels(arguments const & args, ibf_arguments & ibf_args,
                            robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table, unsigned cutoff,
-                           robin_hood::unordered_set<uint64_t> const & genome_set_table, std::size_t filesize)
+                           robin_hood::unordered_set<uint64_t> const & genome_set_table)
 {
     // Calculate expression levels by taking median recursively
     std::vector<uint32_t> counts;
@@ -356,11 +363,10 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 {
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{}; // Storage for minimisers
-    seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for genome sequences
     robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimisers in genome sequences
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
 
-    set_arguments_ibf(args, ibf_args, genome_sequences, genome_set_table);
+    set_arguments_ibf(args, ibf_args, genome_set_table);
     check_bin_size(ibf_args);
 
     // Store experiment names
@@ -400,9 +406,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
                                  ibf_args,
                                  hash_table,
                                  ibf_args.cutoffs[i],
-                                 genome_set_table,
-                                 (ibf_args.samples[i]*std::filesystem::file_size(ibf_args.sequence_files[std::accumulate(ibf_args.samples.begin(),
-                                                                                                 ibf_args.samples.begin()+i,0)])));
+                                 genome_set_table);
         }
 
         // Every minimiser is stored in IBF, if it occurence is greater than or equal to the expression level
@@ -424,7 +428,6 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
         }
         hash_table.clear();
     }
-    genome_sequences.clear();
 
     // Store IBFs
     for (unsigned i = 0; i < ibf_args.expression_levels.size(); i++)
@@ -453,9 +456,11 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
 {
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{}; // Storage for minimisers
+    robin_hood::unordered_set<uint64_t> genome_set_table;
 
     set_arguments(ibf_args);
     check_bin_size(ibf_args);
+    set_include_file(args, ibf_args, genome_set_table);
     if (ibf_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
         ibf_args.cutoffs.assign(minimiser_files.size(),0);
 
@@ -472,6 +477,17 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
        for (unsigned i = 0; i < minimiser_files.size(); i++)
        {
            read_binary(hash_table, minimiser_files[i].replace_extension(".minimiser"));
+
+           if (ibf_args.set_expression_levels_samplewise)
+           {
+              ibf_args.expression_levels.clear();
+              get_expression_levels(args,
+                                    ibf_args,
+                                    hash_table,
+                                    ibf_args.cutoffs[i],
+                                    genome_set_table);
+           }
+
 
            // Every minimiser is stored in IBF, if it occurence is greater than or equal to expression level
            for (auto & elem : hash_table)
@@ -508,13 +524,12 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
     std::vector<uint32_t> counts;
     robin_hood::unordered_node_map<uint64_t,uint64_t> hash_table{}; // Storage for minimisers
     std::ofstream outfile;
-    seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences; // Storage for genome sequences
     robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimisers in genome sequences
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
     int seen_before{0}; // just to keep track, which sequence files have already been processed, used in stead of:
                         // std::accumulate(ibf_args.samples.begin(), ibf_args.samples.begin()+i,0)
 
-    set_arguments_ibf(args, ibf_args, genome_sequences, genome_set_table);
+    set_arguments_ibf(args, ibf_args, genome_set_table);
 
     // Add minimisers to ibf
     for (unsigned i = 0; i < ibf_args.samples.size(); i++)
@@ -530,9 +545,7 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
                                  ibf_args,
                                  hash_table,
                                  ibf_args.cutoffs[i],
-                                 genome_set_table,
-                                 (ibf_args.samples[i]*std::filesystem::file_size(ibf_args.sequence_files[std::accumulate(ibf_args.samples.begin(),
-                                                                                                 ibf_args.samples.begin()+i,0)])));
+                                 genome_set_table);
         }
 
         counts.assign(ibf_args.expression_levels.size(),0);
