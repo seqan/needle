@@ -46,11 +46,11 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
 *  \param file_out    The file where results should be stored to.
 *  \param search_file The sequence file with the sequences which expression value should be estimated.
 *  \param path_in     The directory where the ibfs can be found.
-*  \param header_files Path to the header files, where expression levels can be found.
+*  \param level_file Path to the header files, where expression levels can be found.
 */
 template <class IBFType>
 void estimate(arguments const & args, estimate_arguments const & estimate_args, IBFType & ibf, std::filesystem::path file_out,
-            std::filesystem::path search_file, std::filesystem::path path_in, std::vector<std::filesystem::path> header_files);
+            std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file);
 
 /*! \brief Function, which calls the estimate function.
 *  \param args        The arguments.
@@ -58,7 +58,7 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
 *  \param file_out    The file where results should be stored to.
 *  \param search_file The sequence file with the sequences which expression value should be estimated.
 *  \param path_in     The directory where the ibfs can be found.
-*  \param header_files Path to the header files, where expression levels can be found.
+*  \param level_file  Path to the header files, where expression levels can be found.
 */
 void call_estimate(arguments const & args, estimate_arguments const & estimate_args, std::filesystem::path file_out,
-            std::filesystem::path search_file, std::filesystem::path path_in, std::vector<std::filesystem::path> header_files);
+            std::filesystem::path search_file, std::filesystem::path path_in,std::filesystem::path level_file);

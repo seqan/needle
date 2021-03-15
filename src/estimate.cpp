@@ -81,14 +81,12 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
 
             // Last expression level is looked at
             if (last_exp)
-            {
-        		results[j] = expressions[j][k];
-            }
+        		results[j] = expressions[k][j];
         }
         else if (prev_counts[j] >= (minimiser_length * threshold))
         {
             // Actually calculate estimation
-            results[j] = expressions[j][k] - ((((minimiser_length/2.0) - counter[j])/(prev_counts[j] - (counter[j] * 1.0))) * (expressions[j][k]-expressions[j][k-1]));
+            results[j] = expressions[k][j] - ((((minimiser_length/2.0) - counter[j])/(prev_counts[j] - (counter[j] * 1.0))) * (expressions[k][j]-expressions[k-1][j]));
         }
     }
     return results;
@@ -155,39 +153,44 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
 
 }
 
-// Reads one header file minimiser creates
-void read_header(std::vector<std::vector<uint32_t>> & expressions, std::filesystem::path filename, uint64_t iterator)
+// Reads the level file ibf creates
+void read_levels(std::vector<std::vector<uint32_t>> & expressions, std::filesystem::path filename)
 {
     std::ifstream fin;
     fin.open(filename);
     auto stream_view = seqan3::views::istreambuf(fin);
     auto stream_it = std::ranges::begin(stream_view);
     int j{0};
+    std::vector<uint32_t> empty_vector{};
 
-    // Consume first line
     std::string buffer{};
-    seqan3::detail::consume(stream_view | seqan3::views::take_line_or_throw);
 
-    // Read second line = expression levels
+    // Read line = expression levels
     do
     {
-        std::ranges::copy(stream_view | seqan3::views::take_until_or_throw(seqan3::is_char<' '> || seqan3::is_char<'\n'>),
+        if (j == expressions.size())
+            expressions.push_back(empty_vector);
+        std::ranges::copy(stream_view | seqan3::views::take_until_or_throw(seqan3::is_char<' '>),
                                         std::cpp20::back_inserter(buffer));
-        expressions[iterator][j] = (uint32_t)  std::stoi(buffer);
+        expressions[j].push_back((uint32_t)  std::stoi(buffer));
         buffer.clear();
-        j++;
-        if (*stream_it != '\n')
+        if(*stream_it != '/')
             ++stream_it;
-    } while (*stream_it != '\n');
+
+        if (*stream_it == '\n')
+        {
+            ++stream_it;
+            j++;
+        }
+    } while (*stream_it != '/');
     ++stream_it;
-    seqan3::detail::consume(stream_view | seqan3::views::take_line_or_throw);
 
     fin.close();
 }
 
 template <class IBFType>
 void estimate(arguments const & args, estimate_arguments const & estimate_args, IBFType & ibf, std::filesystem::path file_out,
-              std::filesystem::path search_file, std::filesystem::path path_in, std::vector<std::filesystem::path> header_files)
+              std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file)
 {
     std::vector<std::string> ids;
     std::vector<seqan3::dna4_vector> seqs;
@@ -204,11 +207,10 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
 
     std::vector<std::vector<uint32_t>> prev_counts;
     bool last_exp{false};
-    std::vector<std::vector<uint32_t>> expressions(header_files.size(), std::vector<uint32_t> (estimate_args.expressions.size(), 0));
-    for(int i = 0; i < header_files.size(); i++)
-    {
-        read_header(expressions, header_files[i], i);
-    }
+    std::vector<std::vector<uint32_t>> expressions{};
+
+    read_levels(expressions, level_file);
+
     std::vector<uint32_t> results;
     std::vector<std::vector<uint32_t>> estimations;
     for (int j = 0; j < estimate_args.expressions.size(); j++)
@@ -249,22 +251,22 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
 }
 
 void call_estimate(arguments const & args, estimate_arguments const & estimate_args, std::filesystem::path file_out,
-              std::filesystem::path search_file, std::filesystem::path path_in, std::vector<std::filesystem::path> header_files = {})
+              std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file = "")
 {
     if (args.compressed)
     {
         seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-        if (header_files.empty())
+        if (level_file == "")
             estimate(args, estimate_args, ibf, file_out, search_file, path_in);
         else
-            estimate(args, estimate_args, ibf, file_out, search_file, path_in, header_files);
+            estimate(args, estimate_args, ibf, file_out, search_file, path_in, level_file);
     }
     else
     {
         seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
-        if (header_files.empty())
+        if (level_file == "")
             estimate(args, estimate_args, ibf, file_out, search_file, path_in);
         else
-            estimate(args, estimate_args, ibf, file_out, search_file, path_in, header_files);
+            estimate(args, estimate_args, ibf, file_out, search_file, path_in, level_file);
     }
 }

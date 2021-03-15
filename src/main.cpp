@@ -100,7 +100,7 @@ int run_needle_estimate(seqan3::argument_parser & parser)
     parser.info.author = "Mitra Darvish";
     std::filesystem::path search_file;
     std::filesystem::path path_in{"./"};
-    std::vector<std::filesystem::path> header_files{};
+    std::filesystem::path level_file{""};
     std::filesystem::path file_out{"expressions.out"};
     std::vector<uint32_t> expressions{};
 
@@ -109,7 +109,7 @@ int run_needle_estimate(seqan3::argument_parser & parser)
     parser.add_option(estimate_args.expressions, 'e', "expression", "Which expression levels should be considered during a "
                                                       "search.");
     parser.add_option(path_in, 'i', "in", "Directory where input files can be found.");
-    parser.add_option(header_files, 'd', "header", "Directory where header files can be found.");
+    parser.add_option(level_file, 'd', "level", "Level file.");
     parser.add_option(estimate_args.threshold, 't', "threshold", "The minimal amount of minimisers found in a transcript"
                                                                 " to consider it as found in an IBF. Default: 0.5");
     initialise_argument_parser(parser, args);
@@ -126,7 +126,7 @@ int run_needle_estimate(seqan3::argument_parser & parser)
 
     try
     {
-        call_estimate(args, estimate_args, file_out, search_file, path_in, header_files);
+        call_estimate(args, estimate_args, file_out, search_file, path_in, level_file);
     }
     catch (const std::invalid_argument & e)
     {
