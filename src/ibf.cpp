@@ -113,6 +113,8 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
         {
             for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
                 counter.push_back(hash_table[minHash]);
+            for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
+                seqan3::debug_stream << hash_table[minHash] << ",";
             std::nth_element(counter.begin(), counter.begin() + counter.size()/2, counter.end());
             exp =  counter[counter.size()/2];
             counter.clear();
@@ -529,7 +531,9 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
            {
                  if ((ibf_args.expression_levels[j] == 0) & (elem.second > ibf_args.cutoffs[i])) // for comparison with mantis, SBT
                      ibf.emplace(elem.first,seqan3::bin_index{i});
-                 else if (elem.second >= ibf_args.expression_levels[j])
+                 else if ((elem.second >= ibf_args.expression_levels[j]) & (j < ibf_args.number_expression_levels - 1) &(elem.second < ibf_args.expression_levels[j+1]))
+                     ibf.emplace(elem.first,seqan3::bin_index{i});
+                 else if ((j == ibf_args.number_expression_levels - 1) & (elem.second >= ibf_args.expression_levels[j]))
                      ibf.emplace(elem.first,seqan3::bin_index{i});
            }
            hash_table.clear();

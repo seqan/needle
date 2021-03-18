@@ -218,9 +218,9 @@ TEST(ibfmin, given_expression_levels)
     auto agent = ibf.membership_agent();
 
     sdsl::bit_vector expected_result(1, 0);
-    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
-    expected_result[0] = 1;
     EXPECT_EQ(expected_result,  agent.bulk_contains(97));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(24));
 }
 
 
@@ -242,7 +242,7 @@ TEST(ibfmin, no_given_expression_levels)
     EXPECT_EQ(expected, medians);
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    load_ibf(ibf, std::string{ibf_args.path_out} + "IBF_1");
+    load_ibf(ibf, std::string{ibf_args.path_out} + "IBF_Level_0");
     auto agent = ibf.membership_agent();
 
     sdsl::bit_vector expected_result(1, 0);
@@ -268,7 +268,7 @@ TEST(ibfmin, no_given_expression_levels_auto)
     EXPECT_EQ(expected, medians);
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    load_ibf(ibf, std::string{ibf_args.path_out} + "IBF_1");
+    load_ibf(ibf, std::string{ibf_args.path_out} + "IBF_2");
     auto agent = ibf.membership_agent();
 
     sdsl::bit_vector expected_result(1, 0);
@@ -392,9 +392,9 @@ TEST(minimiser, small_example_auto_expression_level)
 
     sdsl::bit_vector expected_result(2, 0);
     EXPECT_EQ(expected_result, agent.bulk_contains(2));
+    EXPECT_EQ(expected_result, agent.bulk_contains(27));
     expected_result[0] = 1;
     EXPECT_EQ(expected_result, agent.bulk_contains(0));
-    EXPECT_EQ(expected_result, agent.bulk_contains(27));
 }
 
 TEST(minimiser, small_example_samplewise)
@@ -606,7 +606,7 @@ TEST(estimate, small_example_different_expressions_per_level)
 
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
     std::string line;
-    std::string expected{"gen1\t4\t"};
+    std::string expected{"gen1\t1\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
@@ -659,22 +659,23 @@ TEST(estimate, example_different_expressions_per_level)
     ibf_args.samples = {2,2};
     ibf_args.number_expression_levels = 3;
     ibf_args.set_expression_levels_samplewise = true;
-    ibf_args.bin_size = {100000};
+    ibf_args.bin_size = {10000000};
     ibf_args.path_out = std::string(DATA_INPUT_DIR);
     args.compressed = false;
     estimate_args.expressions = {0, 1, 2};
     minimiser(args, ibf_args);
     std::vector<std::filesystem::path> minimiser_files{std::string(DATA_INPUT_DIR) + "exp_01.minimiser", std::string(DATA_INPUT_DIR) + "exp_11.minimiser"};
     ibf_args.expression_levels = {};
+    seqan3::debug_stream << 0 << "\n";
     ibf(minimiser_files, args, ibf_args);
-
+    seqan3::debug_stream << 1<< "\n";
     seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
     estimate(args, estimate_args, ibf, std::string(DATA_INPUT_DIR) + "expression.out",
     std::string(DATA_INPUT_DIR) + "gene.fasta", ibf_args.path_out, std::string(DATA_INPUT_DIR) + "IBF_Levels.levels");
-
+    seqan3::debug_stream << 2 << "\n";
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
     std::string line;
-    std::string expected{"GeneA\t18\t26\t"};
+    std::string expected{"GeneA\t0\t26\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )

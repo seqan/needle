@@ -75,19 +75,28 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
     results.assign(ibf.bin_count(), 0);
     for(int j = 0; j < counter.size(); j++)
     {
-        if (counter[j] >= (minimiser_length * threshold))
+        if ((prev_counts[j] + counter[j]) > (minimiser_length * threshold))
+        {
+            counter[j] = prev_counts[j] + counter[j];
+            if (last_exp)
+            {
+                results[j] = expressions[k][j];
+            }
+            else
+            {
+                // Actually calculate estimation
+                if (k == 0)
+                    results[j] = expressions[k][j] - ((((minimiser_length/2.0) - counter[j])/(prev_counts[j] - (counter[j] * 1.0))) * (expressions[k][j]));
+                else
+                    results[j] = expressions[k][j] - ((((minimiser_length/2.0) - counter[j])/(prev_counts[j] - (counter[j] * 1.0))) * (expressions[k][j]-expressions[k-1][j]));
+                prev_counts[j] = 0;
+            }
+        }
+        else
         {
             prev_counts[j] = prev_counts[j] + counter[j];
+        }
 
-            // Last expression level is looked at
-            if (last_exp)
-        		results[j] = expressions[k][j];
-        }
-        else if (prev_counts[j] >= (minimiser_length * threshold))
-        {
-            // Actually calculate estimation
-            results[j] = expressions[k][j] - ((((minimiser_length/2.0) - counter[j])/(prev_counts[j] - (counter[j] * 1.0))) * (expressions[k][j]-expressions[k-1][j]));
-        }
     }
     return results;
 }
@@ -217,6 +226,7 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
     {
         if (j == estimate_args.expressions.size() - 1)
         	last_exp = true;
+        seqan3::debug_stream << path_in.string() + "IBF_Level_" + std::to_string(j) << "\n";
         load_ibf(ibf, path_in.string() + "IBF_Level_" + std::to_string(j));
         for (int i = 0; i < seqs.size(); ++i)
         {
