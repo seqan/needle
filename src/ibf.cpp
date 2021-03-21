@@ -113,8 +113,6 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
         {
             for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
                 counter.push_back(hash_table[minHash]);
-            for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-                seqan3::debug_stream << hash_table[minHash] << ",";
             std::nth_element(counter.begin(), counter.begin() + counter.size()/2, counter.end());
             exp =  counter[counter.size()/2];
             counter.clear();

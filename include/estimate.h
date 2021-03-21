@@ -14,8 +14,6 @@
  * \param float expression                  The expression level that should be used when searching for a transcript
  *                                          (if no expression file is given to specify this individually for
  *                                          different transcripts).
- * \param float threshold                   The percentage of how many minimisers of a transcript need to be found in an
- *                                          IBF to be considered as contained in a certain IBF.
  *
  */
 struct estimate_arguments
@@ -23,7 +21,6 @@ struct estimate_arguments
     std::filesystem::path search_file;
     std::filesystem::path path_in{"./"};
     std::vector<uint32_t> expressions{};
-    float threshold{0.5};
 
 };
 

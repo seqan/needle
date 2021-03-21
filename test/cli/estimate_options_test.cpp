@@ -31,7 +31,7 @@ TEST_F(cli_test, fail_no_argument)
 
 TEST_F(cli_test, with_argument)
 {
-    cli_test_result result = execute_app("needle estimate -k 4 -w 4 -s 0 -e 1 -c -i ", data(""), data("mini_gen.fasta"));
+    cli_test_result result = execute_app("needle estimate -k 4 -w 4 -s 0 -e 1 -i ", data(""), data("mini_gen.fasta"));
     EXPECT_EQ(result.exit_code, 0);
     EXPECT_EQ(result.out, "");
     EXPECT_EQ(result.err, std::string{});
