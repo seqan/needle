@@ -22,7 +22,7 @@
 
 // Check if one sequence is present in a given ibf
 template <class IBFType>
-std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vector<uint32_t> & counter, seqan3::dna4_vector const seq, float threshold, std::vector<uint32_t> & prev_counts, uint64_t expression,
+std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vector<uint32_t> & counter, seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts, uint64_t expression,
 uint64_t prev_expression, bool last_exp)
 {
     uint64_t minimiser_length = 0;
@@ -35,23 +35,34 @@ uint64_t prev_expression, bool last_exp)
     }
 
     std::vector<uint32_t> results{};
+    float minimiser_pos = minimiser_length/2.0;
     results.assign(ibf.bin_count(), 0);
-    for(unsigned j = 0; j < counter.size(); j++)
+    // Last expression level is looked at
+    if (last_exp)
     {
-        if (counter[j] >= (minimiser_length * threshold))
+        for(unsigned j = 0; j < counter.size(); j++)
         {
-            prev_counts[j] = prev_counts[j] + counter[j];
-
-            // Last expression level is looked at
-            if (last_exp)
+            if ((counter[j]+prev_counts[j]) >= minimiser_pos)
             {
-        		results[j] = expression;
+                results[j] = expression;
             }
         }
-        else if (prev_counts[j] >= (minimiser_length * threshold))
+    }
+    else
+    {
+        for(unsigned j = 0; j < counter.size(); j++)
         {
-            // Actually calculate estimation
-            results[j] = expression - ((((minimiser_length/2.0) - counter[j])/(prev_counts[j] - (counter[j] * 1.0))) * (expression-prev_expression));
+            if ((prev_counts[j] + counter[j]) >= minimiser_pos)
+            {
+                // Actually calculate estimation, 0.5 for rounding
+                results[j] = 0.5 + prev_expression + (((minimiser_pos - prev_counts[j])/(counter[j]*1.0)) * (expression-prev_expression));
+                // Make sure, every transcript is only estimated once
+                prev_counts[j] = 0;
+            }
+            else
+            {
+                prev_counts[j] = prev_counts[j] + counter[j];
+            }
         }
     }
     return results;
@@ -59,7 +70,7 @@ uint64_t prev_expression, bool last_exp)
 
 template <class IBFType>
 std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vector<uint32_t> & counter,
-                                seqan3::dna4_vector const seq, float threshold, std::vector<uint32_t> & prev_counts,
+                                seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
                                 std::vector<std::vector<uint32_t>> & expressions, bool last_exp, int k)
 {
     uint64_t minimiser_length = 0;
@@ -72,32 +83,47 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
     }
 
     std::vector<uint32_t> results{};
+    float minimiser_pos = minimiser_length/2.0;
     results.assign(ibf.bin_count(), 0);
-    for(int j = 0; j < counter.size(); j++)
+    // If there was nothing previous
+    if (k == 0)
     {
-        if ((prev_counts[j] + counter[j]) > (minimiser_length * threshold))
+        for(int j = 0; j < counter.size(); j++)
         {
-            counter[j] = prev_counts[j] + counter[j];
-            if (last_exp)
-            {
+            if (counter[j] >= minimiser_pos)
+                // Actually calculate estimation
+                results[j] = (minimiser_pos/(counter[j]*1.0)) * (expressions[k][j]);
+
+            else
+                prev_counts[j] = prev_counts[j] + counter[j];
+        }
+    }
+    else if (last_exp)
+    {
+        for(int j = 0; j < counter.size(); j++)
+        {
+            if ((prev_counts[j] + counter[j]) >= minimiser_pos)
                 results[j] = expressions[k][j];
+        }
+    }
+    else
+    {
+        for(int j = 0; j < counter.size(); j++)
+        {
+            if ((prev_counts[j] + counter[j]) >= minimiser_pos)
+            {
+                // Actually calculate estimation, 0.5 for rounding
+                results[j] = 0.5 + expressions[k-1][j] + (((minimiser_pos - prev_counts[j])/(counter[j]*1.0)) * (expressions[k][j]-expressions[k-1][j]));
+                // Make sure, every transcript is only estimated once
+                prev_counts[j] = 0;
             }
             else
             {
-                // Actually calculate estimation
-                if (k == 0)
-                    results[j] = expressions[k][j] - ((((minimiser_length/2.0) - counter[j])/(prev_counts[j] - (counter[j] * 1.0))) * (expressions[k][j]));
-                else
-                    results[j] = expressions[k][j] - ((((minimiser_length/2.0) - counter[j])/(prev_counts[j] - (counter[j] * 1.0))) * (expressions[k][j]-expressions[k-1][j]));
-                prev_counts[j] = 0;
+                prev_counts[j] = prev_counts[j] + counter[j];
             }
         }
-        else
-        {
-            prev_counts[j] = prev_counts[j] + counter[j];
-        }
-
     }
+
     return results;
 }
 
@@ -138,7 +164,7 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
                 prev_counts.push_back(counter);
             }
 
-            results = check_ibf(args, ibf, counter, seqs[i], estimate_args.threshold, prev_counts[i],
+            results = check_ibf(args, ibf, counter, seqs[i], prev_counts[i],
                                 expression, prev_expression, last_exp);
             for(unsigned j = 0; j < counter.size(); j++)
                 estimations[i][j] = std::max(estimations[i][j], (uint32_t) results[j]);
@@ -226,7 +252,6 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
     {
         if (j == estimate_args.expressions.size() - 1)
         	last_exp = true;
-        seqan3::debug_stream << path_in.string() + "IBF_Level_" + std::to_string(j) << "\n";
         load_ibf(ibf, path_in.string() + "IBF_Level_" + std::to_string(j));
         for (int i = 0; i < seqs.size(); ++i)
         {
@@ -237,7 +262,7 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
                 prev_counts.push_back(counter);
             }
 
-            results = check_ibf(args, ibf, counter, seqs[i], estimate_args.threshold, prev_counts[i],
+            results = check_ibf(args, ibf, counter, seqs[i], prev_counts[i],
                                 expressions, last_exp, j);
             for(unsigned j = 0; j < counter.size(); j++)
                 estimations[i][j] = std::max(estimations[i][j], (uint32_t) results[j]);

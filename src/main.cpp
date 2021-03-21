@@ -110,8 +110,7 @@ int run_needle_estimate(seqan3::argument_parser & parser)
                                                       "search.");
     parser.add_option(path_in, 'i', "in", "Directory where input files can be found.");
     parser.add_option(level_file, 'd', "level", "Level file.");
-    parser.add_option(estimate_args.threshold, 't', "threshold", "The minimal amount of minimisers found in a transcript"
-                                                                " to consider it as found in an IBF. Default: 0.5");
+
     initialise_argument_parser(parser, args);
 
     try
