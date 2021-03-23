@@ -115,6 +115,7 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
                 counter.push_back(hash_table[minHash]);
             std::nth_element(counter.begin(), counter.begin() + counter.size()/2, counter.end());
             exp =  counter[counter.size()/2];
+            seqan3::debug_stream << ids[j] << " " << counter << "\n";
             counter.clear();
             outfile << ids[j] << "\t" << exp << "\n";
             ++j;
@@ -509,6 +510,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
        // Add minimisers to ibf
        for (unsigned i = 0; i < minimiser_files.size(); i++)
        {
+       	 seqan3::debug_stream << minimiser_files[i] << "\n";
            read_binary(hash_table, minimiser_files[i].replace_extension(".minimiser"));
 
            if (ibf_args.set_expression_levels_samplewise)

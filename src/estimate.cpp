@@ -33,7 +33,7 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
                         std::plus<int>());
         ++minimiser_length;
     }
-
+    seqan3::debug_stream << expression << " " << counter << "\n";
     std::vector<uint32_t> results{};
     float minimiser_pos = minimiser_length/2.0;
     results.assign(ibf.bin_count(), 0);
@@ -42,7 +42,7 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
     {
         for(unsigned j = 0; j < counter.size(); j++)
         {
-            if ((!done_exps[j]) & ((counter[j]+prev_counts[j]) >= minimiser_pos))
+            if (((counter[j]+prev_counts[j]) > minimiser_pos))
             {
                 results[j] = expression;
             }
@@ -54,12 +54,13 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
 
         for(unsigned j = 0; j < counter.size(); j++)
         {
-            if ((!done_exps[j]) & ((prev_counts[j] + counter[j]) >= minimiser_pos))
+            if ( ((prev_counts[j] + counter[j]) > minimiser_pos))
             {
                 // Actually calculate estimation, 0.5 for rounding
                 results[j] = 0.5 + prev_expression + (((minimiser_pos - prev_counts[j])/(counter[j]*1.0)) * (expression-prev_expression));
                 // Make sure, every transcript is only estimated once
                 done_exps[j] = true;
+                prev_counts[j] = 0;
             }
             else
             {
