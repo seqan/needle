@@ -117,7 +117,7 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
                 // Actually calculate estimation, 0.5 for rounding
                 results[j] = 0.5 + expressions[k-1][j] + (((minimiser_pos - prev_counts[j])/(counter[j]*1.0)) * (expressions[k][j]-expressions[k-1][j]));
                 // Make sure, every transcript is only estimated once
-                prev_counts[j] = true;
+                prev_counts[j] = 0;
             }
             else
             {
