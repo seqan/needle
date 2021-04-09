@@ -478,7 +478,7 @@ TEST(estimate, small_example)
 
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
     std::string line;
-    std::string expected{"gen1\t2\t"};
+    std::string expected{"gen1\t3\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
@@ -497,7 +497,7 @@ TEST(estimate, small_example_uncompressed)
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     args.compressed = false;
-    ibf_args.expression_levels = {1, 2};
+    ibf_args.expression_levels = {1, 2, 4};
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     estimate_args.expressions = ibf_args.expression_levels;
 
@@ -508,7 +508,7 @@ TEST(estimate, small_example_uncompressed)
 
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
     std::string line;
-    std::string expected{"gen1\t2\t"};
+    std::string expected{"gen1\t3\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
@@ -570,7 +570,7 @@ TEST(estimate, small_example_different_expressions_per_level)
 
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
     std::string line;
-    std::string expected{"gen1\t1\t"};
+    std::string expected{"gen1\t3\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
@@ -638,7 +638,8 @@ TEST(estimate, example_different_expressions_per_level)
 
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
     std::string line;
-    std::string expected{"GeneA\t0\t26\t"};
+    // Count would expect 6 and 44
+    std::string expected{"GeneA\t8\t26\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <math.h>
 #include <numeric>
+#include <stdlib.h>
 #include <string>
 #include <algorithm> //reorded because of this error:https://github.com/Homebrew/homebrew-core/issues/44579
 
@@ -44,6 +45,8 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
         {
             if ((counter[j]+prev_counts[j]) >= minimiser_pos)
                 results[j] = expression;
+            else
+                prev_counts[j] = counter[j];
         }
     }
     else
@@ -52,8 +55,10 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
         {
             if ((prev_counts[j] + counter[j]) >= minimiser_pos)
             {
-                // Actually calculate estimation, 0.5 for rounding
-                results[j] = 0.5 + prev_expression + (((minimiser_pos - prev_counts[j])/(counter[j]*1.0)) * (expression-prev_expression));
+                // Prevent divisions by 0.
+                prev_counts[j] = (prev_counts[j] == 0) ? 1 : prev_counts[j];
+                // Actually calculate estimation
+                results[j] = expression + ((abs(minimiser_pos - counter[j])/(prev_counts[j]*1.0)) * (prev_expression-expression));
                 // Make sure, every transcript is only estimated once
                 prev_counts[j] = 0;
             }
@@ -84,28 +89,14 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
     float minimiser_pos = minimiser_length/2.0;
     results.assign(ibf.bin_count(), 0);
     // If there was nothing previous
-    if (k == 0)
-    {
-        for(int j = 0; j < counter.size(); j++)
-        {
-            if (counter[j] >= minimiser_pos)
-            {
-                // Actually calculate estimation
-                results[j] = (minimiser_pos/(counter[j]*1.0)) * (expressions[k][j]);
-                prev_counts[j] = 0;
-            }
-            else
-            {
-                prev_counts[j] = prev_counts[j] + counter[j];
-            }
-        }
-    }
-    else if (last_exp)
+    if (last_exp)
     {
         for(int j = 0; j < counter.size(); j++)
         {
             if ((prev_counts[j] + counter[j]) >= minimiser_pos)
                 results[j] = expressions[k][j];
+            else
+                prev_counts[j] = counter[j];
         }
     }
     else
@@ -114,8 +105,10 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
         {
             if ((prev_counts[j] + counter[j]) >= minimiser_pos)
             {
-                // Actually calculate estimation, 0.5 for rounding
-                results[j] = 0.5 + expressions[k-1][j] + (((minimiser_pos - prev_counts[j])/(counter[j]*1.0)) * (expressions[k][j]-expressions[k-1][j]));
+                // Prevent divisions by 0.
+                prev_counts[j] = (prev_counts[j] == 0) ? 1 : prev_counts[j];
+                // Actually calculate estimation
+                results[j] = expressions[k][j] + ((abs(minimiser_pos - counter[j])/(prev_counts[j]*1.0)) * (expressions[k+1][j]-expressions[k][j]));
                 // Make sure, every transcript is only estimated once
                 prev_counts[j] = 0;
             }
@@ -147,16 +140,15 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
 
     std::vector<std::vector<uint32_t>> prev_counts;
     uint64_t prev_expression{0};
-    bool last_exp{false};
+    bool last_exp{true};
 
     std::vector<uint32_t> counter;
     std::vector<uint32_t> results;
     std::vector<std::vector<uint32_t>> estimations;
-    for (auto & expression : estimate_args.expressions)
+    //for (auto & expression : estimate_args.expressions)
+    for(int j = estimate_args.expressions.size() - 1; j >= 0; j--)
     {
-        if (expression == estimate_args.expressions[estimate_args.expressions.size()-1])
-        	last_exp = true;
-        load_ibf(ibf, path_in.string() + "IBF_" + std::to_string(expression));
+        load_ibf(ibf, path_in.string() + "IBF_" + std::to_string(estimate_args.expressions[j]));
         for (int i = 0; i < seqs.size(); ++i)
         {
             counter.assign(ibf.bin_count(), 0);
@@ -167,12 +159,13 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
             }
 
             results = check_ibf(args, ibf, counter, seqs[i], prev_counts[i],
-                                expression, prev_expression, last_exp);
+                                estimate_args.expressions[j], prev_expression, last_exp);
             for(unsigned j = 0; j < counter.size(); j++)
                 estimations[i][j] = std::max(estimations[i][j], results[j]);
             counter.clear();
         }
-        prev_expression = expression;
+        prev_expression = estimate_args.expressions[j];
+        last_exp = false;
     }
     std::ofstream outfile;
     outfile.open(std::string{file_out});
@@ -241,17 +234,15 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
     }
 
     std::vector<std::vector<uint32_t>> prev_counts;
-    bool last_exp{false};
+    bool last_exp{true};
     std::vector<std::vector<uint32_t>> expressions{};
 
     read_levels(expressions, level_file);
 
     std::vector<uint32_t> results;
     std::vector<std::vector<uint32_t>> estimations;
-    for (int j = 0; j < estimate_args.expressions.size(); j++)
+    for (int j = estimate_args.expressions.size() - 1; j >= 0; j--)
     {
-        if (j == estimate_args.expressions.size() - 1)
-        	last_exp = true;
         load_ibf(ibf, path_in.string() + "IBF_Level_" + std::to_string(j));
         for (int i = 0; i < seqs.size(); ++i)
         {
@@ -266,10 +257,9 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
                                 expressions, last_exp, j);
             for(unsigned j = 0; j < counter.size(); j++)
                 estimations[i][j] = std::max(estimations[i][j], (uint32_t) results[j]);
-
-
             counter.clear();
         }
+        last_exp = false;
     }
     std::ofstream outfile;
     outfile.open(std::string{file_out});
