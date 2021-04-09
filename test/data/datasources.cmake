@@ -8,7 +8,7 @@ declare_datasource (FILE exp_01.fasta
                     URL_HASH SHA256=e7236e7b86303d84a86a4454044125005433857416183cdaac0f4cdf7ac34e06)
 declare_datasource (FILE IBF_1
                     URL ${CMAKE_SOURCE_DIR}/test/data/IBF_1
-                    URL_HASH SHA256=c41b34c5853e2ca738d89171f2ca04662d99e7f0d7498b0f5c555cdc9af7d814)
+                    URL_HASH SHA256=cb0f23b093f774e29f75d03c7ebb94c5e809ee2f640d6b6d0e93667ad251ad480)
 declare_datasource (FILE mini_example.fasta
                     URL ${CMAKE_SOURCE_DIR}/test/data/mini_example.fasta
                     URL_HASH SHA256=f872221632e7423b071d1aedaf4c4e9da2a659e843fcafac12cd65632b904b93)
