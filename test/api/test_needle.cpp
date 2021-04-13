@@ -16,7 +16,7 @@
 
 using seqan3::operator""_shape;
 
-std::vector<robin_hood::unordered_node_map<uint64_t,uint64_t>> expected_hash_tables{   // minimisers:
+std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> expected_hash_tables{   // minimisers:
                                                                              {{0,2},   // AAAA
                                                                               {1,4},   // AAAC
                                                                               {6,4},   // AACG
@@ -290,7 +290,7 @@ TEST(minimiser, small_example)
     minimiser(args, ibf_args);
     std::vector<uint64_t> counts{};
     uint32_t normalized_exp_value{};
-    robin_hood::unordered_node_map<uint64_t,uint64_t> result_hash_table{};
+    robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     seqan3::shape expected_shape = seqan3::ungapped{args.k};
 
@@ -351,7 +351,7 @@ TEST(minimiser, small_example_auto_expression_level)
     uint32_t normalized_exp_value{};
     std::vector<std::vector<uint64_t>> expected_counts{{6, 3}, {1, 1}};
     std::vector<uint64_t> expected_levels{2, 4};
-    robin_hood::unordered_node_map<uint64_t,uint64_t> result_hash_table{};
+    robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     seqan3::shape expected_shape = seqan3::ungapped{args.k};
 
@@ -414,7 +414,7 @@ TEST(minimiser, small_example_samplewise)
     uint32_t normalized_exp_value{};
     std::vector<std::vector<uint64_t>> expected_counts{{7}, {12}};
     std::vector<uint64_t> expected_levels{3, 1};
-    robin_hood::unordered_node_map<uint64_t,uint64_t> result_hash_table{};
+    robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     seqan3::shape expected_shape = seqan3::ungapped{args.k};
 
