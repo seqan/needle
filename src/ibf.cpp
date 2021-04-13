@@ -180,6 +180,8 @@ void set_arguments_ibf(arguments const & args, ibf_arguments & ibf_args,
         ibf_args.samples.assign(ibf_args.sequence_files.size(),1);
     if (ibf_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
         ibf_args.cutoffs.assign(ibf_args.samples.size(),0);
+    else if (ibf_args.cutoffs.size() == 1) // If one cutoff is given, every experiment gets this cutoff.
+        ibf_args.cutoffs.assign(ibf_args.samples.size(), ibf_args.cutoffs[0]);
 
     // If sum of ibf_args.samples is not equal to number of files, throw error
     else if (std::accumulate(ibf_args.samples.rbegin(), ibf_args.samples.rend(), 0) != ibf_args.sequence_files.size())
@@ -282,11 +284,11 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
 
 // Calculate expression levels
 void get_expression_levels(arguments const & args, ibf_arguments & ibf_args,
-                           robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table, unsigned cutoff,
+                           robin_hood::unordered_node_map<uint64_t, uint16_t> const & hash_table, unsigned const cutoff,
                            robin_hood::unordered_set<uint64_t> const & genome_set_table)
 {
     // Calculate expression levels by taking median recursively
-    std::vector<uint32_t> counts;
+    std::vector<uint16_t> counts;
     for (auto & elem : hash_table)
     {
         if ((elem.second > cutoff) && ((ibf_args.include_file == "")
@@ -295,16 +297,30 @@ void get_expression_levels(arguments const & args, ibf_arguments & ibf_args,
 
     }
 
-    // Start with dev = 4, and prev_pos is counts.size() divided by two, because we ignoare the first median, assuming it is a
-    // results of errornous minimizers
-    std::size_t dev{2};
-    std::size_t prev_pos{0};
-    for (std::size_t c = 0; c < ibf_args.number_expression_levels; c++)
+    // Take the size and get the expression levels by dividing it in equal parts.
+    if (cutoff == 0)
     {
-        std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
-        prev_pos = prev_pos + counts.size()/dev;
-        dev = dev *2;
-        ibf_args.expression_levels.push_back(counts[prev_pos]);
+        std::size_t prev_pos{0};
+        std::size_t num_of_counts = counts.size()/(ibf_args.number_expression_levels + 1);
+        for (std::size_t c = 0; c < ibf_args.number_expression_levels; c++)
+        {
+            std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + num_of_counts, counts.end());
+            prev_pos = prev_pos + num_of_counts;
+            ibf_args.expression_levels.push_back(counts[prev_pos]);
+        }
+    }
+    else
+    {
+        std::size_t prev_pos{0};
+        std::size_t num_of_counts = counts.size()/(ibf_args.number_expression_levels);
+        // If a cutoff is given, take the start of the counts as first expression
+        ibf_args.expression_levels.push_back(*std::min_element(counts.begin(), counts.end()));
+        for (std::size_t c = 0; c < ibf_args.number_expression_levels - 1; c++)
+        {
+            std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + num_of_counts, counts.end());
+            prev_pos = prev_pos + num_of_counts;
+            ibf_args.expression_levels.push_back(counts[prev_pos]);
+        }
     }
     counts.clear();
 }
@@ -489,6 +505,8 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
     set_include_file(args, ibf_args, genome_set_table);
     if (ibf_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
         ibf_args.cutoffs.assign(minimiser_files.size(),0);
+    else if (ibf_args.cutoffs.size() == 1) // If one cutoff is given, every experiment gets this cutoff.
+        ibf_args.cutoffs.assign(ibf_args.samples.size(), ibf_args.cutoffs[0]);
 
     if (ibf_args.set_expression_levels_samplewise)
     {

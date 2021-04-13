@@ -55,10 +55,8 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
         {
             if ((prev_counts[j] + counter[j]) >= minimiser_pos)
             {
-                // Prevent divisions by 0.
-                prev_counts[j] = (prev_counts[j] == 0) ? 1 : prev_counts[j];
                 // Actually calculate estimation
-                results[j] = expression + ((abs(minimiser_pos - counter[j])/(prev_counts[j]*1.0)) * (prev_expression-expression));
+                results[j] = expression + ((abs(minimiser_pos - counter[j])/abs((prev_counts[j]*1.0) - counter[j])) * (prev_expression-expression));
                 // Make sure, every transcript is only estimated once
                 prev_counts[j] = 0;
             }
@@ -88,6 +86,7 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
     std::vector<uint32_t> results{};
     float minimiser_pos = minimiser_length/2.0;
     results.assign(ibf.bin_count(), 0);
+
     // If there was nothing previous
     if (last_exp)
     {
@@ -105,10 +104,8 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
         {
             if ((prev_counts[j] + counter[j]) >= minimiser_pos)
             {
-                // Prevent divisions by 0.
-                prev_counts[j] = (prev_counts[j] == 0) ? 1 : prev_counts[j];
                 // Actually calculate estimation
-                results[j] = expressions[k][j] + ((abs(minimiser_pos - counter[j])/(prev_counts[j]*1.0)) * (expressions[k+1][j]-expressions[k][j]));
+                results[j] = expressions[k][j] + ((abs(minimiser_pos - counter[j])/abs((prev_counts[j]*1.0) - counter[j])) * (expressions[k+1][j]-expressions[k][j]));
                 // Make sure, every transcript is only estimated once
                 prev_counts[j] = 0;
             }
@@ -118,6 +115,7 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
             }
         }
     }
+    seqan3::debug_stream << results << "\n";
 
     return results;
 }
