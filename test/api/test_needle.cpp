@@ -137,7 +137,7 @@ TEST(ibf, no_given_expression_levels)
     ibf_args.number_expression_levels = 2;
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
-    std::vector<uint32_t> expected{3, 4};
+    std::vector<uint32_t> expected{2, 3};
 
     std::vector<uint32_t> medians = ibf(args, ibf_args);
 
@@ -235,7 +235,7 @@ TEST(ibfmin, no_given_expression_levels)
     ibf_args.bin_size = {1000, 1000};
     std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
 
-    std::vector<uint32_t> expected{3, 4};
+    std::vector<uint32_t> expected{2, 3};
 
     std::vector<uint32_t> medians = ibf(minimiser_file, args, ibf_args);
 
@@ -248,7 +248,7 @@ TEST(ibfmin, no_given_expression_levels)
     sdsl::bit_vector expected_result(1, 0);
     EXPECT_EQ(expected_result,  agent.bulk_contains(2));
     expected_result[0] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(97));
+    EXPECT_EQ(expected_result,  agent.bulk_contains(108));
 }
 
 TEST(ibfmin, no_given_expression_levels_auto)
@@ -618,6 +618,7 @@ TEST(estimate, example_different_expressions_per_level)
     arguments args{};
     ibf_arguments ibf_args{};
     estimate_arguments estimate_args{};
+    ibf_args.cutoffs = {1};
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
                                std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     ibf_args.samples = {2,2};
@@ -639,7 +640,7 @@ TEST(estimate, example_different_expressions_per_level)
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
     std::string line;
     // Count would expect 6 and 44
-    std::string expected{"GeneA\t8\t26\t"};
+    std::string expected{"GeneA\t7\t29\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
@@ -654,12 +655,13 @@ TEST(stats, example)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    ibf_args.cutoffs = {1};
     std::vector<std::filesystem::path> minimiser_files{std::string(DATA_INPUT_DIR) + "exp_01.header",
                                                        std::string(DATA_INPUT_DIR) + "exp_11.header"};
 
-    std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> expected{{{1}, {46745, 47204, 47204}},
-                                                                                {{11}, {7284, 7502, 7502}},
-                                                                                {{26}, {8249, 8565, 8565}}};
+    std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> expected{{{2}, {5319, 5716, 5716}},
+                                                                                {{20}, {5938, 6605, 6605}},
+                                                                                {{29}, {6115, 6358, 6358}}};
 
     std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> results = statistics(args, ibf_args, minimiser_files);
 
