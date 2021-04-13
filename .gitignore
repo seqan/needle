@@ -39,7 +39,10 @@ test/data/Genome_mean/
 test/data/Genome_median/
 test/data/mean/
 test/data/median/
-
+test/data/IBF_Level_0
+test/data/IBF_Level_1
+test/data/IBF_Level_2
+test/data/IBF_Levels.levels
 
 # Googletest folders
 googletest-build/

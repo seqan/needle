@@ -75,7 +75,7 @@ void get_sequences(std::vector<std::filesystem::path> const & sequence_files,
 * \param only_genome               True, if only minimisers found in the genome mask should be stored. Default: False.
 */
 void get_minimisers(arguments const & args, seqan3::concatenated_sequences<seqan3::dna4_vector> const & sequences,
-                    robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table,
+                    robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
                     robin_hood::unordered_set<uint64_t> const & genome_set_table,
                     std::filesystem::path const & genome_file = "", bool only_genome = false);
 
@@ -110,7 +110,7 @@ void set_arguments(ibf_arguments & ibf_args);
 * \param hash_table         The hash table to store minimisers into.
 * \param filename           The filename of the binary file.
 */
-void read_binary(robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table, std::filesystem::path filename);
+void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table, std::filesystem::path filename);
 
 /*!\brief Reads a header file function minimiser creates
 * \param args                 The minimiser arguments to use (seed, shape, window size).

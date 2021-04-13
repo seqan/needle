@@ -46,7 +46,7 @@ void get_sequences(std::vector<std::filesystem::path> const & sequence_files,
 }
 
 void get_minimisers(arguments const & args, seqan3::concatenated_sequences<seqan3::dna4_vector> const & sequences,
-                    robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table,
+                    robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
                     robin_hood::unordered_set<uint64_t> const & genome_set_table,
                     std::filesystem::path const & include_file, bool only_genome)
 {
@@ -56,10 +56,10 @@ void get_minimisers(arguments const & args, seqan3::concatenated_sequences<seqan
         for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
         {
             if (!only_genome)
-                hash_table[minHash]++;
+                hash_table[minHash] = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
             //TODO: Use unordered_set contains function instead of find, only works in C++20
             else if ((include_file == "") || (genome_set_table.find(minHash) != genome_set_table.end()))
-                hash_table[minHash]++;
+                hash_table[minHash] = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
         }
     }
 }
@@ -68,7 +68,7 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
            std::filesystem::path out_path, bool paired)
 {
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences{};
-    robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{};
+    robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{};
     std::vector<std::string> ids{};
     seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences{};
     std::vector<uint64_t> counter{};
@@ -103,7 +103,7 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
         for (auto seq : sequences)
         {
             for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-                hash_table[minHash]++;
+                hash_table[minHash] = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
         }
         sequences.clear();
 
@@ -203,11 +203,11 @@ void check_bin_size(ibf_arguments & ibf_args)
 }
 
 // Reads a binary file minimiser creates
-void read_binary(robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table, std::filesystem::path filename)
+void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table, std::filesystem::path filename)
 {
     std::ifstream fin;
     uint64_t minimiser;
-    uint64_t minimiser_count;
+    uint16_t minimiser_count;
     fin.open(filename, std::ios::binary);
 
     while(fin.read((char*)&minimiser, sizeof(minimiser)))
@@ -282,7 +282,7 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
 
 // Calculate expression levels
 void get_expression_levels(arguments const & args, ibf_arguments & ibf_args,
-                           robin_hood::unordered_node_map<uint64_t, uint64_t> & hash_table, unsigned cutoff,
+                           robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table, unsigned cutoff,
                            robin_hood::unordered_set<uint64_t> const & genome_set_table)
 {
     // Calculate expression levels by taking median recursively
@@ -362,7 +362,7 @@ std::vector<std::filesystem::path> const & header_files)
 std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 {
     // Declarations
-    robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{}; // Storage for minimisers
+    robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimisers in genome sequences
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
     std::vector<std::vector<uint32_t>> expressions{};
@@ -480,7 +480,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
                           ibf_arguments & ibf_args)
 {
     // Declarations
-    robin_hood::unordered_node_map<uint64_t, uint64_t> hash_table{}; // Storage for minimisers
+    robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     robin_hood::unordered_set<uint64_t> genome_set_table;
     std::vector<std::vector<uint32_t>> expressions{};
 
@@ -573,7 +573,7 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
 {
     // Declarations
     std::vector<uint32_t> counts;
-    robin_hood::unordered_node_map<uint64_t,uint64_t> hash_table{}; // Storage for minimisers
+    robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     std::ofstream outfile;
     robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimisers in genome sequences
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
