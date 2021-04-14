@@ -64,63 +64,76 @@ void get_minimisers(arguments const & args, seqan3::concatenated_sequences<seqan
     }
 }
 
+void fill_hash_table(arguments const & args,
+                     seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> & fin,
+                     robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
+                     robin_hood::unordered_set<uint64_t> const & genome_set_table)
+{
+    for (auto & [seq] : fin)
+    {
+        for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
+        {
+            if (genome_set_table.contains(minHash))
+                hash_table[minHash] = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
+        }
+    }
+}
+
 void count(arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,
            std::filesystem::path out_path, bool paired)
 {
-    seqan3::concatenated_sequences<seqan3::dna4_vector> sequences{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{};
-    std::vector<std::string> ids{};
-    seqan3::concatenated_sequences<seqan3::dna4_vector> genome_sequences{};
+    robin_hood::unordered_set<uint64_t> genome_set_table{};
     std::vector<uint64_t> counter{};
     uint64_t exp{};
     std::ofstream outfile;
     int j;
 
-    seqan3::sequence_file_input<my_traits> fin2{genome_file};
-    for (auto & [seq, id, qual]: fin2)
+    seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> fin3{genome_file};
+    for (auto & [seq] : fin3)
     {
         if (seq.size() >= args.w_size.get())
         {
-            ids.push_back(id);
-            genome_sequences.push_back(seq);
+            for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
+                genome_set_table.insert(minHash);
         }
     }
 
+    seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin2{genome_file};
     for (unsigned i = 0; i < sequence_files.size(); i++)
     {
 
         if (paired)
         {
-            get_sequences(sequence_files, sequences, args.k, i, 2);
+            seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{sequence_files[i]};
+            fill_hash_table(args, fin, hash_table, genome_set_table);
             i++;
+            fin = sequence_files[i];
+            fill_hash_table(args, fin, hash_table, genome_set_table);
         }
         else
         {
-            get_sequences(sequence_files, sequences, args.k, i, 1);
+            seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{sequence_files[i]};
+            fill_hash_table(args, fin, hash_table, genome_set_table);
         }
-
-
-        for (auto seq : sequences)
-        {
-            for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-                hash_table[minHash] = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
-        }
-        sequences.clear();
 
         outfile.open(std::string{out_path} + std::string{sequence_files[i].stem()} + ".count.out");
         j = 0;
-        for (auto seq : genome_sequences)
+        for (auto & [id, seq] : fin2)
         {
-            for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-                counter.push_back(hash_table[minHash]);
-            std::nth_element(counter.begin(), counter.begin() + counter.size()/2, counter.end());
-            exp =  counter[counter.size()/2];
-            counter.clear();
-            outfile << ids[j] << "\t" << exp << "\n";
-            ++j;
-
+            if (seq.size() >= args.w_size.get())
+            {
+                for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
+                    counter.push_back(hash_table[minHash]);
+                std::nth_element(counter.begin(), counter.begin() + counter.size()/2, counter.end());
+                exp =  counter[counter.size()/2];
+                counter.clear();
+                outfile << id << "\t" << exp << "\n";
+                ++j;
+            }
         }
         outfile.close();
+        hash_table.clear();
     }
 }
 

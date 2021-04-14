@@ -115,7 +115,6 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
             }
         }
     }
-    seqan3::debug_stream << results << "\n";
 
     return results;
 }
