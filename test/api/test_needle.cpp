@@ -76,8 +76,9 @@ TEST(count, small_example)
         {
             EXPECT_EQ(expected,line);
         }
-    output_file.close();
+        output_file.close();
     }
+    std::filesystem::remove(std::string(DATA_INPUT_DIR) + "mini_example.count.out");
 }
 
 TEST(count, small_example_paired)
@@ -98,8 +99,9 @@ TEST(count, small_example_paired)
         {
             EXPECT_EQ(expected,line);
         }
-    output_file.close();
+        output_file.close();
     }
+    std::filesystem::remove(std::string(DATA_INPUT_DIR) + "mini_example.count.out");
 }
 
 TEST(ibf, given_expression_levels)
@@ -176,6 +178,7 @@ TEST(ibf, no_given_expression_levels_auto)
     EXPECT_EQ(expected_result,  agent.bulk_contains(2));
     expected_result[0] = 1;
     EXPECT_EQ(expected_result,  agent.bulk_contains(97));
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_2");
 }
 
 TEST(ibf, throws)
@@ -249,6 +252,8 @@ TEST(ibfmin, no_given_expression_levels)
     EXPECT_EQ(expected_result,  agent.bulk_contains(2));
     expected_result[0] = 1;
     EXPECT_EQ(expected_result,  agent.bulk_contains(108));
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_Level_0");
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_Levels.levels");
 }
 
 TEST(ibfmin, no_given_expression_levels_auto)
@@ -275,6 +280,7 @@ TEST(ibfmin, no_given_expression_levels_auto)
     EXPECT_EQ(expected_result,  agent.bulk_contains(2));
     expected_result[0] = 1;
     EXPECT_EQ(expected_result,  agent.bulk_contains(97));
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_2");
 }
 
 TEST(minimiser, small_example)
@@ -334,6 +340,8 @@ TEST(minimiser, small_example)
     EXPECT_EQ(expected_result,  agent.bulk_contains(0));
     expected_result[1] = 1;
     EXPECT_EQ(expected_result,  agent.bulk_contains(27));
+
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_0");
 }
 
 TEST(minimiser, small_example_auto_expression_level)
@@ -395,6 +403,7 @@ TEST(minimiser, small_example_auto_expression_level)
     EXPECT_EQ(expected_result, agent.bulk_contains(27));
     expected_result[0] = 1;
     EXPECT_EQ(expected_result, agent.bulk_contains(0));
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_2");
 }
 
 TEST(minimiser, small_example_samplewise)
@@ -458,6 +467,7 @@ TEST(minimiser, small_example_samplewise)
     expected_result[0] = 1;
     expected_result[1] = 1;
     EXPECT_EQ(expected_result, agent.bulk_contains(27));
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_Level_0");
 }
 
 TEST(estimate, small_example)
@@ -485,8 +495,11 @@ TEST(estimate, small_example)
         {
             EXPECT_EQ(expected,line);
         }
-    output_file.close();
+        output_file.close();
     }
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_2");
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_4");
+    std::filesystem::remove(std::string(DATA_INPUT_DIR) + "expression.out");
 }
 
 TEST(estimate, small_example_uncompressed)
@@ -515,8 +528,11 @@ TEST(estimate, small_example_uncompressed)
         {
             EXPECT_EQ(expected,line);
         }
-    output_file.close();
+        output_file.close();
     }
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_2");
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_4");
+    std::filesystem::remove(std::string(DATA_INPUT_DIR) + "expression.out");
 }
 
 TEST(estimate, small_example_gene_not_found)
@@ -544,8 +560,11 @@ TEST(estimate, small_example_gene_not_found)
         {
             EXPECT_EQ(expected,line);
         }
-    output_file.close();
+        output_file.close();
     }
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_2");
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_4");
+    std::filesystem::remove(std::string(DATA_INPUT_DIR) + "expression.out");
 }
 
 TEST(estimate, small_example_different_expressions_per_level)
@@ -577,8 +596,13 @@ TEST(estimate, small_example_different_expressions_per_level)
         {
             EXPECT_EQ(expected,line);
         }
-    output_file.close();
+        output_file.close();
     }
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_Level_0");
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_Level_1");
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_Level_2");
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_Levels.levels");
+    std::filesystem::remove(std::string(DATA_INPUT_DIR) + "expression.out");
 }
 
 TEST(estimate, example)
@@ -611,6 +635,8 @@ TEST(estimate, example)
         }
         output_file.close();
     }
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_32");
+    std::filesystem::remove(std::string(DATA_INPUT_DIR) + "expression.out");
 }
 
 TEST(estimate, example_different_expressions_per_level)
@@ -649,6 +675,11 @@ TEST(estimate, example_different_expressions_per_level)
         }
         output_file.close();
     }
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_Level_0");
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_Level_1");
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_Level_2");
+    std::filesystem::remove(std::string{ibf_args.path_out} + "IBF_Levels.levels");
+    std::filesystem::remove(std::string(DATA_INPUT_DIR) + "expression.out");
 }
 
 TEST(stats, example)
