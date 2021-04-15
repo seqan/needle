@@ -566,7 +566,6 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     std::ofstream outfile;
     robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimisers in genome sequences
-    seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
     int seen_before{0}; // just to keep track, which sequence files have already been processed, used in stead of:
                         // std::accumulate(ibf_args.samples.begin(), ibf_args.samples.begin()+i,0)
 
@@ -612,7 +611,6 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
                 }
             }
         }
-        sequences.clear();
 
         // Write minimiser and their counts to binary
         outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[seen_before].stem()}
