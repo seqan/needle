@@ -625,7 +625,7 @@ TEST(estimate, example)
     ibf_args.samples = {2,2};
     ibf_args.expression_levels = {32};
     ibf_args.bin_size = {100000};
-    ibf_args.path_out = tmp_dir/"";
+    ibf_args.path_out = tmp_dir/"Test_";
     args.compressed = false;
     estimate_args.expressions = ibf_args.expression_levels;
     ibf(args, ibf_args);
