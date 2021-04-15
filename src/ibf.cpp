@@ -566,8 +566,6 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     std::ofstream outfile;
     robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimisers in genome sequences
-    int seen_before{0}; // just to keep track, which sequence files have already been processed, used in stead of:
-                        // std::accumulate(ibf_args.samples.begin(), ibf_args.samples.begin()+i,0)
 
     set_arguments_ibf(args, ibf_args, genome_set_table);
 
@@ -581,7 +579,6 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
             seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{ibf_args.sequence_files[file_iterator+f]};
             fill_hash_table(args, fin, hash_table, genome_set_table, (ibf_args.include_file != ""));
         }
-        file_iterator = file_iterator + ibf_args.samples[i];
 
         //If no expression values given, determine them
         if (ibf_args.set_expression_levels_samplewise)
@@ -613,7 +610,7 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
         }
 
         // Write minimiser and their counts to binary
-        outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[seen_before].stem()}
+        outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[file_iterator].stem()}
                      + ".minimiser", std::ios::binary);
         for (auto & elem : hash_table)
         {
@@ -624,7 +621,7 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
         hash_table.clear();
 
         // Write header file, containing information about the minimiser counts per expression level
-        outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[seen_before].stem()}
+        outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[file_iterator].stem()}
                      + ".header");
         outfile <<  args.s.get() << " " << std::to_string(args.k) << " " << args.w_size.get() << " " << args.shape.to_ulong() << " "
                 << ibf_args.cutoffs[i] << "\n";
@@ -636,7 +633,7 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
             outfile  << counts[k] << " ";
         outfile << "\n";
         outfile.close();
-        seen_before = seen_before + ibf_args.samples[i];
+        file_iterator = file_iterator + ibf_args.samples[i];
     }
 
 }
