@@ -10,14 +10,18 @@ uint32_t w_size;
 uint64_t shape{};
 uint64_t se;
 
-void initialise_argument_parser(seqan3::argument_parser & parser, arguments & args)
+void initialise_arguments_minimiser_hash(seqan3::argument_parser & parser, arguments & args)
 {
-    parser.add_flag(args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
     parser.add_option(args.k, 'k', "kmer", "Define kmer size.");
     parser.add_option(w_size, 'w', "window", "Define window size. Default: 60.");
     parser.add_option(shape, 'p', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
                                            "position to be ignored, 1 a position considered. Default: ungapped.");
     parser.add_option(se, 's', "seed", "Define seed.");
+}
+
+void initialise_arguments_ibf(seqan3::argument_parser & parser, arguments & args)
+{
+    parser.add_flag(args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
 }
 
 void parsing(seqan3::argument_parser & parser, arguments & args)
@@ -36,9 +40,6 @@ void parsing(seqan3::argument_parser & parser, arguments & args)
 // Initialize arguments for ibf and minimiser
 void initialise_ibf_argument_parser(seqan3::argument_parser & parser, ibf_arguments & ibf_args)
 {
-    parser.info.version = "1.0.0";
-    parser.info.author = "Mitra Darvish";
-
     parser.add_positional_option(ibf_args.sequence_files, "Please provide at least one sequence file.");
     parser.add_option(ibf_args.include_file, 'g', "genom-mask", "Genom file used as a mask.");
     parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
@@ -57,7 +58,7 @@ void initialise_ibf_argument_parser(seqan3::argument_parser & parser, ibf_argume
 int run_needle_count(seqan3::argument_parser & parser)
 {
     arguments args;
-    initialise_argument_parser(parser, args);
+    initialise_arguments_minimiser_hash(parser, args);
     std::vector<std::filesystem::path> sequence_files;
     std::filesystem::path genome_file;
     std::filesystem::path out_path = "./";
@@ -111,7 +112,8 @@ int run_needle_estimate(seqan3::argument_parser & parser)
     parser.add_option(path_in, 'i', "in", "Directory where input files can be found.");
     parser.add_option(level_file, 'd', "level", "Level file.");
 
-    initialise_argument_parser(parser, args);
+    initialise_arguments_minimiser_hash(parser, args);
+    initialise_arguments_ibf(parser, args);
 
     try
     {
@@ -140,7 +142,8 @@ int run_needle_estimate(seqan3::argument_parser & parser)
 int run_needle_ibf(seqan3::argument_parser & parser)
 {
     arguments args;
-    initialise_argument_parser(parser, args);
+    initialise_arguments_minimiser_hash(parser, args);
+    initialise_arguments_ibf(parser, args);
     ibf_arguments ibf_args{};
     initialise_ibf_argument_parser(parser, ibf_args);
 
@@ -225,7 +228,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
 int run_needle_minimiser(seqan3::argument_parser & parser)
 {
     arguments args{};
-    initialise_argument_parser(parser, args);
+    initialise_arguments_minimiser_hash(parser, args);
     ibf_arguments ibf_args{};
     initialise_ibf_argument_parser(parser, ibf_args);
     parser.info.short_description = "Calculates minimiser for given experiments.";
