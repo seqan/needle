@@ -640,7 +640,7 @@ TEST(estimate, example_different_expressions_per_level)
     std::ifstream output_file(std::string(DATA_INPUT_DIR) + "expression.out");
     std::string line;
     // Count would expect 6 and 44
-    std::string expected{"GeneA\t7\t29\t"};
+    std::string expected{"GeneA\t8\t29\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
@@ -659,8 +659,8 @@ TEST(stats, example)
     std::vector<std::filesystem::path> minimiser_files{std::string(DATA_INPUT_DIR) + "exp_01.header",
                                                        std::string(DATA_INPUT_DIR) + "exp_11.header"};
 
-    std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> expected{{{2}, {5319, 5716, 5716}},
-                                                                                {{20}, {5938, 6605, 6605}},
+    std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> expected{{{2}, {5310, 5739, 5739}},
+                                                                                {{21}, {5235, 5904, 5904}},
                                                                                 {{29}, {6115, 6358, 6358}}};
 
     std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> results = statistics(args, ibf_args, minimiser_files);
