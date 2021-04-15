@@ -1,6 +1,14 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
+#ifdef __has_include
+    #if __has_include(<filesystem>)
+        #include <filesystem>
+    #else
+        #include <experimental/filesystem>
+    #endif
+#endif
+
 #include <robin_hood.h>
 
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
