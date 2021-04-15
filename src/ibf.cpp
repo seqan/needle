@@ -42,31 +42,16 @@ void get_include_set_table(arguments const & args, std::filesystem::path include
     }
 }
 
-// Fill hash table with minimisers without cutoff.
-void fill_hash_table(arguments const & args,
-                     seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> & fin,
-                     robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
-                     robin_hood::unordered_set<uint64_t> const & genome_set_table,
-                     bool const only_genome = false)
-{
-    for (auto & [seq] : fin)
-    {
-        for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-        {
-            if ((only_genome & (genome_set_table.contains(minHash))) | (!only_genome))
-                hash_table[minHash] = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
-        }
-    }
-}
-
 // Fill hash table with minimisers with cutoff.
 void fill_hash_table(arguments const & args,
                      seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> & fin,
                      robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
                      robin_hood::unordered_set<uint64_t> const & genome_set_table,
-                     uint8_t cutoff,
-                     bool const only_genome = false)
+
+                     bool const only_genome = false, uint8_t cutoff = 0)
 {
+    // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
+    // and afterwards discarded.
     robin_hood::unordered_node_map<uint64_t, uint8_t>  cutoff_table;
     for (auto & [seq] : fin)
     {
@@ -74,15 +59,19 @@ void fill_hash_table(arguments const & args,
         {
             if ((only_genome & (genome_set_table.contains(minHash))) | (!only_genome))
             {
+                // If minHash is already in hash table, increase count in hash table
                 if (hash_table.contains(minHash))
                 {
                     hash_table[minHash] = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
                 }
+                // If minHash equals now the cutoff than add it to the hash table and add plus one for the current
+                // iteration.
                 else if (cutoff_table[minHash] == cutoff)
                 {
                     hash_table[minHash] = cutoff_table[minHash] + 1;
                     cutoff_table.erase(minHash);
                 }
+                // If none of the above, increase count in cutoff table.
                 else
                 {
                     cutoff_table[minHash] = std::min<uint8_t>(254u, cutoff_table[minHash] + 1);
@@ -90,19 +79,6 @@ void fill_hash_table(arguments const & args,
             }
         }
     }
-}
-
-void call_fill_hash_table(arguments const & args,
-                     seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> & fin,
-                     robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
-                     robin_hood::unordered_set<uint64_t> const & genome_set_table,
-                     uint8_t cutoff,
-                     bool const only_genome = false)
-{
-    if (cutoff == 0)
-        fill_hash_table(args, fin, hash_table, genome_set_table, only_genome);
-    else
-        fill_hash_table(args, fin, hash_table, genome_set_table, cutoff, only_genome);
 }
 
 void count(arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,
@@ -434,7 +410,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
         for (unsigned f = 0; f < ibf_args.samples[i]; f++)
         {
            seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{ibf_args.sequence_files[file_iterator+f]};
-           fill_hash_table(args, fin, hash_table, genome_set_table, ibf_args.cutoffs[i], (ibf_args.include_file != ""));
+           fill_hash_table(args, fin, hash_table, genome_set_table, (ibf_args.include_file != ""), ibf_args.cutoffs[i]);
         }
         file_iterator = file_iterator + ibf_args.samples[i];
 
@@ -621,7 +597,7 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
         for (unsigned f = 0; f < ibf_args.samples[i]; f++)
         {
             seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{ibf_args.sequence_files[file_iterator+f]};
-            fill_hash_table(args, fin, hash_table, genome_set_table, ibf_args.cutoffs[i], (ibf_args.include_file != ""));
+            fill_hash_table(args, fin, hash_table, genome_set_table, (ibf_args.include_file != ""), ibf_args.cutoffs[i]);
         }
 
         //If no expression values given, determine them
