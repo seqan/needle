@@ -4,6 +4,7 @@
 #include <numeric>
 #include <stdlib.h>
 #include <string>
+#include <vector>
 #include <algorithm> //reorded because of this error:https://github.com/Homebrew/homebrew-core/issues/44579
 
 
@@ -120,7 +121,7 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
 }
 
 template <class IBFType>
-void estimate(arguments const & args, estimate_arguments const & estimate_args, IBFType & ibf, std::filesystem::path file_out,
+void estimate(arguments const & args, estimate_arguments & estimate_args, IBFType & ibf, std::filesystem::path file_out,
               std::filesystem::path search_file, std::filesystem::path path_in)
 {
     std::vector<std::string> ids;
@@ -142,7 +143,9 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
     std::vector<uint32_t> counter;
     std::vector<uint32_t> results;
     std::vector<std::vector<uint32_t>> estimations;
-    //for (auto & expression : estimate_args.expressions)
+    // Make sure expression levels are sorted.
+    sort(estimate_args.expressions.begin(), estimate_args.expressions.end());
+
     for(int j = estimate_args.expressions.size() - 1; j >= 0; j--)
     {
         load_ibf(ibf, path_in.string() + "IBF_" + std::to_string(estimate_args.expressions[j]));
@@ -214,7 +217,7 @@ void read_levels(std::vector<std::vector<uint32_t>> & expressions, std::filesyst
 }
 
 template <class IBFType>
-void estimate(arguments const & args, estimate_arguments const & estimate_args, IBFType & ibf, std::filesystem::path file_out,
+void estimate(arguments const & args, estimate_arguments & estimate_args, IBFType & ibf, std::filesystem::path file_out,
               std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file)
 {
     std::vector<std::string> ids;
@@ -238,6 +241,8 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
 
     std::vector<uint32_t> results;
     std::vector<std::vector<uint32_t>> estimations;
+    // Make sure expression levels are sorted.
+    sort(estimate_args.expressions.begin(), estimate_args.expressions.end());
     for (int j = estimate_args.expressions.size() - 1; j >= 0; j--)
     {
         load_ibf(ibf, path_in.string() + "IBF_Level_" + std::to_string(j));
@@ -272,7 +277,7 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
 
 }
 
-void call_estimate(arguments const & args, estimate_arguments const & estimate_args, std::filesystem::path file_out,
+void call_estimate(arguments const & args, estimate_arguments & estimate_args, std::filesystem::path file_out,
               std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file = "")
 {
     if (args.compressed)
