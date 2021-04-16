@@ -33,7 +33,7 @@ struct estimate_arguments
 *  \param path_in     The directory where the ibfs can be found.
 */
 template <class IBFType>
-void estimate(arguments const & args, estimate_arguments const & estimate_args, IBFType & ibf, std::filesystem::path file_out,
+void estimate(arguments const & args, estimate_arguments & estimate_args, IBFType & ibf, std::filesystem::path file_out,
               std::filesystem::path search_file, std::filesystem::path path_in);
 
 /*! \brief Function to estimate expression value.
@@ -46,7 +46,7 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
 *  \param level_file Path to the header files, where expression levels can be found.
 */
 template <class IBFType>
-void estimate(arguments const & args, estimate_arguments const & estimate_args, IBFType & ibf, std::filesystem::path file_out,
+void estimate(arguments const & args, estimate_arguments & estimate_args, IBFType & ibf, std::filesystem::path file_out,
             std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file);
 
 /*! \brief Function, which calls the estimate function.
@@ -57,5 +57,5 @@ void estimate(arguments const & args, estimate_arguments const & estimate_args, 
 *  \param path_in     The directory where the ibfs can be found.
 *  \param level_file  Path to the header files, where expression levels can be found.
 */
-void call_estimate(arguments const & args, estimate_arguments const & estimate_args, std::filesystem::path file_out,
+void call_estimate(arguments const & args, estimate_arguments & estimate_args, std::filesystem::path file_out,
             std::filesystem::path search_file, std::filesystem::path path_in,std::filesystem::path level_file);
