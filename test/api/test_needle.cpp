@@ -178,6 +178,10 @@ TEST(ibf, no_given_expression_levels_auto)
     EXPECT_EQ(expected_result,  agent.bulk_contains(2));
     expected_result[0] = 1;
     EXPECT_EQ(expected_result,  agent.bulk_contains(97));
+
+    load_ibf(ibf, tmp_dir/"Test_IBF_4");
+    agent = ibf.membership_agent();
+    EXPECT_EQ(expected_result,  agent.bulk_contains(27));
     std::filesystem::remove(tmp_dir/"Test_IBF_3");
     std::filesystem::remove(tmp_dir/"Test_IBF_4");
 }
