@@ -47,7 +47,6 @@ void fill_hash_table(arguments const & args,
                      seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> & fin,
                      robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
                      robin_hood::unordered_set<uint64_t> const & genome_set_table,
-
                      bool const only_genome = false, uint8_t cutoff = 0)
 {
     // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
@@ -553,7 +552,7 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
         outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[file_iterator].stem()}
                      + ".header");
         outfile <<  args.s.get() << " " << std::to_string(args.k) << " " << args.w_size.get() << " " << args.shape.to_ulong() << " "
-                << ibf_args.cutoffs[i] << "\n";
+                << std::to_string(ibf_args.cutoffs[i]) << "\n";
 
         outfile << "\n";
         outfile.close();

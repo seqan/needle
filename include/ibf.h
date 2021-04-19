@@ -23,7 +23,7 @@ struct ibf_arguments
     std::vector<int> samples{}; // Can be used to indicate that sequence files belong to the same experiment
     bool paired = false; // If true, than experiments are seen as paired-end experiments
     // Which expression values should be ignored during calculation of the normalization_method, default is zero
-    std::vector<uint32_t> cutoffs{};
+    std::vector<uint8_t> cutoffs{};
     //std::string expression_method{"median"}; // Method to calculate expression levels
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
     uint8_t number_expression_levels{};
