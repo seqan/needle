@@ -93,7 +93,6 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
 
     get_include_set_table(args, genome_file, genome_set_table);
 
-    seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin2{genome_file};
     for (unsigned i = 0; i < sequence_files.size(); i++)
     {
 
@@ -113,6 +112,7 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
 
         outfile.open(std::string{out_path} + std::string{sequence_files[i].stem()} + ".count.out");
         j = 0;
+        seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin2{genome_file};
         for (auto & [id, seq] : fin2)
         {
             if (seq.size() >= args.w_size.get())
@@ -137,24 +137,15 @@ void set_arguments(ibf_arguments & ibf_args)
     // Sort given expression rates
     sort(ibf_args.expression_levels.begin(), ibf_args.expression_levels.end());
 
-    // If the expression levels are not supposed to be set automatically and no number of expression levels are given,
-    // throw.
-    if (ibf_args.set_expression_levels_samplewise & (ibf_args.number_expression_levels == 0))
+     // If no expression levels are given and the no number of expression levels is specified, throw.
+    if (((ibf_args.number_expression_levels == 0) & (ibf_args.expression_levels.size() == 0)) |
+         (ibf_args.set_expression_levels_samplewise & (ibf_args.expression_levels.size() > 0)))
     {
-        throw std::invalid_argument{"Error. Please set the expression levels or give the number of expression levels."};
+        throw std::invalid_argument{"Error. Please set the expression levels OR give the number of expression levels."};
     }
     else if (ibf_args.number_expression_levels == 0)
     {
         ibf_args.number_expression_levels = ibf_args.expression_levels.size();
-    }
-    else if (!ibf_args.set_expression_levels_samplewise & ibf_args.expression_levels.size() == 0)
-    {
-        std::uint64_t level{2};
-        for (std::size_t c = 0; c < ibf_args.number_expression_levels; c++)
-        {
-            ibf_args.expression_levels.push_back(level);
-            level = level *2;
-        }
     }
 }
 
@@ -185,12 +176,19 @@ void check_bin_size(ibf_arguments & ibf_args)
 {
     // If no bin size is given or not the right amount, throw error.
     if (ibf_args.bin_size.empty())
+    {
         throw std::invalid_argument{"Error. Please give a size for the IBFs in bit."};
-    else if (ibf_args.bin_size.size() == 1)
-        ibf_args.bin_size.assign(ibf_args.number_expression_levels,ibf_args.bin_size[0]);
+    }
+    // If only one ibf size is given, set it for all levels.
+    if (ibf_args.bin_size.size() == 1)
+    {
+        ibf_args.bin_size.assign(ibf_args.number_expression_levels, ibf_args.bin_size[0]);
+    }
     else if (ibf_args.bin_size.size() != ibf_args.number_expression_levels)
+    {
         throw std::invalid_argument{"Error. Length of sizes for IBFs in bin_size is not equal to length of expression "
                                     "levels."};
+    }
 }
 
 // Reads a binary file minimiser creates
@@ -212,7 +210,7 @@ void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table
 
 // Reads one header file minimiser creates
 void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::path filename,
-                 std::vector<uint64_t> & counts)
+                 std::vector<uint16_t> & counts)
 {
     std::ifstream fin;
     fin.open(filename);
@@ -264,7 +262,7 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
         buffer.clear();
         std::ranges::copy(stream_view | seqan3::views::take_until_or_throw(seqan3::is_char<' '>),
                                         std::cpp20::back_inserter(buffer));
-        counts.push_back(std::stoull(buffer));
+        counts.push_back((uint16_t)  std::stoi(buffer));
         if (*stream_it != '\n')
             ++stream_it;
     } while (*stream_it != '\n');
@@ -278,7 +276,7 @@ void get_expression_levels(arguments const & args, ibf_arguments & ibf_args,
 {
     // Calculate expression levels by taking median recursively
     std::vector<uint16_t> counts;
-    for (auto & elem : hash_table)
+    for (auto && elem : hash_table)
     {
         if ((elem.second > cutoff) && ((ibf_args.include_file == "")
                                    || (genome_set_table.find(elem.first) != genome_set_table.end())))
@@ -286,30 +284,14 @@ void get_expression_levels(arguments const & args, ibf_arguments & ibf_args,
 
     }
 
-    // Take the size and get the expression levels by dividing it in equal parts.
-    if (cutoff == 0)
+    std::size_t dev{2};
+    std::size_t prev_pos{0};
+    for (std::size_t c = 0; c < ibf_args.number_expression_levels; c++)
     {
-        std::size_t prev_pos{0};
-        std::size_t num_of_counts = counts.size()/(ibf_args.number_expression_levels + 1);
-        for (std::size_t c = 0; c < ibf_args.number_expression_levels; c++)
-        {
-            std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + num_of_counts, counts.end());
-            prev_pos = prev_pos + num_of_counts;
-            ibf_args.expression_levels.push_back(counts[prev_pos]);
-        }
-    }
-    else
-    {
-        std::size_t prev_pos{0};
-        std::size_t num_of_counts = counts.size()/(ibf_args.number_expression_levels);
-        // If a cutoff is given, take the start of the counts as first expression
-        ibf_args.expression_levels.push_back(*std::min_element(counts.begin(), counts.end()));
-        for (std::size_t c = 0; c < ibf_args.number_expression_levels - 1; c++)
-        {
-            std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + num_of_counts, counts.end());
-            prev_pos = prev_pos + num_of_counts;
-            ibf_args.expression_levels.push_back(counts[prev_pos]);
-        }
+        std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
+        prev_pos = prev_pos + counts.size()/dev;
+        dev = dev *2;
+        ibf_args.expression_levels.push_back(counts[prev_pos]);
     }
     counts.clear();
 }
@@ -319,13 +301,13 @@ std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> statistics
 std::vector<std::filesystem::path> const & header_files)
 {
     // for every expression level a count list of all experiments is created
-    std::vector<std::vector<uint64_t>> count_all{};
+    std::vector<std::vector<uint16_t>> count_all{};
     std::vector<uint32_t> exp_levels;
     std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> results{};
 
     // For function call read_header
     ibf_args.expression_levels = {};
-    std::vector<uint64_t> counts{};
+    std::vector<uint16_t> counts{};
 
     uint64_t minimum;
     uint64_t median;
@@ -414,7 +396,8 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
         }
         file_iterator = file_iterator + ibf_args.samples[i];
 
-
+        // If set_expression_levels_samplewise is not set the expressions as determined by the first file are used for
+        // all files.
         if (ibf_args.set_expression_levels_samplewise)
         {
            get_expression_levels(args,
@@ -426,18 +409,21 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
            for (unsigned k = 0; k < ibf_args.number_expression_levels; k++)
                 expressions[k][i] = ibf_args.expression_levels[k];
         }
+        else if (ibf_args.expression_levels.size() == 0)
+        {
+            get_expression_levels(args,
+                                  ibf_args,
+                                  hash_table,
+                                  ibf_args.cutoffs[i],
+                                  genome_set_table);
+        }
 
         // Every minimiser is stored in IBF, if it occurence is greater than or equal to the expression level
-        for (auto & elem : hash_table)
+        for (auto && elem : hash_table)
         {
             for (int j = ibf_args.number_expression_levels - 1; j >= 0 ; --j)
             {
-                if ((ibf_args.expression_levels[j] == 0) & (elem.second > ibf_args.cutoffs[i])) // for comparison with mantis, SBT
-                {
-                    ibfs[j].emplace(elem.first,seqan3::bin_index{i});
-                    break;
-                }
-                else if (elem.second >= ibf_args.expression_levels[j])
+                if (elem.second >= ibf_args.expression_levels[j])
                 {
                     ibfs[j].emplace(elem.first,seqan3::bin_index{i});
                     break;
@@ -450,6 +436,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
     // Store IBFs
     for (unsigned i = 0; i < ibf_args.expression_levels.size(); i++)
     {
+
         std::filesystem::path filename{ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[i])};
         if (ibf_args.set_expression_levels_samplewise) // TODO: If this option is choosen the expressions need to be stored
              filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(i);
@@ -482,6 +469,23 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
     return ibf_args.expression_levels;
 }
 
+void fill_ibf(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> & ibf,
+              robin_hood::unordered_node_map<uint64_t, uint16_t> const & hash_table,
+              uint32_t const current_expression,
+              uint32_t const next_expression,
+              unsigned const bin)
+{
+    // Every minimiser is stored in IBF, if it occurence is greater than or equal to expression level and less
+    // than the next expression level.
+    for (auto && elem : hash_table)
+    {
+          if ((elem.second >= current_expression) & (elem.second < next_expression))
+              ibf.emplace(elem.first, seqan3::bin_index{bin});
+          else if ((next_expression == 0) & (elem.second >= current_expression))
+              ibf.emplace(elem.first, seqan3::bin_index{bin});
+    }
+}
+
 // Create ibf based on the minimiser and header files
 std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, arguments & args,
                           ibf_arguments & ibf_args)
@@ -496,7 +500,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
     if (ibf_args.include_file != "")
         get_include_set_table(args, ibf_args.include_file, genome_set_table);
     if (ibf_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
-        ibf_args.cutoffs.assign(minimiser_files.size(),0);
+        ibf_args.cutoffs.assign(minimiser_files.size(), 0);
     else if (ibf_args.cutoffs.size() == 1) // If one cutoff is given, every experiment gets this cutoff.
         ibf_args.cutoffs.assign(ibf_args.samples.size(), ibf_args.cutoffs[0]);
 
@@ -507,7 +511,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
             expressions.push_back(zero_vector);
     }
 
-    // TODO: if expression levels given does not match the expression levels in header file, get_bin_size gives
+    // TODO: If expression levels given does not match the expression levels in header file, get_bin_size gives
     // incorrect results or even an error, if more expression levels are added
     for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
     {
@@ -515,13 +519,12 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
         seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
 					   seqan3::bin_count{minimiser_files.size()}, seqan3::bin_size{ibf_args.bin_size[j]},
 					   seqan3::hash_function_count{ibf_args.num_hash});
-
        // Add minimisers to ibf
        for (unsigned i = 0; i < minimiser_files.size(); i++)
        {
-           read_binary(hash_table, minimiser_files[i].replace_extension(".minimiser"));
+           read_binary(hash_table, minimiser_files[i]);
 
-           if (ibf_args.set_expression_levels_samplewise)
+           if (ibf_args.set_expression_levels_samplewise & (j==0))
            {
               ibf_args.expression_levels.clear();
               get_expression_levels(args,
@@ -530,20 +533,29 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
                                     ibf_args.cutoffs[i],
                                     genome_set_table);
               for (unsigned k = 0; k < ibf_args.number_expression_levels; k++)
-                expressions[k][i] = ibf_args.expression_levels[k];
+                 expressions[k][i] = ibf_args.expression_levels[k];
            }
-
-
-           // Every minimiser is stored in IBF, if it occurence is greater than or equal to expression level
-           for (auto & elem : hash_table)
+           // If set_expression_levels_samplewise is not set the expressions as determined by the first file are used for
+           // all files.
+           else if (ibf_args.expression_levels.size() == 0)
            {
-                 if ((ibf_args.expression_levels[j] == 0) & (elem.second > ibf_args.cutoffs[i])) // for comparison with mantis, SBT
-                     ibf.emplace(elem.first,seqan3::bin_index{i});
-                 else if ((elem.second >= ibf_args.expression_levels[j]) & (j < ibf_args.number_expression_levels - 1) &(elem.second < ibf_args.expression_levels[j+1]))
-                     ibf.emplace(elem.first,seqan3::bin_index{i});
-                 else if ((j == ibf_args.number_expression_levels - 1) & (elem.second >= ibf_args.expression_levels[j]))
-                     ibf.emplace(elem.first,seqan3::bin_index{i});
+               get_expression_levels(args,
+                                     ibf_args,
+                                     hash_table,
+                                     ibf_args.cutoffs[i],
+                                     genome_set_table);
            }
+
+
+           if (ibf_args.set_expression_levels_samplewise & ((j < ibf_args.number_expression_levels - 1)))
+                fill_ibf(ibf, hash_table, expressions[j][i], expressions[j+1][i], i);
+           else if (ibf_args.set_expression_levels_samplewise)
+                fill_ibf(ibf, hash_table, expressions[j][i], 0, i);
+           else if ((j < ibf_args.number_expression_levels - 1))
+                fill_ibf(ibf, hash_table, ibf_args.expression_levels[j], ibf_args.expression_levels[j+1], i);
+           else
+                fill_ibf(ibf, hash_table, ibf_args.expression_levels[j], 0, i);
+
            hash_table.clear();
        }
 
@@ -610,9 +622,18 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
                                  ibf_args.cutoffs[i],
                                  genome_set_table);
         }
+        //If no expression values given, determine them
+        else if (ibf_args.expression_levels.size() == 0)
+        {
+           get_expression_levels(args,
+                                 ibf_args,
+                                 hash_table,
+                                 ibf_args.cutoffs[i],
+                                 genome_set_table);
+        }
 
         counts.assign(ibf_args.expression_levels.size(),0);
-        for (auto & elem : hash_table)
+        for (auto && elem : hash_table)
         {
             for (int j =  ibf_args.expression_levels.size() - 1; j >= 0; j--)
             {
