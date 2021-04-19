@@ -262,56 +262,10 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
     return 0;
 }
 
-int run_needle_stats(seqan3::argument_parser & parser)
-{
-    arguments args{};
-    ibf_arguments ibf_args{};
-    std::vector<std::filesystem::path> minimiser_files{};
-
-    parser.info.short_description = "Get statistics from header files produced by needle minimiser.";
-    parser.info.version = "1.0.0";
-    parser.info.author = "Mitra Darvish";
-
-    parser.add_positional_option(minimiser_files, "Please provide at least one header file.");
-
-    try
-    {
-        parser.parse();
-    }
-    catch (seqan3::argument_parser_error const & ext)                     // catch user errors
-    {
-        seqan3::debug_stream << "Error. Incorrect command line input for stats. " << ext.what() << "\n";
-        return -1;
-    }
-
-    std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> results;
-
-    try
-    {
-        results = statistics(args, ibf_args, minimiser_files);
-    }
-    catch (const std::invalid_argument & e)
-    {
-        std::cerr << e.what() << std::endl;
-        return -1;
-    }
-
-    for (unsigned i = 0; i < results.size(); ++i)
-    {
-        std::cout << "For expression level " << std::get<0>(results[i])[0] << ":\n";
-        std::cout << "Minimum of Counts: " << std::get<1>(results[i])[0] << "\n";
-        std::cout << "Median of Counts: " << std::get<1>(results[i])[1] << "\n";
-        std::cout << "Maximum of Counts: " << std::get<1>(results[i])[2] << "\n\n\n";
-    }
-
-
-    return 0;
-}
-
 int main(int argc, char const ** argv)
 {
     seqan3::argument_parser needle_parser{"needle", argc, argv, seqan3::update_notifications::on,
-    {"count", "estimate", "ibf", "ibfmin", "minimiser", "stats"}};
+    {"count", "estimate", "ibf", "ibfmin", "minimiser"}};
     needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
                                              "command ibf or estimate the expression of transcripts with the command "
                                              "estimate.");
@@ -338,8 +292,6 @@ int main(int argc, char const ** argv)
         run_needle_ibf_min(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-minimiser"})
         run_needle_minimiser(sub_parser);
-    else if (sub_parser.info.app_name == std::string_view{"needle-stats"})
-        run_needle_stats(sub_parser);
     else
         throw std::logic_error{"The used sub parser is not known: " + sub_parser.info.app_name};
 }

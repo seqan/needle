@@ -691,20 +691,3 @@ TEST(estimate, example_different_expressions_per_level)
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
-
-TEST(stats, example)
-{
-    arguments args{};
-    ibf_arguments ibf_args{};
-    ibf_args.cutoffs = {1};
-    std::vector<std::filesystem::path> minimiser_files{std::string(DATA_INPUT_DIR) + "exp_01.header",
-                                                       std::string(DATA_INPUT_DIR) + "exp_11.header"};
-
-    std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> expected{{{2}, {5310, 5739, 5739}},
-                                                                                {{21}, {5235, 5904, 5904}},
-                                                                                {{29}, {6115, 6358, 6358}}};
-
-    std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> results = statistics(args, ibf_args, minimiser_files);
-
-    EXPECT_EQ(expected, results);
-}

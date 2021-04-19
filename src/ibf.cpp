@@ -296,56 +296,6 @@ void get_expression_levels(arguments const & args, ibf_arguments & ibf_args,
     counts.clear();
 }
 
-// Calculates statistics from header files created by minimiser
-std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> statistics(arguments & args, ibf_arguments & ibf_args,
-std::vector<std::filesystem::path> const & header_files)
-{
-    // for every expression level a count list of all experiments is created
-    std::vector<std::vector<uint16_t>> count_all{};
-    std::vector<uint32_t> exp_levels;
-    std::vector<std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>> results{};
-
-    // For function call read_header
-    ibf_args.expression_levels = {};
-    std::vector<uint16_t> counts{};
-
-    uint64_t minimum;
-    uint64_t median;
-    uint64_t maximum;
-    std::vector<uint64_t> first;
-    std::vector<uint64_t> second;
-
-    for(auto & file : header_files) // Go over every minimiser file
-    {
-        read_header(args, ibf_args, file, counts);
-        if (count_all.size() == 0) // is true for the very first file
-        {
-            exp_levels = ibf_args.expression_levels;
-            count_all.assign(ibf_args.expression_levels.size(), {});
-        }
-
-        for( unsigned i = 0; i < counts.size(); ++i)
-            count_all[i].push_back(counts[i]);
-        ibf_args.expression_levels.clear();
-        counts.clear();
-    }
-
-    for( unsigned i = 0; i < exp_levels.size(); ++i)
-    {
-        minimum = *std::min_element(count_all[i].begin(), count_all[i].end());
-        std::nth_element(count_all[i].begin(), count_all[i].begin() + count_all[i].size()/2, count_all[i].end());
-        median = count_all[i][count_all[i].size()/2];
-        maximum = *std::max_element(count_all[i].begin(), count_all[i].end());
-
-        first = {exp_levels[i]};
-        second = {minimum, median, maximum};
-        results.push_back(std::make_tuple(first, second));
-    }
-
-    return results;
-
-}
-
 std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 {
     // Declarations
