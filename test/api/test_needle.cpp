@@ -109,9 +109,9 @@ TEST(ibf, given_expression_levels)
     ibf_args.expression_levels = {1, 2};
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
-    std::vector<uint32_t> expected{1, 2};
+    std::vector<uint16_t> expected{1, 2};
 
-    std::vector<uint32_t> medians = ibf(args, ibf_args);
+    std::vector<uint16_t> medians = ibf(args, ibf_args);
 
     EXPECT_EQ(expected, medians);
 
@@ -138,9 +138,9 @@ TEST(ibf, no_given_expression_levels)
     ibf_args.number_expression_levels = 2;
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
-    std::vector<uint32_t> expected{3, 4};
+    std::vector<uint16_t> expected{3, 4};
 
-    std::vector<uint32_t> medians = ibf(args, ibf_args);
+    std::vector<uint16_t> medians = ibf(args, ibf_args);
 
     EXPECT_EQ(expected, medians);
 
@@ -164,9 +164,9 @@ TEST(ibf, no_given_expression_levels_auto)
     ibf_args.number_expression_levels = 2;
     ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
-    std::vector<uint32_t> expected{3, 4};
+    std::vector<uint16_t> expected{3, 4};
 
-    std::vector<uint32_t> medians = ibf(args, ibf_args);
+    std::vector<uint16_t> medians = ibf(args, ibf_args);
 
     EXPECT_EQ(expected, medians);
 
@@ -215,9 +215,9 @@ TEST(ibfmin, given_expression_levels)
     ibf_args.bin_size = {1000, 1000};
     std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
 
-    std::vector<uint32_t> expected{1, 2};
+    std::vector<uint16_t> expected{1, 2};
 
-    std::vector<uint32_t> medians = ibf(minimiser_file, args, ibf_args);
+    std::vector<uint16_t> medians = ibf(minimiser_file, args, ibf_args);
 
     EXPECT_EQ(expected, medians);
 
@@ -245,9 +245,9 @@ TEST(ibfmin, no_given_expression_levels)
     ibf_args.bin_size = {1000, 1000};
     std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
 
-    std::vector<uint32_t> expected{3, 4};
+    std::vector<uint16_t> expected{3, 4};
 
-    std::vector<uint32_t> medians = ibf(minimiser_file, args, ibf_args);
+    std::vector<uint16_t> medians = ibf(minimiser_file, args, ibf_args);
 
     EXPECT_EQ(expected, medians);
 
@@ -273,9 +273,9 @@ TEST(ibfmin, no_given_expression_levels_auto)
     ibf_args.bin_size = {1000, 1000};
     std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
 
-    std::vector<uint32_t> expected{3, 4};
+    std::vector<uint16_t> expected{3, 4};
 
-    std::vector<uint32_t> medians = ibf(minimiser_file, args, ibf_args);
+    std::vector<uint16_t> medians = ibf(minimiser_file, args, ibf_args);
 
     EXPECT_EQ(expected, medians);
 
@@ -419,7 +419,7 @@ TEST(minimiser, small_example_samplewise)
     minimiser(args, ibf_args);
     uint32_t normalized_exp_value{};
     std::vector<std::vector<uint32_t>> expected_counts{{7}, {12}};
-    std::vector<uint32_t> expected_levels{3, 1};
+    std::vector<uint16_t> expected_levels{3, 1};
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     seqan3::shape expected_shape = seqan3::ungapped{args.k};

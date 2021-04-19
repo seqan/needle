@@ -19,7 +19,7 @@ struct ibf_arguments
     std::vector<size_t> bin_size{}; // The bin size of one IBF, can be different for different expression levels
     size_t num_hash{1}; // Number of hash functions to use, default 1
     std::filesystem::path path_out{"./"}; // Path where IBFs should be stored
-    std::vector<uint32_t> expression_levels{}; // Expression levels which should be created
+    std::vector<uint16_t> expression_levels{}; // Expression levels which should be created
     std::vector<int> samples{}; // Can be used to indicate that sequence files belong to the same experiment
     bool paired = false; // If true, than experiments are seen as paired-end experiments
     // Which expression values should be ignored during calculation of the normalization_method, default is zero
@@ -126,7 +126,7 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
  *                     struct ibf_arguments.
  *  \returns The normalized expression values per experiment.
  */
-std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args);
+std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args);
 
 /*! \brief Create IBF based on the minimiser and header files
  * \param minimiser_files  A vector of minimiser file paths.
@@ -135,7 +135,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args);
  *                         struct ibf_arguments.
  *  \returns The normalized expression values per experiment.
  */
-std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, arguments & args,
+std::vector<uint16_t> ibf(std::vector<std::filesystem::path> minimiser_files, arguments & args,
                           ibf_arguments & ibf_args);
 
 void minimiser(arguments const & args, ibf_arguments & ibf_args);

@@ -270,13 +270,13 @@ void get_expression_levels(arguments const & args, ibf_arguments & ibf_args,
     counts.clear();
 }
 
-std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
+std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 {
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimisers in genome sequences
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
-    std::vector<std::vector<uint32_t>> expressions{};
+    std::vector<std::vector<uint16_t>> expressions{};
 
     set_arguments_ibf(args, ibf_args, genome_set_table);
     set_arguments(ibf_args);
@@ -284,7 +284,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
 
     if (ibf_args.set_expression_levels_samplewise)
     {
-        std::vector<uint32_t> zero_vector(ibf_args.samples.size());
+        std::vector<uint16_t> zero_vector(ibf_args.samples.size());
         for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
             expressions.push_back(zero_vector);
     }
@@ -412,13 +412,13 @@ void fill_ibf(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed
 }
 
 // Create ibf based on the minimiser and header files
-std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, arguments & args,
+std::vector<uint16_t> ibf(std::vector<std::filesystem::path> minimiser_files, arguments & args,
                           ibf_arguments & ibf_args)
 {
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     robin_hood::unordered_set<uint64_t> genome_set_table;
-    std::vector<std::vector<uint32_t>> expressions{};
+    std::vector<std::vector<uint16_t>> expressions{};
 
     set_arguments(ibf_args);
     check_bin_size(ibf_args);
@@ -431,7 +431,7 @@ std::vector<uint32_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
 
     if (ibf_args.set_expression_levels_samplewise)
     {
-        std::vector<uint32_t> zero_vector(minimiser_files.size());
+        std::vector<uint16_t> zero_vector(minimiser_files.size());
         for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
             expressions.push_back(zero_vector);
     }
