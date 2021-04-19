@@ -18,7 +18,7 @@ TEST_F(cli_test, no_options)
 
 TEST_F(cli_test, fail_no_argument)
 {
-    cli_test_result result = execute_app("needle minimiser", "-y");
+    cli_test_result result = execute_app("needle minimiser", "-s 0");
     std::string expected
     {
         "Error. Incorrect command line input for minimiser. Not enough positional arguments provided "
@@ -31,7 +31,7 @@ TEST_F(cli_test, fail_no_argument)
 
 TEST_F(cli_test, with_argument)
 {
-    cli_test_result result = execute_app("needle minimiser -k 4 -w 8 -l 1", data("mini_example.fasta"));
+    cli_test_result result = execute_app("needle minimiser -k 4 -w 8", data("mini_example.fasta"));
     EXPECT_EQ(result.exit_code, 0);
     EXPECT_EQ(result.out, "");
     EXPECT_EQ(result.err, std::string{});

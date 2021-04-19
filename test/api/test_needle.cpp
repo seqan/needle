@@ -298,7 +298,6 @@ TEST(minimiser, small_example)
                                std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
 
     minimiser(args, ibf_args);
-    std::vector<uint16_t> counts{};
     uint32_t normalized_exp_value{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
@@ -307,20 +306,14 @@ TEST(minimiser, small_example)
     for (int i = 0; i < ibf_args.sequence_files.size(); ++i)
     {
         // Test Header file
-        ibf_args.expression_levels = {1, 2};
         read_header(args, ibf_args, std::string{ibf_args.path_out}  +
-                    std::string{ibf_args.sequence_files[i].stem()} + ".header", counts);
+                    std::string{ibf_args.sequence_files[i].stem()} + ".header");
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
         EXPECT_EQ(0, ibf_args.cutoffs[0]);
-        EXPECT_EQ(0, ibf_args.expression_levels[2]);
-        EXPECT_EQ(3, ibf_args.expression_levels.size());
-        EXPECT_EQ(12, counts[0]);
-        EXPECT_EQ(1, counts.size());
-        counts.clear();
 
         // Test binary file
         read_binary(result_hash_table, tmp_dir/("Test_" + std::string{ibf_args.sequence_files[i].stem()} + ".minimiser"));
@@ -362,7 +355,6 @@ TEST(minimiser, small_example_auto_expression_level)
 
     minimiser(args, ibf_args);
 
-    std::vector<uint16_t> counts{};
     uint32_t normalized_exp_value{};
     std::vector<std::vector<uint64_t>> expected_counts{{4, 3}, {0, 1}};
     std::vector<uint64_t> expected_levels{3, 4};
@@ -375,19 +367,12 @@ TEST(minimiser, small_example_auto_expression_level)
         // Test Header file
         ibf_args.expression_levels = {};
         read_header(args, ibf_args, std::string{ibf_args.path_out}  +
-                    std::string{ibf_args.sequence_files[i].stem()} + ".header", counts);
+                    std::string{ibf_args.sequence_files[i].stem()} + ".header");
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
         EXPECT_EQ(0, ibf_args.cutoffs[0]);
-        EXPECT_EQ(expected_levels[0], ibf_args.expression_levels[0]);
-        EXPECT_EQ(expected_levels[1], ibf_args.expression_levels[1]);
-        EXPECT_EQ(2, ibf_args.expression_levels.size());
-        EXPECT_EQ(expected_counts[i][0], counts[0]);
-        EXPECT_EQ(expected_counts[i][1], counts[1]);
-        EXPECT_EQ(2, counts.size());
-        counts.clear();
 
         // Test binary file
         read_binary(result_hash_table, tmp_dir/("Test_" + std::string{ibf_args.sequence_files[i].stem()} + ".minimiser"));
@@ -428,7 +413,6 @@ TEST(minimiser, small_example_samplewise)
     ibf_args.set_expression_levels_samplewise = true;
 
     minimiser(args, ibf_args);
-    std::vector<uint16_t> counts{};
     uint32_t normalized_exp_value{};
     std::vector<std::vector<uint32_t>> expected_counts{{7}, {12}};
     std::vector<uint32_t> expected_levels{3, 1};
@@ -441,17 +425,12 @@ TEST(minimiser, small_example_samplewise)
         // Test Header file
         ibf_args.expression_levels = {};
         read_header(args, ibf_args, std::string{ibf_args.path_out}  +
-                    std::string{ibf_args.sequence_files[i].stem()} + ".header", counts);
+                    std::string{ibf_args.sequence_files[i].stem()} + ".header");
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
         EXPECT_EQ(0, ibf_args.cutoffs[0]);
-        EXPECT_EQ(expected_levels[i], ibf_args.expression_levels[0]);
-        EXPECT_EQ(1, ibf_args.expression_levels.size());
-        EXPECT_EQ(expected_counts[i][0], counts[0]);
-        EXPECT_EQ(1, counts.size());
-        counts.clear();
 
         // Test binary file
         read_binary(result_hash_table, tmp_dir/("Test_" + std::string{ibf_args.sequence_files[i].stem()} + ".minimiser"));

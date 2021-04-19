@@ -166,8 +166,6 @@ void set_arguments_ibf(arguments const & args, ibf_arguments & ibf_args,
     else if (std::accumulate(ibf_args.samples.rbegin(), ibf_args.samples.rend(), 0) != ibf_args.sequence_files.size())
         throw std::invalid_argument{"Error. Incorrect command line input for multiple-samples."};
 
-    set_arguments(ibf_args);
-
     if (ibf_args.include_file != "")
         get_include_set_table(args, ibf_args.include_file, genome_set_table);
 }
@@ -209,8 +207,7 @@ void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table
 }
 
 // Reads one header file minimiser creates
-void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::path filename,
-                 std::vector<uint16_t> & counts)
+void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::path filename)
 {
     std::ifstream fin;
     fin.open(filename);
@@ -244,28 +241,6 @@ void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::pa
                                     std::cpp20::back_inserter(buffer));
     ibf_args.cutoffs.push_back(std::stoi(buffer));
 
-    // Read second line = expression levels
-    do
-    {
-        buffer.clear();
-        std::ranges::copy(stream_view | seqan3::views::take_until_or_throw(seqan3::is_char<' '> || seqan3::is_char<'\n'>),
-                                        std::cpp20::back_inserter(buffer));
-        ibf_args.expression_levels.push_back((uint32_t)  std::stoi(buffer));
-        if (*stream_it != '\n')
-            ++stream_it;
-    } while (*stream_it != '\n');
-    ++stream_it;
-
-    // Read third line = counts per minimiser per expression level
-    do
-    {
-        buffer.clear();
-        std::ranges::copy(stream_view | seqan3::views::take_until_or_throw(seqan3::is_char<' '>),
-                                        std::cpp20::back_inserter(buffer));
-        counts.push_back((uint16_t)  std::stoi(buffer));
-        if (*stream_it != '\n')
-            ++stream_it;
-    } while (*stream_it != '\n');
     fin.close();
 }
 
@@ -305,6 +280,7 @@ std::vector<uint32_t> ibf(arguments const & args, ibf_arguments & ibf_args)
     std::vector<std::vector<uint32_t>> expressions{};
 
     set_arguments_ibf(args, ibf_args, genome_set_table);
+    set_arguments(ibf_args);
     check_bin_size(ibf_args);
 
     if (ibf_args.set_expression_levels_samplewise)
@@ -562,44 +538,6 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
             fill_hash_table(args, fin, hash_table, genome_set_table, (ibf_args.include_file != ""), ibf_args.cutoffs[i]);
         }
 
-        //If no expression values given, determine them
-        if (ibf_args.set_expression_levels_samplewise)
-        {
-           ibf_args.expression_levels.clear();
-           get_expression_levels(args,
-                                 ibf_args,
-                                 hash_table,
-                                 ibf_args.cutoffs[i],
-                                 genome_set_table);
-        }
-        //If no expression values given, determine them
-        else if (ibf_args.expression_levels.size() == 0)
-        {
-           get_expression_levels(args,
-                                 ibf_args,
-                                 hash_table,
-                                 ibf_args.cutoffs[i],
-                                 genome_set_table);
-        }
-
-        counts.assign(ibf_args.expression_levels.size(),0);
-        for (auto && elem : hash_table)
-        {
-            for (int j =  ibf_args.expression_levels.size() - 1; j >= 0; j--)
-            {
-                if ((ibf_args.expression_levels[j] == 0) & (elem.second > ibf_args.cutoffs[i])) // for comparison with mantis, SBT
-                {
-                    counts[j]++;
-                    break;
-                }
-                else if ((((elem.second)) >= ibf_args.expression_levels[j]))
-                {
-                    counts[j]++;
-                    break;
-                }
-            }
-        }
-
         // Write minimiser and their counts to binary
         outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[file_iterator].stem()}
                      + ".minimiser", std::ios::binary);
@@ -616,12 +554,7 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
                      + ".header");
         outfile <<  args.s.get() << " " << std::to_string(args.k) << " " << args.w_size.get() << " " << args.shape.to_ulong() << " "
                 << ibf_args.cutoffs[i] << "\n";
-        for (unsigned k = 0; k < counts.size(); k++)
-            outfile  << ibf_args.expression_levels[k] << " ";
 
-        outfile << "\n";
-        for (unsigned k = 0; k < counts.size(); k++)
-            outfile  << counts[k] << " ";
         outfile << "\n";
         outfile.close();
         file_iterator = file_iterator + ibf_args.samples[i];

@@ -38,7 +38,7 @@ void parsing(seqan3::argument_parser & parser, arguments & args)
 }
 
 // Initialize arguments for ibf and minimiser
-void initialise_ibf_argument_parser(seqan3::argument_parser & parser, ibf_arguments & ibf_args)
+void initialise_arguments_sequence_files(seqan3::argument_parser & parser, ibf_arguments & ibf_args)
 {
     parser.add_positional_option(ibf_args.sequence_files, "Please provide at least one sequence file.");
     parser.add_option(ibf_args.include_file, 'g', "genom-mask", "Genom file used as a mask.");
@@ -51,6 +51,13 @@ void initialise_ibf_argument_parser(seqan3::argument_parser & parser, ibf_argume
                                                          "should be considered the result of a sequencing error and "
                                                          "therefore be ignored. Default: Every sample has a cut off of "
                                                          "zero.");
+}
+
+// Initialize arguments for expression levels
+void initialise_ibf_argument_parser(seqan3::argument_parser & parser, ibf_arguments & ibf_args)
+{
+    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
+                                                                            " constructing the IBFs. Default: [0.5,1,2,4].");
     parser.add_flag(ibf_args.set_expression_levels_samplewise, 'y', "individual", "If set, every sample gets its own expression level. Default: false.");
     parser.add_option(ibf_args.number_expression_levels, 'l', "number_expression_levels", "Number of expression levels.");
 }
@@ -146,12 +153,11 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     initialise_arguments_ibf(parser, args);
     ibf_arguments ibf_args{};
     initialise_ibf_argument_parser(parser, ibf_args);
+    initialise_arguments_sequence_files(parser, ibf_args);
 
     parser.info.short_description = "Constructs an IBF.";
     parser.add_option(ibf_args.bin_size, 'b', "bin-size", "List of bin sizes per expression level. If only one is given"
                                                           ", then that bin size is used for all expression levels.");
-    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
-                                                                            " constructing the IBFs. Default: [0.5,1,2,4].");
     parser.add_option(ibf_args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
                                                       "one IBF.");
     parser.add_option(ibf_args.experiment_names, 'f', "experiment-names", "If set, names of the experiments are stored"
@@ -192,15 +198,12 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     parser.add_flag(args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
     parser.add_positional_option(minimiser_files, "Please provide at least one minimiser file. It is assumed that the "
                                                   "header file exits in the same directory.");
-    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
-                                                                            " constructing the IBFs. Default: The "
-                                                                            "expression levels found in the header files.");
+
     parser.add_option(ibf_args.include_file, 'g', "genom-mask", "Genom file used as a mask.");
     parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_option(ibf_args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
                                                       "one IBF.");
-    parser.add_flag(ibf_args.set_expression_levels_samplewise, 'y', "individual", "If set, every sample gets its own expression level. Default: false.");
-    parser.add_option(ibf_args.number_expression_levels, 'l', "number_expression_levels", "Number of expression levels.");
+    initialise_ibf_argument_parser(parser, ibf_args);
 
     try
     {
@@ -230,15 +233,8 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
     arguments args{};
     initialise_arguments_minimiser_hash(parser, args);
     ibf_arguments ibf_args{};
-    initialise_ibf_argument_parser(parser, ibf_args);
+    initialise_arguments_sequence_files(parser, ibf_args);
     parser.info.short_description = "Calculates minimiser for given experiments.";
-    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "The expression levels are used for counting"
-                                                                            " how many minimisers are greater or equal "
-                                                                            "than the given expression levels. Default "
-                                                                            "is an expression level of zero, so all "
-                                                                            "minimisers are counted. Multiple levels can"
-                                                                            "be given, so multiple counts will be "
-                                                                            "calculated. Default: [0].");
 
     try
     {
