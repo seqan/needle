@@ -24,8 +24,8 @@
 
 // Check if one sequence is present in a given ibf
 template <class IBFType>
-std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vector<uint32_t> & counter, seqan3::dna4_vector const seq,
-                                std::vector<uint32_t> & prev_counts, uint64_t expression, uint64_t prev_expression, bool last_exp)
+std::vector<uint16_t> check_ibf(arguments const & args, IBFType & ibf, std::vector<uint32_t> & counter, seqan3::dna4_vector const seq,
+                                std::vector<uint32_t> & prev_counts, uint16_t expression, uint16_t prev_expression, bool last_exp)
 {
     uint64_t minimiser_length = 0;
     for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
@@ -36,7 +36,7 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
         ++minimiser_length;
     }
 
-    std::vector<uint32_t> results{};
+    std::vector<uint16_t> results{};
     float minimiser_pos = minimiser_length/2.0;
     results.assign(ibf.bin_count(), 0);
     // Last expression level is looked at
@@ -71,9 +71,9 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
 }
 
 template <class IBFType>
-std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vector<uint32_t> & counter,
+std::vector<uint16_t> check_ibf(arguments const & args, IBFType & ibf, std::vector<uint32_t> & counter,
                                 seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
-                                std::vector<std::vector<uint32_t>> & expressions, bool last_exp, int k)
+                                std::vector<std::vector<uint16_t>> & expressions, bool last_exp, int k)
 {
     uint64_t minimiser_length = 0;
     for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
@@ -84,7 +84,7 @@ std::vector<uint32_t> check_ibf(arguments const & args, IBFType & ibf, std::vect
         ++minimiser_length;
     }
 
-    std::vector<uint32_t> results{};
+    std::vector<uint16_t> results{};
     float minimiser_pos = minimiser_length/2.0;
     results.assign(ibf.bin_count(), 0);
 
@@ -141,8 +141,9 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
     bool last_exp{true};
 
     std::vector<uint32_t> counter;
-    std::vector<uint32_t> results;
-    std::vector<std::vector<uint32_t>> estimations;
+    std::vector<uint16_t> counter_est;
+    std::vector<uint16_t> results;
+    std::vector<std::vector<uint16_t>> estimations;
     // Make sure expression levels are sorted.
     sort(estimate_args.expressions.begin(), estimate_args.expressions.end());
 
@@ -152,17 +153,20 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
         for (int i = 0; i < seqs.size(); ++i)
         {
             counter.assign(ibf.bin_count(), 0);
+            counter_est.assign(ibf.bin_count(), 0);
             if (estimations.size() <= i)
             {
-                estimations.push_back(counter);
+                estimations.push_back(counter_est);
                 prev_counts.push_back(counter);
             }
+            counter_est.clear();
 
             results = check_ibf(args, ibf, counter, seqs[i], prev_counts[i],
                                 estimate_args.expressions[j], prev_expression, last_exp);
             for(unsigned j = 0; j < counter.size(); j++)
                 estimations[i][j] = std::max(estimations[i][j], results[j]);
             counter.clear();
+
         }
         prev_expression = estimate_args.expressions[j];
         last_exp = false;
@@ -182,14 +186,14 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
 }
 
 // Reads the level file ibf creates
-void read_levels(std::vector<std::vector<uint32_t>> & expressions, std::filesystem::path filename)
+void read_levels(std::vector<std::vector<uint16_t>> & expressions, std::filesystem::path filename)
 {
     std::ifstream fin;
     fin.open(filename);
     auto stream_view = seqan3::views::istreambuf(fin);
     auto stream_it = std::ranges::begin(stream_view);
     int j{0};
-    std::vector<uint32_t> empty_vector{};
+    std::vector<uint16_t> empty_vector{};
 
     std::string buffer{};
 
@@ -200,7 +204,7 @@ void read_levels(std::vector<std::vector<uint32_t>> & expressions, std::filesyst
             expressions.push_back(empty_vector);
         std::ranges::copy(stream_view | seqan3::views::take_until_or_throw(seqan3::is_char<' '>),
                                         std::cpp20::back_inserter(buffer));
-        expressions[j].push_back((uint32_t)  std::stoi(buffer));
+        expressions[j].push_back((uint16_t)  std::stoi(buffer));
         buffer.clear();
         if(*stream_it != '/')
             ++stream_it;
@@ -223,6 +227,7 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
     std::vector<std::string> ids;
     std::vector<seqan3::dna4_vector> seqs;
     std::vector<uint32_t> counter;
+    std::vector<uint16_t> counter_est;
 
     uint64_t minimiser_length{};
 
@@ -235,12 +240,12 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
 
     std::vector<std::vector<uint32_t>> prev_counts;
     bool last_exp{true};
-    std::vector<std::vector<uint32_t>> expressions{};
+    std::vector<std::vector<uint16_t>> expressions{};
 
     read_levels(expressions, level_file);
 
-    std::vector<uint32_t> results;
-    std::vector<std::vector<uint32_t>> estimations;
+    std::vector<uint16_t> results;
+    std::vector<std::vector<uint16_t>> estimations;
     // Make sure expression levels are sorted.
     sort(estimate_args.expressions.begin(), estimate_args.expressions.end());
     for (int j = estimate_args.expressions.size() - 1; j >= 0; j--)
@@ -249,16 +254,18 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
         for (int i = 0; i < seqs.size(); ++i)
         {
             counter.assign(ibf.bin_count(), 0);
+            counter_est.assign(ibf.bin_count(), 0);
             if (estimations.size() <= i)
             {
-                estimations.push_back(counter);
+                estimations.push_back(counter_est);
                 prev_counts.push_back(counter);
             }
+            counter_est.clear();
 
             results = check_ibf(args, ibf, counter, seqs[i], prev_counts[i],
                                 expressions, last_exp, j);
             for(unsigned j = 0; j < counter.size(); j++)
-                estimations[i][j] = std::max(estimations[i][j], (uint32_t) results[j]);
+                estimations[i][j] = std::max(estimations[i][j], results[j]);
             counter.clear();
         }
         last_exp = false;

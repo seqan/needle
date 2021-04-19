@@ -20,7 +20,7 @@ struct estimate_arguments
 {
     std::filesystem::path search_file;
     std::filesystem::path path_in{"./"};
-    std::vector<uint32_t> expressions{};
+    std::vector<uint16_t> expressions{};
 
 };
 
