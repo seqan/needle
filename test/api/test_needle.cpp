@@ -311,7 +311,7 @@ TEST(minimiser, small_example)
     for (int i = 0; i < ibf_args.sequence_files.size(); ++i)
     {
         // Test Header file
-        read_header(args, ibf_args, std::string{ibf_args.path_out}  +
+        read_header(args, ibf_args.cutoffs, std::string{ibf_args.path_out}  +
                     std::string{ibf_args.sequence_files[i].stem()} + ".header");
 
         EXPECT_EQ(4, args.k);
@@ -372,7 +372,7 @@ TEST(minimiser, small_example_auto_expression_level)
     {
         // Test Header file
         ibf_args.expression_levels = {};
-        read_header(args, ibf_args, std::string{ibf_args.path_out}  +
+        read_header(args, ibf_args.cutoffs, std::string{ibf_args.path_out}  +
                     std::string{ibf_args.sequence_files[i].stem()} + ".header");
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -431,7 +431,7 @@ TEST(minimiser, small_example_samplewise)
     {
         // Test Header file
         ibf_args.expression_levels = {};
-        read_header(args, ibf_args, std::string{ibf_args.path_out}  +
+        read_header(args, ibf_args.cutoffs, std::string{ibf_args.path_out}  +
                     std::string{ibf_args.sequence_files[i].stem()} + ".header");
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -485,7 +485,7 @@ TEST(minimiser, cutoff_by_filesize)
     for (int i = 0; i < ibf_args.sequence_files.size(); ++i)
     {
         // Test Header file
-        read_header(args, ibf_args, std::string{ibf_args.path_out}  +
+        read_header(args, ibf_args.cutoffs, std::string{ibf_args.path_out}  +
                     std::string{ibf_args.sequence_files[i].stem()} + ".header");
 
         EXPECT_EQ(4, args.k);
