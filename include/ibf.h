@@ -114,11 +114,10 @@ void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table
 
 /*!\brief Reads a header file function minimiser creates
 * \param args                 The minimiser arguments to use (seed, shape, window size).
-* \param ibf_args             The IBF specific arguments to use (bin size, number of hash functions, ...). See
-*                             struct ibf_arguments.
+* \param cutoffs              The vector where the cutoff value should be push backed to.
 * \param filename             The filename of the binary file.
 */
-void read_header(arguments & args, ibf_arguments & ibf_args, std::filesystem::path filename);
+void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesystem::path filename);
 
 /*! \brief Create IBF.
  * \param args         The minimiser arguments to use (seed, shape, window size).
