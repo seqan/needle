@@ -326,6 +326,7 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args)
         // all files.
         if (ibf_args.set_expression_levels_samplewise)
         {
+           ibf_args.expression_levels.clear();
            get_expression_levels(args,
                                  ibf_args,
                                  hash_table,
@@ -360,9 +361,8 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args)
     }
 
     // Store IBFs
-    for (unsigned i = 0; i < ibf_args.expression_levels.size(); i++)
+    for (unsigned i = 0; i < ibf_args.number_expression_levels; i++)
     {
-
         std::filesystem::path filename{ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[i])};
         if (ibf_args.set_expression_levels_samplewise) // TODO: If this option is choosen the expressions need to be stored
              filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(i);
