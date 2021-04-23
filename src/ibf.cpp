@@ -556,20 +556,19 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
     std::array<uint64_t, 4> const cutoff_bounds{314'572'800, 524'288'000, 1'073'741'824, 3'221'225'472};
 
     unsigned file_iterator{0};
-    auto worker = [&] (auto && i, auto &&)
+    auto worker = [&] (auto && filename, auto &&)
     {
-        file_iterator = std::accumulate(ibf_args.samples.begin(), ibf_args.samples.begin()+i, 0);
+        uint16_t cutoff{default_cutoff};
         if (calculate_cutoffs)
         {
             uint16_t count{0};
-            uint16_t cutoff{default_cutoff};
             // Since the curoffs are based on the filesize of a gzipped fastq file, we try account for the other cases:
             // We multiply by two if we have fasta input.
             // We divide by 3 if the input is not compressed.
-            bool const is_compressed = ibf_args.sequence_files[file_iterator].extension() == ".gz" || ibf_args.sequence_files[file_iterator].extension() == ".bgzf" || ibf_args.sequence_files[file_iterator].extension() == ".bz2";
-            bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions, ibf_args.sequence_files[file_iterator].stem())
-                                               : check_for_fasta_format(seqan3::format_fasta::file_extensions, ibf_args.sequence_files[file_iterator].extension());
-            size_t const filesize = std::filesystem::file_size(ibf_args.sequence_files[file_iterator]) * ibf_args.samples[i] * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
+            bool const is_compressed = filename.extension() == ".gz" || filename.extension() == ".bgzf" || filename.extension() == ".bz2";
+            bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions, filename.stem())
+                                               : check_for_fasta_format(seqan3::format_fasta::file_extensions, filename.extension());
+            size_t const filesize = std::filesystem::file_size(filename) * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
 
             for (size_t k = 0; k < cutoff_bounds.size(); ++k)
             {
@@ -579,18 +578,14 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
                     break;
                 }
             }
-            ibf_args.cutoffs.push_back(cutoff);
         }
 
         // Fill hash_table with minimisers.
-        for (unsigned f = 0; f < ibf_args.samples[i]; f++)
-        {
-            seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{ibf_args.sequence_files[file_iterator+f]};
-            fill_hash_table(args, fin, hash_table, genome_set_table, (ibf_args.include_file != ""), ibf_args.cutoffs[i]);
-        }
+        seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{filename};
+        fill_hash_table(args, fin, hash_table, genome_set_table, (ibf_args.include_file != ""), cutoff);
 
         // Write minimiser and their counts to binary
-        outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[file_iterator].stem()}
+        outfile.open(std::string{ibf_args.path_out} + std::string{filename.stem()}
                      + ".minimiser", std::ios::binary);
         for (auto && hash : hash_table)
         {
@@ -601,18 +596,18 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
         hash_table.clear();
 
         // Write header file, containing information about the minimiser counts per expression level
-        outfile.open(std::string{ibf_args.path_out} + std::string{ibf_args.sequence_files[file_iterator].stem()}
+        outfile.open(std::string{ibf_args.path_out} + std::string{filename.stem()}
                      + ".header");
         outfile <<  args.s.get() << " " << std::to_string(args.k) << " " << args.w_size.get() << " " << args.shape.to_ulong() << " "
-                << std::to_string(ibf_args.cutoffs[i]) << "\n";
+                << std::to_string(cutoff) << "\n";
 
         outfile << "\n";
         outfile.close();
     };
 
     seqan3::detail::execution_handler_parallel executioner{args.threads};
-    auto view = std::views::iota(0u, ibf_args.samples.size());
-    executioner.bulk_execute(std::move(worker), std::move(view), [](){});
+    //auto view = std::views::iota(0u, ibf_args.samples.size());
+    executioner.bulk_execute(std::move(worker), std::move(ibf_args.sequence_files), [](){});
 }
 
 void build_ibf(arguments & args, ibf_arguments & ibf_args, float fpr)
