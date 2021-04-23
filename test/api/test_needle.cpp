@@ -517,6 +517,64 @@ TEST(minimiser, cutoff_by_filesize)
     std::filesystem::remove(tmp_dir/("Test_mini_example2.minimiser"));
 }
 
+TEST(minimiser, small_example_two_threads)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+    args.threads = 2;
+    ibf_args.cutoffs = {0, 0};
+    ibf_args.expression_levels = {0};
+    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
+                               std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    minimiser(args, ibf_args);
+    args.threads = 1;
+    uint32_t normalized_exp_value{};
+    robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
+    std::vector<std::filesystem::path> minimiser_files{};
+    seqan3::shape expected_shape = seqan3::ungapped{args.k};
+
+    for (int i = 0; i < ibf_args.sequence_files.size(); ++i)
+    {
+        // Test Header file
+        read_header(args, ibf_args.cutoffs, std::string{ibf_args.path_out}  +
+                    std::string{ibf_args.sequence_files[i].stem()} + ".header");
+
+        EXPECT_EQ(4, args.k);
+        EXPECT_EQ(4, args.w_size.get());
+        EXPECT_EQ(0, args.s.get());
+        EXPECT_EQ(15, args.shape.to_ulong());
+        EXPECT_EQ(0, ibf_args.cutoffs[0]);
+
+        // Test binary file
+        read_binary(result_hash_table, tmp_dir/("Test_" + std::string{ibf_args.sequence_files[i].stem()} + ".minimiser"));
+        minimiser_files.push_back(tmp_dir/("Test_" + std::string{ibf_args.sequence_files[i].stem()} + ".minimiser"));
+        EXPECT_EQ(expected_hash_tables[i], result_hash_table);
+
+        result_hash_table.clear();
+    }
+
+    EXPECT_EQ(ibf_args.expression_levels, ibf(minimiser_files, args, ibf_args));
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    load_ibf(ibf, tmp_dir/"Test_IBF_0");
+    auto agent = ibf.membership_agent();
+
+    sdsl::bit_vector expected_result(2, 0);
+    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(0));
+    expected_result[1] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(27));
+
+    std::filesystem::remove(tmp_dir/"Test_IBF_0");
+    std::filesystem::remove(tmp_dir/("Test_mini_example.header"));
+    std::filesystem::remove(tmp_dir/("Test_mini_example2.header"));
+    std::filesystem::remove(tmp_dir/("Test_mini_example.minimiser"));
+    std::filesystem::remove(tmp_dir/("Test_mini_example2.minimiser"));
+}
+
 TEST(estimate, small_example)
 {
     arguments args{};

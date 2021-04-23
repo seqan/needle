@@ -14,6 +14,7 @@
 #include <robin_hood.h>
 
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
+#include <seqan3/core/algorithm/detail/execution_handler_parallel.hpp>
 #include <seqan3/core/concept/cereal.hpp>
 #include <seqan3/core/debug_stream.hpp>
 #include <seqan3/io/sequence_file/all.hpp>
@@ -555,9 +556,9 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
     std::array<uint64_t, 4> const cutoff_bounds{314'572'800, 524'288'000, 1'073'741'824, 3'221'225'472};
 
     unsigned file_iterator{0};
-    // Add minimisers to ibf
-    for (unsigned i = 0; i < ibf_args.samples.size(); i++)
+    auto worker = [&] (auto && i, auto &&)
     {
+        file_iterator = std::accumulate(ibf_args.samples.begin(), ibf_args.samples.begin()+i, 0);
         if (calculate_cutoffs)
         {
             uint16_t count{0};
@@ -607,9 +608,11 @@ void minimiser(arguments const & args, ibf_arguments & ibf_args)
 
         outfile << "\n";
         outfile.close();
-        file_iterator = file_iterator + ibf_args.samples[i];
-    }
+    };
 
+    seqan3::detail::execution_handler_parallel executioner{args.threads};
+    auto view = std::views::iota(0u, ibf_args.samples.size());
+    executioner.bulk_execute(std::move(worker), std::move(view), [](){});
 }
 
 void build_ibf(arguments & args, ibf_arguments & ibf_args, float fpr)
