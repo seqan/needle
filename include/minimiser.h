@@ -9,6 +9,11 @@
 #include <seqan3/search/dream_index/interleaved_bloom_filter.hpp>
 #include <seqan3/search/kmer_index/shape.hpp>
 
+inline constexpr static uint64_t adjust_seed(uint8_t const kmer_size, uint64_t const seed = 0x8F3F73B5CF1C9ADEULL) noexcept
+{
+    return seed >> (64u - 2u * kmer_size);
+}
+
 //!\brief arguments used for construction of the IBF as well as the search
 struct arguments
 {
@@ -16,7 +21,7 @@ struct arguments
     uint8_t k{20};
     seqan3::window_size w_size{60};
     seqan3::shape shape = seqan3::ungapped{k};
-    seqan3::seed s{0x8F3F73B5CF1C9ADE};
+    seqan3::seed s{0x8F3F73B5CF1C9ADEULL};
 
 };
 

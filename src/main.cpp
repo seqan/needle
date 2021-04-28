@@ -34,7 +34,7 @@ void parsing(seqan3::argument_parser & parser, arguments & args)
             args.shape = seqan3::ungapped{args.k};
     else
             args.shape = seqan3::bin_literal{shape};
-    args.s = seqan3::seed{se};
+    args.s = seqan3::seed{adjust_seed(args.k, se)};
 }
 
 // Initialize arguments for ibf and minimiser
