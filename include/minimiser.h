@@ -19,11 +19,11 @@ struct arguments
 {
     bool compressed = false;
     uint8_t k{20};
-    seqan3::window_size w_size{60};
-    seqan3::shape shape = seqan3::ungapped{k};
+    std::filesystem::path path_out{"./"};
     seqan3::seed s{0x8F3F73B5CF1C9ADEULL};
+    seqan3::shape shape = seqan3::ungapped{k};
     uint8_t threads{1};
-
+    seqan3::window_size w_size{60};
 };
 
 //!\brief Use dna4 instead of default dna5
