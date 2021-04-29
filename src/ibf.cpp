@@ -15,7 +15,6 @@
 #include <robin_hood.h>
 
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
-#include <seqan3/core/algorithm/detail/execution_handler_parallel.hpp>
 #include <seqan3/core/concept/cereal.hpp>
 #include <seqan3/core/debug_stream.hpp>
 #include <seqan3/io/sequence_file/all.hpp>
@@ -246,8 +245,7 @@ void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesyst
 }
 
 // Calculate expression levels
-//TODO: Why do I need args here?
-void get_expression_levels(arguments const & args, uint8_t const number_expression_levels,
+void get_expression_levels(uint8_t const number_expression_levels,
                            robin_hood::unordered_node_map<uint64_t, uint16_t> const & hash_table,
                            std::vector<uint16_t> & expression_levels)
 {
@@ -331,8 +329,7 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args)
         if (ibf_args.set_expression_levels_samplewise)
         {
            ibf_args.expression_levels.clear();
-           get_expression_levels(args,
-                                 ibf_args.number_expression_levels,
+           get_expression_levels(ibf_args.number_expression_levels,
                                  hash_table,
                                  ibf_args.expression_levels);
 
@@ -341,8 +338,7 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args)
         }
         else if (ibf_args.expression_levels.size() == 0)
         {
-            get_expression_levels(args,
-                                  ibf_args.number_expression_levels,
+            get_expression_levels(ibf_args.number_expression_levels,
                                   hash_table,
                                   ibf_args.expression_levels);
         }
@@ -415,20 +411,17 @@ void fill_ibf(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed
 }
 
 // Create ibf based on the minimiser and header files
-//TODO: Why do I need args here?
-std::vector<uint16_t> ibf(std::vector<std::filesystem::path> minimiser_files, arguments & args,
+std::vector<uint16_t> ibf(std::vector<std::filesystem::path> minimiser_files, arguments const & args,
                           ibf_arguments & ibf_args)
 {
 
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
-    robin_hood::unordered_set<uint64_t> genome_set_table;
     std::vector<std::vector<uint16_t>> expressions{};
 
     set_arguments(ibf_args.expression_levels, ibf_args.number_expression_levels,
                   ibf_args.set_expression_levels_samplewise);
     check_bin_size(ibf_args.number_expression_levels, ibf_args.bin_size);
-    if (ibf_args.include_file != "")
-        get_include_set_table(args, ibf_args.include_file, genome_set_table);
+
     if (ibf_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
         ibf_args.cutoffs.assign(minimiser_files.size(), 0);
     else if (ibf_args.cutoffs.size() == 1) // If one cutoff is given, every experiment gets this cutoff.
@@ -472,8 +465,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
         if (ibf_args.set_expression_levels_samplewise)
         {
            ibf_args.expression_levels.clear();
-           get_expression_levels(args,
-                                 ibf_args.number_expression_levels,
+           get_expression_levels(ibf_args.number_expression_levels,
                                  hash_table,
                                  ibf_args.expression_levels);
 
@@ -482,8 +474,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
         }
         else if (ibf_args.expression_levels.size() == 0)
         {
-            get_expression_levels(args,
-                                  ibf_args.number_expression_levels,
+            get_expression_levels(ibf_args.number_expression_levels,
                                   hash_table,
                                   ibf_args.expression_levels);
         }
@@ -580,8 +571,7 @@ std::vector<uint16_t> ibf_one_ibf_at_a_time(std::vector<std::filesystem::path> m
            if (ibf_args.set_expression_levels_samplewise & (j==0))
            {
               ibf_args.expression_levels.clear();
-              get_expression_levels(args,
-                                    ibf_args.number_expression_levels,
+              get_expression_levels(ibf_args.number_expression_levels,
                                     hash_table,
                                     ibf_args.expression_levels);
               for (unsigned k = 0; k < ibf_args.number_expression_levels; k++)
@@ -591,8 +581,7 @@ std::vector<uint16_t> ibf_one_ibf_at_a_time(std::vector<std::filesystem::path> m
            // all files.
            else if (ibf_args.expression_levels.size() == 0)
            {
-               get_expression_levels(args,
-                                     ibf_args.number_expression_levels,
+               get_expression_levels(ibf_args.number_expression_levels,
                                      hash_table,
                                      ibf_args.expression_levels);
            }
