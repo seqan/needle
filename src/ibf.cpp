@@ -523,7 +523,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> minimiser_files, ar
         outfile.open(std::string{ibf_args.path_out} +  "IBF_Levels.levels");
         for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
         {
-            for (unsigned i = 0; i < ibf_args.samples.size(); i++)
+            for (unsigned i = 0; i < minimiser_files.size(); i++)
                  outfile << expressions[j][i] << " ";
             outfile << "\n";
         }
