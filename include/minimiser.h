@@ -22,6 +22,7 @@ struct arguments
     seqan3::window_size w_size{60};
     seqan3::shape shape = seqan3::ungapped{k};
     seqan3::seed s{0x8F3F73B5CF1C9ADEULL};
+    uint8_t threads{1};
 
 };
 

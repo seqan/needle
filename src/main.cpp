@@ -17,6 +17,7 @@ void initialise_arguments_minimiser_hash(seqan3::argument_parser & parser, argum
     parser.add_option(shape, 'p', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
                                            "position to be ignored, 1 a position considered. Default: ungapped.");
     parser.add_option(se, 's', "seed", "Define seed.");
+    parser.add_option(args.threads, 't', "threads", "Number of threads to use. Default: 1.");
 }
 
 void initialise_arguments_ibf(seqan3::argument_parser & parser, arguments & args)
