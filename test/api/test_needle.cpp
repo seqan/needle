@@ -47,12 +47,12 @@ void initialization_args(arguments & args)
     args.shape = seqan3::ungapped{args.k};
     args.w_size = seqan3::window_size{4};
     args.s = seqan3::seed{0};
+    args.path_out = tmp_dir/"Test_";
 }
 
 void initialization_ibf_args(ibf_arguments & args)
 {
     args.bin_size = {1000};
-    args.path_out = tmp_dir/"Test_";
 }
 
 TEST(count, small_example)
@@ -104,14 +104,15 @@ TEST(ibf, given_expression_levels)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     ibf_args.expression_levels = {1, 2};
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
     std::vector<uint16_t> expected{1, 2};
 
-    std::vector<uint16_t> medians = ibf(args, ibf_args);
+    std::vector<uint16_t> medians = ibf(args, ibf_args, minimiser_args);
 
     EXPECT_EQ(expected, medians);
 
@@ -132,15 +133,16 @@ TEST(ibf, no_given_expression_levels)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     ibf_args.set_expression_levels_samplewise = true;
     ibf_args.number_expression_levels = 2;
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
     std::vector<uint16_t> expected{3, 4};
 
-    std::vector<uint16_t> medians = ibf(args, ibf_args);
+    std::vector<uint16_t> medians = ibf(args, ibf_args, minimiser_args);
 
     EXPECT_EQ(expected, medians);
 
@@ -159,14 +161,15 @@ TEST(ibf, no_given_expression_levels_auto)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     ibf_args.number_expression_levels = 2;
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
     std::vector<uint16_t> expected{3, 4};
 
-    std::vector<uint16_t> medians = ibf(args, ibf_args);
+    std::vector<uint16_t> medians = ibf(args, ibf_args, minimiser_args);
 
     EXPECT_EQ(expected, medians);
 
@@ -190,19 +193,20 @@ TEST(ibf, throws)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     ibf_args.set_expression_levels_samplewise = true;
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
-    EXPECT_THROW(ibf(args, ibf_args), std::invalid_argument);
+    EXPECT_THROW(ibf(args, ibf_args, minimiser_args), std::invalid_argument);
 
     ibf_args.expression_levels = {1, 2};
     ibf_args.bin_size = {};
-    EXPECT_THROW(ibf(args, ibf_args), std::invalid_argument);
+    EXPECT_THROW(ibf(args, ibf_args, minimiser_args), std::invalid_argument);
 
     ibf_args.bin_size = {1000};
-    EXPECT_THROW(ibf(args, ibf_args), std::invalid_argument);
+    EXPECT_THROW(ibf(args, ibf_args, minimiser_args), std::invalid_argument);
 }
 
 TEST(ibfmin, given_expression_levels)
@@ -295,34 +299,35 @@ TEST(minimiser, small_example)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.cutoffs = {0, 0};
+    minimiser_args.cutoffs = {0, 0};
     ibf_args.expression_levels = {0};
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
                                std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
 
-    minimiser(args, ibf_args);
+    minimiser(args, minimiser_args);
     uint32_t normalized_exp_value{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     seqan3::shape expected_shape = seqan3::ungapped{args.k};
 
-    for (int i = 0; i < ibf_args.sequence_files.size(); ++i)
+    for (int i = 0; i < minimiser_args.sequence_files.size(); ++i)
     {
         // Test Header file
-        read_header(args, ibf_args.cutoffs, std::string{ibf_args.path_out}  +
-                    std::string{ibf_args.sequence_files[i].stem()} + ".header");
+        read_header(args, minimiser_args.cutoffs, std::string{args.path_out}  +
+                    std::string{minimiser_args.sequence_files[i].stem()} + ".header");
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
-        EXPECT_EQ(0, ibf_args.cutoffs[0]);
+        EXPECT_EQ(0, minimiser_args.cutoffs[0]);
 
         // Test binary file
-        read_binary(result_hash_table, tmp_dir/("Test_" + std::string{ibf_args.sequence_files[i].stem()} + ".minimiser"));
-        minimiser_files.push_back(tmp_dir/("Test_" + std::string{ibf_args.sequence_files[i].stem()} + ".minimiser"));
+        read_binary(result_hash_table, tmp_dir/("Test_" + std::string{minimiser_args.sequence_files[i].stem()} + ".minimiser"));
+        minimiser_files.push_back(tmp_dir/("Test_" + std::string{minimiser_args.sequence_files[i].stem()} + ".minimiser"));
         EXPECT_EQ(expected_hash_tables[i], result_hash_table);
 
         result_hash_table.clear();
@@ -352,14 +357,15 @@ TEST(minimiser, small_example_auto_expression_level)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.cutoffs = {0, 0};
+    minimiser_args.cutoffs = {0, 0};
     ibf_args.number_expression_levels = 2;
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
                                std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
 
-    minimiser(args, ibf_args);
+    minimiser(args, minimiser_args);
 
     uint32_t normalized_exp_value{};
     std::vector<std::vector<uint64_t>> expected_counts{{4, 3}, {0, 1}};
@@ -368,21 +374,21 @@ TEST(minimiser, small_example_auto_expression_level)
     std::vector<std::filesystem::path> minimiser_files{};
     seqan3::shape expected_shape = seqan3::ungapped{args.k};
 
-    for (int i = 0; i < ibf_args.sequence_files.size(); ++i)
+    for (int i = 0; i < minimiser_args.sequence_files.size(); ++i)
     {
         // Test Header file
         ibf_args.expression_levels = {};
-        read_header(args, ibf_args.cutoffs, std::string{ibf_args.path_out}  +
-                    std::string{ibf_args.sequence_files[i].stem()} + ".header");
+        read_header(args, minimiser_args.cutoffs, std::string{args.path_out}  +
+                    std::string{minimiser_args.sequence_files[i].stem()} + ".header");
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
-        EXPECT_EQ(0, ibf_args.cutoffs[0]);
+        EXPECT_EQ(0, minimiser_args.cutoffs[0]);
 
         // Test binary file
-        read_binary(result_hash_table, tmp_dir/("Test_" + std::string{ibf_args.sequence_files[i].stem()} + ".minimiser"));
-        minimiser_files.push_back(tmp_dir/("Test_" + std::string{ibf_args.sequence_files[i].stem()} + ".minimiser"));
+        read_binary(result_hash_table, tmp_dir/("Test_" + std::string{minimiser_args.sequence_files[i].stem()} + ".minimiser"));
+        minimiser_files.push_back(tmp_dir/("Test_" + std::string{minimiser_args.sequence_files[i].stem()} + ".minimiser"));
         EXPECT_EQ(expected_hash_tables[i], result_hash_table);
 
         result_hash_table.clear();
@@ -410,16 +416,17 @@ TEST(minimiser, small_example_samplewise)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
 
-    ibf_args.cutoffs = {0, 0};
+    minimiser_args.cutoffs = {0, 0};
     ibf_args.number_expression_levels = 1;
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
                                std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
     ibf_args.set_expression_levels_samplewise = true;
 
-    minimiser(args, ibf_args);
+    minimiser(args, minimiser_args);
     uint32_t normalized_exp_value{};
     std::vector<std::vector<uint32_t>> expected_counts{{7}, {12}};
     std::vector<uint16_t> expected_levels{3, 1};
@@ -427,21 +434,21 @@ TEST(minimiser, small_example_samplewise)
     std::vector<std::filesystem::path> minimiser_files{};
     seqan3::shape expected_shape = seqan3::ungapped{args.k};
 
-    for (int i = 0; i < ibf_args.sequence_files.size(); ++i)
+    for (int i = 0; i < minimiser_args.sequence_files.size(); ++i)
     {
         // Test Header file
         ibf_args.expression_levels = {};
-        read_header(args, ibf_args.cutoffs, std::string{ibf_args.path_out}  +
-                    std::string{ibf_args.sequence_files[i].stem()} + ".header");
+        read_header(args, minimiser_args.cutoffs, std::string{args.path_out}  +
+                    std::string{minimiser_args.sequence_files[i].stem()} + ".header");
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
-        EXPECT_EQ(0, ibf_args.cutoffs[0]);
+        EXPECT_EQ(0, minimiser_args.cutoffs[0]);
 
         // Test binary file
-        read_binary(result_hash_table, tmp_dir/("Test_" + std::string{ibf_args.sequence_files[i].stem()} + ".minimiser"));
-        minimiser_files.push_back(tmp_dir/("Test_" + std::string{ibf_args.sequence_files[i].stem()} + ".minimiser"));
+        read_binary(result_hash_table, tmp_dir/("Test_" + std::string{minimiser_args.sequence_files[i].stem()} + ".minimiser"));
+        minimiser_files.push_back(tmp_dir/("Test_" + std::string{minimiser_args.sequence_files[i].stem()} + ".minimiser"));
         EXPECT_EQ(expected_hash_tables[i], result_hash_table);
 
         result_hash_table.clear();
@@ -471,29 +478,30 @@ TEST(minimiser, cutoff_by_filesize)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     ibf_args.expression_levels = {0};
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
                                std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
 
-    minimiser(args, ibf_args);
+    minimiser(args, minimiser_args);
     uint32_t normalized_exp_value{};
     std::vector<std::filesystem::path> minimiser_files{};
     seqan3::shape expected_shape = seqan3::ungapped{args.k};
 
-    for (int i = 0; i < ibf_args.sequence_files.size(); ++i)
+    for (int i = 0; i < minimiser_args.sequence_files.size(); ++i)
     {
         // Test Header file
-        read_header(args, ibf_args.cutoffs, std::string{ibf_args.path_out}  +
-                    std::string{ibf_args.sequence_files[i].stem()} + ".header");
+        read_header(args, minimiser_args.cutoffs, std::string{args.path_out}  +
+                    std::string{minimiser_args.sequence_files[i].stem()} + ".header");
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
-        EXPECT_EQ(1, ibf_args.cutoffs[0]);
-        minimiser_files.push_back(tmp_dir/("Test_" + std::string{ibf_args.sequence_files[i].stem()} + ".minimiser"));
+        EXPECT_EQ(1, minimiser_args.cutoffs[0]);
+        minimiser_files.push_back(tmp_dir/("Test_" + std::string{minimiser_args.sequence_files[i].stem()} + ".minimiser"));
     }
 
     EXPECT_EQ(ibf_args.expression_levels, ibf(minimiser_files, args, ibf_args));
@@ -517,21 +525,81 @@ TEST(minimiser, cutoff_by_filesize)
     std::filesystem::remove(tmp_dir/("Test_mini_example2.minimiser"));
 }
 
+TEST(minimiser, small_example_two_threads)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+    args.threads = 2;
+    minimiser_args.cutoffs = {0, 0};
+    ibf_args.expression_levels = {0};
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
+                               std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    minimiser(args, minimiser_args);
+    args.threads = 1;
+    uint32_t normalized_exp_value{};
+    robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
+    std::vector<std::filesystem::path> minimiser_files{};
+    seqan3::shape expected_shape = seqan3::ungapped{args.k};
+
+    for (int i = 0; i < minimiser_args.sequence_files.size(); ++i)
+    {
+        // Test Header file
+        read_header(args, minimiser_args.cutoffs, std::string{args.path_out}  +
+                    std::string{minimiser_args.sequence_files[i].stem()} + ".header");
+
+        EXPECT_EQ(4, args.k);
+        EXPECT_EQ(4, args.w_size.get());
+        EXPECT_EQ(0, args.s.get());
+        EXPECT_EQ(15, args.shape.to_ulong());
+        EXPECT_EQ(0, minimiser_args.cutoffs[0]);
+
+        // Test binary file
+        read_binary(result_hash_table, tmp_dir/("Test_" + std::string{minimiser_args.sequence_files[i].stem()} + ".minimiser"));
+        minimiser_files.push_back(tmp_dir/("Test_" + std::string{minimiser_args.sequence_files[i].stem()} + ".minimiser"));
+        EXPECT_EQ(expected_hash_tables[i], result_hash_table);
+
+        result_hash_table.clear();
+    }
+
+    EXPECT_EQ(ibf_args.expression_levels, ibf(minimiser_files, args, ibf_args));
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    load_ibf(ibf, tmp_dir/"Test_IBF_0");
+    auto agent = ibf.membership_agent();
+
+    sdsl::bit_vector expected_result(2, 0);
+    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(0));
+    expected_result[1] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(27));
+
+    std::filesystem::remove(tmp_dir/"Test_IBF_0");
+    std::filesystem::remove(tmp_dir/("Test_mini_example.header"));
+    std::filesystem::remove(tmp_dir/("Test_mini_example2.header"));
+    std::filesystem::remove(tmp_dir/("Test_mini_example.minimiser"));
+    std::filesystem::remove(tmp_dir/("Test_mini_example2.minimiser"));
+}
+
 TEST(estimate, small_example)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     ibf_args.expression_levels = {1, 2, 4};
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     estimate_args.expressions = ibf_args.expression_levels;
 
-    ibf(args, ibf_args);
+    ibf(args, ibf_args, minimiser_args);
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
     estimate(args, estimate_args, ibf, tmp_dir/"expression.out",
-             std::string(DATA_INPUT_DIR) + "mini_gen.fasta", ibf_args.path_out);
+             std::string(DATA_INPUT_DIR) + "mini_gen.fasta", args.path_out);
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -553,18 +621,19 @@ TEST(estimate, small_example_uncompressed)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     args.compressed = false;
     ibf_args.expression_levels = {1, 2, 4};
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     estimate_args.expressions = ibf_args.expression_levels;
 
-    ibf(args, ibf_args);
+    ibf(args, ibf_args, minimiser_args);
     seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
     estimate(args, estimate_args, ibf, tmp_dir/"expression.out",
-             std::string(DATA_INPUT_DIR) + "mini_gen.fasta", ibf_args.path_out);
+             std::string(DATA_INPUT_DIR) + "mini_gen.fasta", args.path_out);
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -586,17 +655,18 @@ TEST(estimate, small_example_gene_not_found)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     ibf_args.expression_levels = {2, 4};
     estimate_args.expressions = ibf_args.expression_levels;
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
-    ibf(args, ibf_args);
+    ibf(args, ibf_args, minimiser_args);
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
     estimate(args, estimate_args, ibf, tmp_dir/"expression.out",
-             std::string(DATA_INPUT_DIR) + "mini_gen2.fasta", ibf_args.path_out);
+             std::string(DATA_INPUT_DIR) + "mini_gen2.fasta", args.path_out);
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -618,21 +688,22 @@ TEST(estimate, small_example_different_expressions_per_level)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     ibf_args.number_expression_levels = 3;
     ibf_args.set_expression_levels_samplewise = true;
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
-    minimiser(args, ibf_args);
+    minimiser(args, minimiser_args);
     std::vector<std::filesystem::path> minimiser_files{tmp_dir/"Test_mini_example.minimiser"};
     ibf_args.expression_levels = {};
     ibf(minimiser_files, args, ibf_args);
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
     estimate_args.expressions = {0, 1, 2};
     estimate(args, estimate_args, ibf, tmp_dir/"expression.out",
-             std::string(DATA_INPUT_DIR) + "mini_gen.fasta", ibf_args.path_out, tmp_dir/"Test_IBF_Levels.levels");
+             std::string(DATA_INPUT_DIR) + "mini_gen.fasta", args.path_out, tmp_dir/"Test_IBF_Levels.levels");
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -656,20 +727,21 @@ TEST(estimate, example)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
                                std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
-    ibf_args.samples = {2,2};
+    minimiser_args.samples = {2,2};
     ibf_args.expression_levels = {32};
     ibf_args.bin_size = {100000};
-    ibf_args.path_out = tmp_dir/"Test_";
+    args.path_out = tmp_dir/"Test_";
     args.compressed = false;
     estimate_args.expressions = ibf_args.expression_levels;
-    ibf(args, ibf_args);
+    ibf(args, ibf_args, minimiser_args);
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
     estimate(args, estimate_args, ibf, tmp_dir/"expression.out",
-    std::string(DATA_INPUT_DIR) + "gene.fasta", ibf_args.path_out);
+    std::string(DATA_INPUT_DIR) + "gene.fasta", args.path_out);
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -690,25 +762,26 @@ TEST(estimate, example_different_expressions_per_level)
 {
     arguments args{};
     ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
-    ibf_args.sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
+    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
                                std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
-    ibf_args.cutoffs = {0, 0};
-    ibf_args.samples = {2,2};
+    minimiser_args.cutoffs = {0, 0};
+    minimiser_args.samples = {2,2};
     ibf_args.number_expression_levels = 3;
     ibf_args.set_expression_levels_samplewise = true;
     ibf_args.bin_size = {10000000};
-    ibf_args.path_out = tmp_dir/"Test_";
+    args.path_out = tmp_dir/"Test_";
     args.compressed = false;
     estimate_args.expressions = {0, 1, 2};
-    minimiser(args, ibf_args);
+    minimiser(args, minimiser_args);
     std::vector<std::filesystem::path> minimiser_files{tmp_dir/"Test_exp_01.minimiser", tmp_dir/"Test_exp_11.minimiser"};
     ibf_args.expression_levels = {};
     ibf(minimiser_files, args, ibf_args);
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
     estimate(args, estimate_args, ibf, tmp_dir/"expression.out",
-    std::string(DATA_INPUT_DIR) + "gene.fasta", ibf_args.path_out, tmp_dir/"Test_IBF_Levels.levels");
+    std::string(DATA_INPUT_DIR) + "gene.fasta", args.path_out, tmp_dir/"Test_IBF_Levels.levels");
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;

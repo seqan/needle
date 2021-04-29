@@ -13,22 +13,25 @@
 //!\brief specific arguments needed for constructing an IBF
 struct ibf_arguments
 {
+    std::vector<size_t> bin_size{}; // The bin size of one IBF, can be different for different expression levels
+    size_t num_hash{1}; // Number of hash functions to use, default 1
+    std::vector<uint16_t> expression_levels{}; // Expression levels which should be created
+    uint8_t number_expression_levels{};
+    // Flag, if true the "median" approach is used to determine the expression_levels individually for a sample
+    bool set_expression_levels_samplewise{false};
+};
+
+struct minimiser_arguments
+{
     std::vector<std::filesystem::path> sequence_files;
     std::filesystem::path include_file; // Needs to be defined when only minimizers appearing in this file should be stored
     std::filesystem::path exclude_file; // Needs to be defined when minimizers appearing in this file should NOT be stored
-    std::vector<size_t> bin_size{}; // The bin size of one IBF, can be different for different expression levels
-    size_t num_hash{1}; // Number of hash functions to use, default 1
-    std::filesystem::path path_out{"./"}; // Path where IBFs should be stored
-    std::vector<uint16_t> expression_levels{}; // Expression levels which should be created
     std::vector<int> samples{}; // Can be used to indicate that sequence files belong to the same experiment
     bool paired = false; // If true, than experiments are seen as paired-end experiments
     // Which expression values should be ignored during calculation of the normalization_method, default is zero
     std::vector<uint8_t> cutoffs{};
     //std::string expression_method{"median"}; // Method to calculate expression levels
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
-    uint8_t number_expression_levels{};
-    // Flag, if true the "median" approach is used to determine the expression_levels individually for a sample
-    bool set_expression_levels_samplewise{false};
 };
 
 //!\brief Generates a random integer not greater than a given maximum
@@ -120,12 +123,13 @@ void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table
 void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesystem::path filename);
 
 /*! \brief Create IBF.
- * \param args         The minimiser arguments to use (seed, shape, window size).
- * \param ibf_args     The IBF specific arguments to use (bin size, number of hash functions, ...). See
- *                     struct ibf_arguments.
+ * \param args            The minimiser arguments to use (seed, shape, window size).
+ * \param ibf_args        The IBF specific arguments to use (bin size, number of hash functions, ...). See
+ *                        struct ibf_arguments.
+ * \param minimiser_args  The minimiser specific arguments to use.
  *  \returns The normalized expression values per experiment.
  */
-std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args);
+std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args, minimiser_arguments & minimiser_args);
 
 /*! \brief Create IBF based on the minimiser and header files
  * \param minimiser_files  A vector of minimiser file paths.
@@ -134,9 +138,7 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args);
  *                         struct ibf_arguments.
  *  \returns The normalized expression values per experiment.
  */
-std::vector<uint16_t> ibf(std::vector<std::filesystem::path> minimiser_files, arguments & args,
+std::vector<uint16_t> ibf(std::vector<std::filesystem::path> minimiser_files, arguments const & args,
                           ibf_arguments & ibf_args);
 
-void minimiser(arguments const & args, ibf_arguments & ibf_args);
-
-void build_ibf(arguments & args, ibf_arguments & ibf_args, float fpr = 0.05);
+void minimiser(arguments const & args, minimiser_arguments & minimiser_args);
