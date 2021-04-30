@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.9)
 
 # Set the project specific configuration settings to configure and build the gtest target.
 set (gtest_project_args ${APP_TEMPLATE_EXTERNAL_PROJECT_CMAKE_ARGS})
