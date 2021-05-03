@@ -194,6 +194,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
                                                   "header file exits in the same directory.");
 
     parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
+    parser.add_option(args.threads, 't', "threads", "Number of threads to use. Default: 1.");
 
     initialise_arguments_ibf(parser, args, ibf_args);
 

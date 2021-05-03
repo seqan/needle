@@ -157,38 +157,6 @@ TEST(ibf, no_given_expression_levels)
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
 }
 
-TEST(ibf, no_given_expression_levels_auto)
-{
-    arguments args{};
-    ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
-    initialization_args(args);
-    initialization_ibf_args(ibf_args);
-    ibf_args.number_expression_levels = 2;
-    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
-
-    std::vector<uint16_t> expected{3, 4};
-
-    std::vector<uint16_t> medians = ibf(args, ibf_args, minimiser_args);
-
-    EXPECT_EQ(expected, medians);
-
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    load_ibf(ibf, tmp_dir/"Test_IBF_3");
-    auto agent = ibf.membership_agent();
-
-    sdsl::bit_vector expected_result(1, 0);
-    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
-    expected_result[0] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(97));
-
-    load_ibf(ibf, tmp_dir/"Test_IBF_4");
-    agent = ibf.membership_agent();
-    EXPECT_EQ(expected_result,  agent.bulk_contains(27));
-    std::filesystem::remove(tmp_dir/"Test_IBF_3");
-    std::filesystem::remove(tmp_dir/"Test_IBF_4");
-}
-
 TEST(ibf, throws)
 {
     arguments args{};
@@ -237,6 +205,34 @@ TEST(ibfmin, given_expression_levels)
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
 }
 
+TEST(ibfmin, given_expression_levels_multiple_threads)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+    ibf_args.expression_levels = {1, 2};
+    ibf_args.bin_size = {1000, 1000};
+    args.threads = 2;
+    std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser", std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
+
+    std::vector<uint16_t> expected{1, 2};
+
+    std::vector<uint16_t> medians = ibf(minimiser_file, args, ibf_args);
+
+    EXPECT_EQ(expected, medians);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    load_ibf(ibf, tmp_dir/"Test_IBF_1");
+    auto agent = ibf.membership_agent();
+
+    sdsl::bit_vector expected_result(1, 0);
+    EXPECT_EQ(expected_result,  agent.bulk_contains(97));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(24));
+    std::filesystem::remove(tmp_dir/"Test_IBF_1");
+    std::filesystem::remove(tmp_dir/"Test_IBF_2");
+}
 
 TEST(ibfmin, no_given_expression_levels)
 {
@@ -249,7 +245,7 @@ TEST(ibfmin, no_given_expression_levels)
     ibf_args.bin_size = {1000, 1000};
     std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
 
-    std::vector<uint16_t> expected{3, 4};
+    std::vector<uint16_t> expected{};
 
     std::vector<uint16_t> medians = ibf(minimiser_file, args, ibf_args);
 
@@ -267,32 +263,34 @@ TEST(ibfmin, no_given_expression_levels)
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
 }
 
-TEST(ibfmin, no_given_expression_levels_auto)
+TEST(ibfmin, no_given_expression_levels_multiple_threads)
 {
     arguments args{};
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
+    ibf_args.set_expression_levels_samplewise = true;
     ibf_args.number_expression_levels = 2;
     ibf_args.bin_size = {1000, 1000};
-    std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
+    args.threads = 2;
+    std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser", std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
 
-    std::vector<uint16_t> expected{3, 4};
+    std::vector<uint16_t> expected{};
 
     std::vector<uint16_t> medians = ibf(minimiser_file, args, ibf_args);
 
     EXPECT_EQ(expected, medians);
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    load_ibf(ibf, tmp_dir/"Test_IBF_3");
+    load_ibf(ibf, tmp_dir/"Test_IBF_Level_0");
     auto agent = ibf.membership_agent();
 
     sdsl::bit_vector expected_result(1, 0);
     EXPECT_EQ(expected_result,  agent.bulk_contains(2));
     expected_result[0] = 1;
     EXPECT_EQ(expected_result,  agent.bulk_contains(97));
-    std::filesystem::remove(tmp_dir/"Test_IBF_3");
-    std::filesystem::remove(tmp_dir/"Test_IBF_4");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
 }
 
 TEST(minimiser, small_example)
@@ -353,65 +351,6 @@ TEST(minimiser, small_example)
     std::filesystem::remove(tmp_dir/("Test_mini_example2.minimiser"));
 }
 
-TEST(minimiser, small_example_auto_expression_level)
-{
-    arguments args{};
-    ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
-    initialization_args(args);
-    initialization_ibf_args(ibf_args);
-    minimiser_args.cutoffs = {0, 0};
-    ibf_args.number_expression_levels = 2;
-    minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
-                               std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
-
-    minimiser(args, minimiser_args);
-
-    uint32_t normalized_exp_value{};
-    std::vector<std::vector<uint64_t>> expected_counts{{4, 3}, {0, 1}};
-    std::vector<uint64_t> expected_levels{3, 4};
-    robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
-    std::vector<std::filesystem::path> minimiser_files{};
-    seqan3::shape expected_shape = seqan3::ungapped{args.k};
-
-    for (int i = 0; i < minimiser_args.sequence_files.size(); ++i)
-    {
-        // Test Header file
-        ibf_args.expression_levels = {};
-        read_header(args, minimiser_args.cutoffs, std::string{args.path_out}  +
-                    std::string{minimiser_args.sequence_files[i].stem()} + ".header");
-        EXPECT_EQ(4, args.k);
-        EXPECT_EQ(4, args.w_size.get());
-        EXPECT_EQ(0, args.s.get());
-        EXPECT_EQ(15, args.shape.to_ulong());
-        EXPECT_EQ(0, minimiser_args.cutoffs[0]);
-
-        // Test binary file
-        read_binary(result_hash_table, tmp_dir/("Test_" + std::string{minimiser_args.sequence_files[i].stem()} + ".minimiser"));
-        minimiser_files.push_back(tmp_dir/("Test_" + std::string{minimiser_args.sequence_files[i].stem()} + ".minimiser"));
-        EXPECT_EQ(expected_hash_tables[i], result_hash_table);
-
-        result_hash_table.clear();
-    }
-
-    EXPECT_EQ(ibf_args.expression_levels, ibf(minimiser_files, args, ibf_args));
-
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    load_ibf(ibf, tmp_dir/"Test_IBF_3");
-    auto agent = ibf.membership_agent();
-
-    sdsl::bit_vector expected_result(2, 0);
-    EXPECT_EQ(expected_result, agent.bulk_contains(2));
-    EXPECT_EQ(expected_result, agent.bulk_contains(27));
-    expected_result[0] = 1;
-    EXPECT_EQ(expected_result, agent.bulk_contains(192));
-    std::filesystem::remove(tmp_dir/"Test_IBF_3");
-    std::filesystem::remove(tmp_dir/("Test_mini_example.header"));
-    std::filesystem::remove(tmp_dir/("Test_mini_example2.header"));
-    std::filesystem::remove(tmp_dir/("Test_mini_example.minimiser"));
-    std::filesystem::remove(tmp_dir/("Test_mini_example2.minimiser"));
-}
-
 TEST(minimiser, small_example_samplewise)
 {
     arguments args{};
@@ -454,7 +393,7 @@ TEST(minimiser, small_example_samplewise)
         result_hash_table.clear();
     }
     ibf_args.expression_levels = {};
-    expected_levels = {1}; // Only levels from last experiment are returned.
+    expected_levels = {}; // Only levels from last experiment are returned.
     EXPECT_EQ(expected_levels, ibf(minimiser_files, args, ibf_args));
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;

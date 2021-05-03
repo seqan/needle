@@ -138,7 +138,7 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args, mini
  *                         struct ibf_arguments.
  *  \returns The normalized expression values per experiment.
  */
-std::vector<uint16_t> ibf(std::vector<std::filesystem::path> minimiser_files, arguments const & args,
+std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files, arguments const & args,
                           ibf_arguments & ibf_args);
 
 void minimiser(arguments const & args, minimiser_arguments & minimiser_args);
