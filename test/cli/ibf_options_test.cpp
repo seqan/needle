@@ -31,7 +31,7 @@ TEST_F(cli_test, ibf_fail_no_argument)
 
 TEST_F(cli_test, ibf_with_argument)
 {
-    cli_test_result result = execute_app("needle ibf -b 1000 -l 1 -y", data("exp_01.fasta"));
+    cli_test_result result = execute_app("needle ibf -b 1000 -l 1", data("exp_01.fasta"));
     EXPECT_EQ(result.exit_code, 0);
     EXPECT_EQ(result.out, "");
     EXPECT_EQ(result.err, std::string{});
@@ -39,7 +39,7 @@ TEST_F(cli_test, ibf_with_argument)
 
 TEST_F(cli_test, ibf_with_argument_with_options)
 {
-    cli_test_result result = execute_app("needle ibf -b 1000 -k 4 -w 8 -l 1 -y", data("exp_01.fasta"));
+    cli_test_result result = execute_app("needle ibf -b 1000 -k 4 -w 8 -l 1", data("exp_01.fasta"));
     EXPECT_EQ(result.exit_code, 0);
     EXPECT_EQ(result.out, "");
     EXPECT_EQ(result.err, std::string{});
@@ -74,7 +74,7 @@ TEST_F(cli_test, ibfmin_fail_no_argument)
 
 TEST_F(cli_test, ibfmin_with_argument)
 {
-    cli_test_result result = execute_app("needle ibfmin -b 1000 -l 1 -y", data("mini_example.minimiser"));
+    cli_test_result result = execute_app("needle ibfmin -b 1000 -l 1", data("mini_example.minimiser"));
     EXPECT_EQ(result.exit_code, 0);
     EXPECT_EQ(result.out, "");
     EXPECT_EQ(result.err, std::string{});

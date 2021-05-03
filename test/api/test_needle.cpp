@@ -136,7 +136,6 @@ TEST(ibf, no_given_expression_levels)
     minimiser_arguments minimiser_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.set_expression_levels_samplewise = true;
     ibf_args.number_expression_levels = 2;
     minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
@@ -164,12 +163,11 @@ TEST(ibf, throws)
     minimiser_arguments minimiser_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.set_expression_levels_samplewise = true;
     minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
     EXPECT_THROW(ibf(args, ibf_args, minimiser_args), std::invalid_argument);
 
-    ibf_args.expression_levels = {1, 2};
+    ibf_args.number_expression_levels = 0;
     ibf_args.bin_size = {};
     EXPECT_THROW(ibf(args, ibf_args, minimiser_args), std::invalid_argument);
 
@@ -240,7 +238,6 @@ TEST(ibfmin, no_given_expression_levels)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.set_expression_levels_samplewise = true;
     ibf_args.number_expression_levels = 2;
     ibf_args.bin_size = {1000, 1000};
     std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
@@ -269,7 +266,6 @@ TEST(ibfmin, no_given_expression_levels_multiple_threads)
     ibf_arguments ibf_args{};
     initialization_args(args);
     initialization_ibf_args(ibf_args);
-    ibf_args.set_expression_levels_samplewise = true;
     ibf_args.number_expression_levels = 2;
     ibf_args.bin_size = {1000, 1000};
     args.threads = 2;
@@ -363,7 +359,6 @@ TEST(minimiser, small_example_samplewise)
     ibf_args.number_expression_levels = 1;
     minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
                                std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
-    ibf_args.set_expression_levels_samplewise = true;
 
     minimiser(args, minimiser_args);
     uint32_t normalized_exp_value{};
@@ -632,7 +627,6 @@ TEST(estimate, small_example_different_expressions_per_level)
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     ibf_args.number_expression_levels = 3;
-    ibf_args.set_expression_levels_samplewise = true;
     minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
     minimiser(args, minimiser_args);
@@ -708,7 +702,6 @@ TEST(estimate, example_different_expressions_per_level)
     minimiser_args.cutoffs = {0, 0};
     minimiser_args.samples = {2,2};
     ibf_args.number_expression_levels = 3;
-    ibf_args.set_expression_levels_samplewise = true;
     ibf_args.bin_size = {10000000};
     args.path_out = tmp_dir/"Test_";
     args.compressed = false;

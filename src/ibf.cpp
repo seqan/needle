@@ -132,15 +132,13 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
 }
 
 // Set arguments that ibf and minimiser use
-void set_arguments(std::vector<uint16_t> & expression_levels, uint8_t & number_expression_levels,
-                   bool const set_expression_levels_samplewise)
+void set_arguments(std::vector<uint16_t> & expression_levels, uint8_t & number_expression_levels)
 {
     // Sort given expression rates
     sort(expression_levels.begin(), expression_levels.end());
 
      // If no expression levels are given and the no number of expression levels is specified, throw.
-    if (((number_expression_levels == 0) & (expression_levels.size() == 0)) |
-         (set_expression_levels_samplewise & (expression_levels.size() > 0)))
+    if ((number_expression_levels == 0) & (expression_levels.size() == 0))
     {
         throw std::invalid_argument{"Error. Please set the expression levels OR give the number of expression levels."};
     }
@@ -281,11 +279,12 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args, mini
     if (minimiser_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
         minimiser_args.cutoffs.assign(minimiser_args.samples.size(), 0);
 
-    set_arguments(ibf_args.expression_levels, ibf_args.number_expression_levels,
-                  ibf_args.set_expression_levels_samplewise);
+    set_arguments(ibf_args.expression_levels, ibf_args.number_expression_levels);
     check_bin_size(ibf_args.number_expression_levels, ibf_args.bin_size);
 
-    if (ibf_args.set_expression_levels_samplewise)
+    bool samplewise = (ibf_args.expression_levels.size() == 0);
+
+    if (samplewise)
     {
         std::vector<uint16_t> zero_vector(minimiser_args.samples.size());
         for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
@@ -324,9 +323,7 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args, mini
         }
         file_iterator = file_iterator + minimiser_args.samples[i];
 
-        // If set_expression_levels_samplewise is not set the expressions as determined by the first file are used for
-        // all files.
-        if (ibf_args.set_expression_levels_samplewise)
+        if (samplewise)
         {
            ibf_args.expression_levels.clear();
            get_expression_levels(ibf_args.number_expression_levels,
@@ -335,12 +332,6 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args, mini
 
            for (unsigned k = 0; k < ibf_args.number_expression_levels; k++)
                 expressions[k][i] = ibf_args.expression_levels[k];
-        }
-        else if (ibf_args.expression_levels.size() == 0)
-        {
-            get_expression_levels(ibf_args.number_expression_levels,
-                                  hash_table,
-                                  ibf_args.expression_levels);
         }
 
         // Every minimiser is stored in IBF, if it occurence is greater than or equal to the expression level
@@ -362,7 +353,7 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args, mini
     for (unsigned i = 0; i < ibf_args.number_expression_levels; i++)
     {
         std::filesystem::path filename{args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[i])};
-        if (ibf_args.set_expression_levels_samplewise) // TODO: If this option is choosen the expressions need to be stored
+        if (samplewise) // TODO: If this option is choosen the expressions need to be stored
              filename = args.path_out.string() + "IBF_Level_" + std::to_string(i);
         if (args.compressed)
         {
@@ -376,7 +367,7 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args, mini
 
     }
 
-    if (ibf_args.set_expression_levels_samplewise)
+    if (samplewise)
     {
         std::ofstream outfile;
         outfile.open(std::string{args.path_out} +  "IBF_Levels.levels");
@@ -399,13 +390,14 @@ void minimisers_to_ibf(std::filesystem::path const & minimiser_file, ibf_argumen
 {
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     std::vector<uint16_t> expression_levels;
+    bool samplewise = (ibf_args.expression_levels.size() == 0);
 
     // Fill hash table with minimisers.
     read_binary(hash_table, minimiser_file);
 
     // If set_expression_levels_samplewise is not set the expressions as determined by the first file are used for
     // all files.
-    if (ibf_args.set_expression_levels_samplewise)
+    if (samplewise)
     {
        get_expression_levels(ibf_args.number_expression_levels,
                              hash_table,
@@ -443,11 +435,12 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
 {
     std::vector<std::vector<uint16_t>> expressions{};
 
-    set_arguments(ibf_args.expression_levels, ibf_args.number_expression_levels,
-                  ibf_args.set_expression_levels_samplewise);
+    set_arguments(ibf_args.expression_levels, ibf_args.number_expression_levels);
     check_bin_size(ibf_args.number_expression_levels, ibf_args.bin_size);
 
-    if (ibf_args.set_expression_levels_samplewise)
+    bool samplewise = (ibf_args.expression_levels.size() == 0);
+
+    if (samplewise)
     {
         std::vector<uint16_t> zero_vector(minimiser_files.size());
         for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
@@ -474,7 +467,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
     for (unsigned i = 0; i < ibf_args.number_expression_levels; i++)
     {
         std::filesystem::path filename;
-        if (ibf_args.set_expression_levels_samplewise) // TODO: If this option is choosen the expressions need to be stored
+        if (samplewise)
              filename = args.path_out.string() + "IBF_Level_" + std::to_string(i);
         else
             filename = args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[i]);
@@ -490,7 +483,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
 
     }
 
-    if (ibf_args.set_expression_levels_samplewise)
+    if (samplewise)
     {
         std::ofstream outfile;
         outfile.open(std::string{args.path_out} +  "IBF_Levels.levels");

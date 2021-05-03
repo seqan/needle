@@ -30,7 +30,6 @@ void initialise_arguments_ibf(seqan3::argument_parser & parser, arguments & args
                                                       "one IBF.");
     parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
                                                                             " constructing the IBFs.");
-    parser.add_flag(ibf_args.set_expression_levels_samplewise, 'y', "individual", "If set, every sample gets its own expression level. Default: false.");
     parser.add_option(ibf_args.number_expression_levels, 'l', "number_expression_levels", "Number of expression levels.");
 }
 
