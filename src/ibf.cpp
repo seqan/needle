@@ -403,11 +403,9 @@ void minimisers_to_ibf(std::filesystem::path const & minimiser_file, ibf_argumen
                              hash_table,
                              expression_levels);
 
-       for (unsigned k = 0; k < ibf_args.number_expression_levels; k++)
-       {
-           #pragma omp critical
-           expressions[k][i] = expression_levels[k];
-       }
+       #pragma omp critical
+       expressions[i] = expression_levels;
+
     }
     else
     {
@@ -442,8 +440,8 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
 
     if (samplewise)
     {
-        std::vector<uint16_t> zero_vector(minimiser_files.size());
-        for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
+        std::vector<uint16_t> zero_vector(ibf_args.number_expression_levels);
+        for (unsigned j = 0; j < minimiser_files.size(); j++)
             expressions.push_back(zero_vector);
     }
 
@@ -490,7 +488,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
         for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
         {
             for (unsigned i = 0; i < minimiser_files.size(); i++)
-                 outfile << expressions[j][i] << " ";
+                 outfile << expressions[i][j] << " ";
             outfile << "\n";
         }
         outfile << "/\n";
