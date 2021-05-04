@@ -139,7 +139,7 @@ TEST(ibf, no_given_expression_levels)
     ibf_args.number_expression_levels = 2;
     minimiser_args.sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
-    std::vector<uint16_t> expected{3, 4};
+    std::vector<uint16_t> expected{};
 
     std::vector<uint16_t> medians = ibf(args, ibf_args, minimiser_args);
 
