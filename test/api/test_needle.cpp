@@ -203,6 +203,7 @@ TEST(ibfmin, given_expression_levels)
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
 }
 
+#if defined(__GNUC__) && ((__GNUC___ == 10 && __cplusplus == 201703L) || (__GNUC__ <10))
 TEST(ibfmin, given_expression_levels_multiple_threads)
 {
     arguments args{};
@@ -231,6 +232,7 @@ TEST(ibfmin, given_expression_levels_multiple_threads)
     std::filesystem::remove(tmp_dir/"Test_IBF_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
 }
+#endif
 
 TEST(ibfmin, no_given_expression_levels)
 {
@@ -260,6 +262,7 @@ TEST(ibfmin, no_given_expression_levels)
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
 }
 
+#if defined(__GNUC__) && ((__GNUC___ == 10 && __cplusplus == 201703L) || (__GNUC__ <10))
 TEST(ibfmin, no_given_expression_levels_multiple_threads)
 {
     arguments args{};
@@ -288,6 +291,7 @@ TEST(ibfmin, no_given_expression_levels_multiple_threads)
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
 }
+#endif
 
 TEST(minimiser, small_example)
 {
