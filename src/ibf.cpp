@@ -402,8 +402,6 @@ void minimisers_to_ibf(std::filesystem::path const & minimiser_file, ibf_argumen
        get_expression_levels(ibf_args.number_expression_levels,
                              hash_table,
                              expression_levels);
-
-       #pragma omp critical
        expressions[i] = expression_levels;
 
     }
@@ -419,7 +417,6 @@ void minimisers_to_ibf(std::filesystem::path const & minimiser_file, ibf_argumen
         {
             if (elem.second >= expression_levels[j])
             {
-                #pragma omp critical
                 ibfs[j].emplace(elem.first, seqan3::bin_index{i});
                 break;
             }
@@ -454,8 +451,12 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
 
     omp_set_num_threads(args.threads);
 
+    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(minimiser_files.size() / args.threads),
+                                                 8u,
+                                                 64u);
+
     // Add minimisers to ibf
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(dynamic, chunk_size)
     for (unsigned i = 0; i < minimiser_files.size(); i++)
     {
         minimisers_to_ibf(minimiser_files[i], ibf_args, i, expressions, ibfs);
@@ -599,8 +600,12 @@ void minimiser(arguments const & args, minimiser_arguments & minimiser_args)
 
     omp_set_num_threads(args.threads);
 
+    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(minimiser_args.samples.size() / args.threads),
+                                                 8u,
+                                                 64u);
+
     // Add minimisers to ibf
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(dynamic, chunk_size)
     for(unsigned i = 0; i < minimiser_args.samples.size(); i++)
     {
         calculate_minimiser(genome_set_table, args, minimiser_args, i);

@@ -213,7 +213,8 @@ TEST(ibfmin, given_expression_levels_multiple_threads)
     ibf_args.expression_levels = {1, 2};
     ibf_args.bin_size = {1000, 1000};
     args.threads = 2;
-    std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser", std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
+    std::vector<std::filesystem::path> minimiser_file{};
+    minimiser_file.assign(16, std::string(DATA_INPUT_DIR) + "mini_example.minimiser");
 
     std::vector<uint16_t> expected{1, 2};
 
@@ -272,7 +273,8 @@ TEST(ibfmin, no_given_expression_levels_multiple_threads)
     ibf_args.number_expression_levels = 2;
     ibf_args.bin_size = {1000, 1000};
     args.threads = 2;
-    std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser", std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
+    std::vector<std::filesystem::path> minimiser_file{};
+    minimiser_file.assign(16, std::string(DATA_INPUT_DIR) + "mini_example.minimiser");
 
     std::vector<uint16_t> expected{};
 
