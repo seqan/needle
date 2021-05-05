@@ -131,16 +131,14 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
     }
 }
 
-// Set arguments that ibf and minimiser use
-void set_arguments(std::vector<uint16_t> & expression_levels, uint8_t & number_expression_levels,
-                   bool const set_expression_levels_samplewise)
+// Check number of expression levels, sort expression levels
+void check_expression(std::vector<uint16_t> & expression_levels, uint8_t & number_expression_levels)
 {
     // Sort given expression rates
     sort(expression_levels.begin(), expression_levels.end());
 
      // If no expression levels are given and the no number of expression levels is specified, throw.
-    if (((number_expression_levels == 0) & (expression_levels.size() == 0)) |
-         (set_expression_levels_samplewise & (expression_levels.size() > 0)))
+    if ((number_expression_levels == 0) & (expression_levels.size() == 0))
     {
         throw std::invalid_argument{"Error. Please set the expression levels OR give the number of expression levels."};
     }
@@ -150,10 +148,10 @@ void set_arguments(std::vector<uint16_t> & expression_levels, uint8_t & number_e
     }
 }
 
-// Set arguments that ibf use
-void set_arguments_ibf(arguments const & args, std::vector<std::filesystem::path> const & sequence_files,
+// Check and set samples and cutoffs
+void check_cutoffs_samples(arguments const & args, std::vector<std::filesystem::path> const & sequence_files,
                        std::filesystem::path const include_file, bool const paired, std::vector<int> & samples,
-                       std::vector<uint8_t> & cutoffs, robin_hood::unordered_set<uint64_t> & genome_set_table)
+                       std::vector<uint8_t> & cutoffs)
 {
     if (paired) // If paired is true, a pair is seen as one sample
         samples.assign(sequence_files.size()/2,2);
@@ -165,9 +163,6 @@ void set_arguments_ibf(arguments const & args, std::vector<std::filesystem::path
     // If sum of minimiser_args.samples is not equal to number of files, throw error
     else if (std::accumulate(samples.rbegin(), samples.rend(), 0) != sequence_files.size())
         throw std::invalid_argument{"Error. Incorrect command line input for multiple-samples."};
-
-    if (include_file != "")
-        get_include_set_table(args, include_file, genome_set_table);
 }
 
 void check_bin_size(uint8_t const number_expression_levels, std::vector<size_t> & bin_size)
@@ -268,24 +263,157 @@ void get_expression_levels(uint8_t const number_expression_levels,
     counts.clear();
 }
 
-std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args, minimiser_arguments & minimiser_args)
+template<bool samplewise, bool minimiser_files_given = true>
+void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, arguments const & args,
+                ibf_arguments const & ibf_args, minimiser_arguments const & minimiser_args = {})
+{
+    size_t num_files;
+    if constexpr (minimiser_files_given)
+        num_files = minimiser_files.size();
+    else
+        num_files = minimiser_args.samples.size();
+
+    std::vector<std::vector<uint16_t>> expressions{};
+
+    robin_hood::unordered_set<uint64_t> genome_set_table; // Storage for minimisers in genome sequences
+    if constexpr(samplewise)
+    {
+        std::vector<uint16_t> zero_vector(ibf_args.number_expression_levels);
+        for (unsigned j = 0; j < num_files; j++)
+            expressions.push_back(zero_vector);
+    }
+    else
+    {
+        if (minimiser_args.include_file != "")
+            get_include_set_table(args, minimiser_args.include_file, genome_set_table);
+    }
+
+    // Create IBFs
+    std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
+    for (unsigned i = 0; i < ibf_args.number_expression_levels; i++)
+        ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
+                     seqan3::bin_count{num_files}, seqan3::bin_size{ibf_args.bin_size[i]},
+                     seqan3::hash_function_count{ibf_args.num_hash}));
+
+    omp_set_num_threads(args.threads);
+
+    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / args.threads),
+                                                 8u,
+                                                 64u);
+
+    // Add minimisers to ibf
+    #pragma omp parallel for schedule(dynamic, chunk_size)
+    for (unsigned i = 0; i < num_files; i++)
+    {
+        robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
+        std::vector<uint16_t> expression_levels;
+
+        // Fill hash table with minimisers.
+        if constexpr (minimiser_files_given)
+        {
+            read_binary(hash_table, minimiser_files[i]);
+        }
+        else
+        {
+            unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
+            for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
+            {
+               seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_files[file_iterator+f]};
+               fill_hash_table(args, fin, hash_table, genome_set_table, (minimiser_args.include_file != ""), minimiser_args.cutoffs[i]);
+            }
+        }
+
+        // If set_expression_levels_samplewise is not set the expressions as determined by the first file are used for
+        // all files.
+        if constexpr (samplewise)
+        {
+           get_expression_levels(ibf_args.number_expression_levels,
+                                 hash_table,
+                                 expression_levels);
+           expressions[i] = expression_levels;
+
+        }
+
+        // Every minimiser is stored in IBF, if it occurence is greater than or equal to the expression level
+        for (auto && elem : hash_table)
+        {
+            for (int j = ibf_args.number_expression_levels - 1; j >= 0 ; --j)
+            {
+                if constexpr (samplewise)
+                {
+                    if (elem.second >= expression_levels[j])
+                    {
+                        ibfs[j].emplace(elem.first, seqan3::bin_index{i});
+                        break;
+                    }
+                }
+                else
+                {
+                    if (elem.second >= ibf_args.expression_levels[j])
+                    {
+                        ibfs[j].emplace(elem.first, seqan3::bin_index{i});
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // Store IBFs
+    for (unsigned i = 0; i < ibf_args.number_expression_levels; i++)
+    {
+        std::filesystem::path filename;
+        if constexpr(samplewise)
+             filename = args.path_out.string() + "IBF_Level_" + std::to_string(i);
+        else
+            filename = args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[i]);
+
+        if (args.compressed)
+        {
+            seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf{ibfs[i]};
+            store_ibf(ibf, filename);
+        }
+        else
+        {
+            store_ibf(ibfs[i], filename);
+        }
+
+    }
+
+    if constexpr(samplewise)
+    {
+        std::ofstream outfile;
+        outfile.open(std::string{args.path_out} +  "IBF_Levels.levels");
+        for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
+        {
+            for (unsigned i = 0; i < num_files; i++)
+                 outfile << expressions[i][j] << " ";
+            outfile << "\n";
+        }
+        outfile << "/\n";
+        outfile.close();
+    }
+}
+
+std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files, arguments const & args,
+                          ibf_arguments & ibf_args, minimiser_arguments & minimiser_args)
 {
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
-    robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimisers in genome sequences
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
     std::vector<std::vector<uint16_t>> expressions{};
 
-    set_arguments_ibf(args, minimiser_args.sequence_files, minimiser_args.include_file, minimiser_args.paired,
-                      minimiser_args.samples, minimiser_args.cutoffs, genome_set_table);
+    check_cutoffs_samples(args, sequence_files, minimiser_args.include_file, minimiser_args.paired,
+                      minimiser_args.samples, minimiser_args.cutoffs);
     if (minimiser_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
         minimiser_args.cutoffs.assign(minimiser_args.samples.size(), 0);
 
-    set_arguments(ibf_args.expression_levels, ibf_args.number_expression_levels,
-                  ibf_args.set_expression_levels_samplewise);
+    check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels);
     check_bin_size(ibf_args.number_expression_levels, ibf_args.bin_size);
 
-    if (ibf_args.set_expression_levels_samplewise)
+    bool samplewise = (ibf_args.expression_levels.size() == 0);
+
+    if (samplewise)
     {
         std::vector<uint16_t> zero_vector(minimiser_args.samples.size());
         for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
@@ -299,320 +427,37 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args, mini
         outfile.open(std::string{args.path_out} + "Stored_Files.txt");
         for (unsigned i = 0; i < minimiser_args.samples.size(); i++)
         {
-            outfile  << minimiser_args.sequence_files[std::accumulate(minimiser_args.samples.begin(),
+            outfile  << sequence_files[std::accumulate(minimiser_args.samples.begin(),
                                                 minimiser_args.samples.begin()+i, 0)] << "\n";
         }
         outfile.close();
     }
 
-    // Create IBFs
-    std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
-    for (unsigned i = 0; i < ibf_args.number_expression_levels; i++)
-        ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
-                     seqan3::bin_count{minimiser_args.samples.size()}, seqan3::bin_size{ibf_args.bin_size[i]},
-                     seqan3::hash_function_count{ibf_args.num_hash}));
-
-    unsigned file_iterator{0};
-    // Add minimisers to ibf
-    for (unsigned i = 0; i < minimiser_args.samples.size(); i++)
-    {
-        // Fill hash table with minimisers.
-        for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
-        {
-           seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_args.sequence_files[file_iterator+f]};
-           fill_hash_table(args, fin, hash_table, genome_set_table, (minimiser_args.include_file != ""), minimiser_args.cutoffs[i]);
-        }
-        file_iterator = file_iterator + minimiser_args.samples[i];
-
-        // If set_expression_levels_samplewise is not set the expressions as determined by the first file are used for
-        // all files.
-        if (ibf_args.set_expression_levels_samplewise)
-        {
-           ibf_args.expression_levels.clear();
-           get_expression_levels(ibf_args.number_expression_levels,
-                                 hash_table,
-                                 ibf_args.expression_levels);
-
-           for (unsigned k = 0; k < ibf_args.number_expression_levels; k++)
-                expressions[k][i] = ibf_args.expression_levels[k];
-        }
-        else if (ibf_args.expression_levels.size() == 0)
-        {
-            get_expression_levels(ibf_args.number_expression_levels,
-                                  hash_table,
-                                  ibf_args.expression_levels);
-        }
-
-        // Every minimiser is stored in IBF, if it occurence is greater than or equal to the expression level
-        for (auto && elem : hash_table)
-        {
-            for (int j = ibf_args.number_expression_levels - 1; j >= 0 ; --j)
-            {
-                if (elem.second >= ibf_args.expression_levels[j])
-                {
-                    ibfs[j].emplace(elem.first,seqan3::bin_index{i});
-                    break;
-                }
-            }
-        }
-        hash_table.clear();
-    }
-
-    // Store IBFs
-    for (unsigned i = 0; i < ibf_args.number_expression_levels; i++)
-    {
-        std::filesystem::path filename{args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[i])};
-        if (ibf_args.set_expression_levels_samplewise) // TODO: If this option is choosen the expressions need to be stored
-             filename = args.path_out.string() + "IBF_Level_" + std::to_string(i);
-        if (args.compressed)
-        {
-            seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf{ibfs[i]};
-            store_ibf(ibf, filename);
-        }
-        else
-        {
-            store_ibf(ibfs[i], filename);
-        }
-
-    }
-
-    if (ibf_args.set_expression_levels_samplewise)
-    {
-        std::ofstream outfile;
-        outfile.open(std::string{args.path_out} +  "IBF_Levels.levels");
-        for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
-        {
-            for (unsigned i = 0; i < minimiser_args.samples.size(); i++)
-                 outfile << expressions[j][i] << " ";
-            outfile << "\n";
-        }
-        outfile << "/\n";
-        outfile.close();
-    }
+    if (samplewise)
+        ibf_helper<true, false>(sequence_files, args, ibf_args, minimiser_args);
+    else
+        ibf_helper<false, false>(sequence_files, args, ibf_args, minimiser_args);
 
     return ibf_args.expression_levels;
 }
 
 // Create ibf based on the minimiser and header files
-std::vector<uint16_t> ibf(std::vector<std::filesystem::path> minimiser_files, arguments const & args,
+std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files, arguments const & args,
                           ibf_arguments & ibf_args)
 {
-
-    robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
-    std::vector<std::vector<uint16_t>> expressions{};
-
-    set_arguments(ibf_args.expression_levels, ibf_args.number_expression_levels,
-                  ibf_args.set_expression_levels_samplewise);
+    check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels);
     check_bin_size(ibf_args.number_expression_levels, ibf_args.bin_size);
 
-    if (ibf_args.set_expression_levels_samplewise)
-    {
-        std::vector<uint16_t> zero_vector(minimiser_files.size());
-        for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
-            expressions.push_back(zero_vector);
-    }
+    bool const samplewise = (ibf_args.expression_levels.size() == 0);
 
-    // Create IBFs
-    std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
-    for (unsigned i = 0; i < ibf_args.number_expression_levels; i++)
-        ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
-                     seqan3::bin_count{minimiser_files.size()}, seqan3::bin_size{ibf_args.bin_size[i]},
-                     seqan3::hash_function_count{ibf_args.num_hash}));
-
-    // Add minimisers to ibf
-    for (unsigned i = 0; i < minimiser_files.size(); i++)
-    {
-        // Fill hash table with minimisers.
-        read_binary(hash_table, minimiser_files[i]);
-
-        // If set_expression_levels_samplewise is not set the expressions as determined by the first file are used for
-        // all files.
-        if (ibf_args.set_expression_levels_samplewise)
-        {
-           ibf_args.expression_levels.clear();
-           get_expression_levels(ibf_args.number_expression_levels,
-                                 hash_table,
-                                 ibf_args.expression_levels);
-
-           for (unsigned k = 0; k < ibf_args.number_expression_levels; k++)
-                expressions[k][i] = ibf_args.expression_levels[k];
-        }
-        else if (ibf_args.expression_levels.size() == 0)
-        {
-            get_expression_levels(ibf_args.number_expression_levels,
-                                  hash_table,
-                                  ibf_args.expression_levels);
-        }
-
-        // Every minimiser is stored in IBF, if it occurence is greater than or equal to the expression level
-        for (auto && elem : hash_table)
-        {
-            for (int j = ibf_args.number_expression_levels - 1; j >= 0 ; --j)
-            {
-                if (elem.second >= ibf_args.expression_levels[j])
-                {
-                    ibfs[j].emplace(elem.first,seqan3::bin_index{i});
-                    break;
-                }
-            }
-        }
-        hash_table.clear();
-    }
-
-    // Store IBFs
-    for (unsigned i = 0; i < ibf_args.number_expression_levels; i++)
-    {
-        std::filesystem::path filename{args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[i])};
-        if (ibf_args.set_expression_levels_samplewise) // TODO: If this option is choosen the expressions need to be stored
-             filename = args.path_out.string() + "IBF_Level_" + std::to_string(i);
-        if (args.compressed)
-        {
-            seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf{ibfs[i]};
-            store_ibf(ibf, filename);
-        }
-        else
-        {
-            store_ibf(ibfs[i], filename);
-        }
-
-    }
-
-    if (ibf_args.set_expression_levels_samplewise)
-    {
-        std::ofstream outfile;
-        outfile.open(std::string{args.path_out} +  "IBF_Levels.levels");
-        for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
-        {
-            for (unsigned i = 0; i < minimiser_files.size(); i++)
-                 outfile << expressions[j][i] << " ";
-            outfile << "\n";
-        }
-        outfile << "/\n";
-        outfile.close();
-    }
+    if (samplewise)
+        ibf_helper<true>(minimiser_files, args, ibf_args);
+    else
+        ibf_helper<false>(minimiser_files, args, ibf_args);
 
     return ibf_args.expression_levels;
 }
-/*
-void fill_ibf(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> & ibf,
-              robin_hood::unordered_node_map<uint64_t, uint16_t> const & hash_table,
-              uint32_t const current_expression,
-              uint32_t const next_expression,
-              unsigned const bin)
-{
-    // Every minimiser is stored in IBF, if it occurence is greater than or equal to expression level and less
-    // than the next expression level.
-    for (auto && elem : hash_table)
-    {
-          if ((elem.second >= current_expression) & (elem.second < next_expression))
-              ibf.emplace(elem.first, seqan3::bin_index{bin});
-          else if ((next_expression == 0) & (elem.second >= current_expression))
-              ibf.emplace(elem.first, seqan3::bin_index{bin});
-    }
-}
 
-
-// Create ibf based on the minimiser and header files
-std::vector<uint16_t> ibf_one_ibf_at_a_time(std::vector<std::filesystem::path> minimiser_files, arguments & args,
-                          minimiser_arguments & ibf_args)
-{
-    // Declarations
-    robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
-    robin_hood::unordered_set<uint64_t> genome_set_table;
-    std::vector<std::vector<uint16_t>> expressions{};
-
-    set_arguments(ibf_args.expression_levels, ibf_args.number_expression_levels,
-                  ibf_args.set_expression_levels_samplewise);
-    check_bin_size(ibf_args.number_expression_levels, ibf_args.bin_size);
-    if (minimiser_args.include_file != "")
-        get_include_set_table(args, minimiser_args.include_file, genome_set_table);
-    if (minimiser_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
-        minimiser_args.cutoffs.assign(minimiser_files.size(), 0);
-    else if (minimiser_args.cutoffs.size() == 1) // If one cutoff is given, every experiment gets this cutoff.
-        minimiser_args.cutoffs.assign(minimiser_args.samples.size(), minimiser_args.cutoffs[0]);
-
-    if (ibf_args.set_expression_levels_samplewise)
-    {
-        std::vector<uint16_t> zero_vector(minimiser_files.size());
-        for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
-            expressions.push_back(zero_vector);
-    }
-
-    // TODO: If expression levels given does not match the expression levels in header file, get_bin_size gives
-    // incorrect results or even an error, if more expression levels are added
-    for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
-    {
-        seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf =
-        seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
-					   seqan3::bin_count{minimiser_files.size()}, seqan3::bin_size{ibf_args.bin_size[j]},
-					   seqan3::hash_function_count{ibf_args.num_hash});
-       // Add minimisers to ibf
-       for (unsigned i = 0; i < minimiser_files.size(); i++)
-       {
-           read_binary(hash_table, minimiser_files[i]);
-
-           if (ibf_args.set_expression_levels_samplewise & (j==0))
-           {
-              ibf_args.expression_levels.clear();
-              get_expression_levels(ibf_args.number_expression_levels,
-                                    hash_table,
-                                    ibf_args.expression_levels);
-              for (unsigned k = 0; k < ibf_args.number_expression_levels; k++)
-                 expressions[k][i] = ibf_args.expression_levels[k];
-           }
-           // If set_expression_levels_samplewise is not set the expressions as determined by the first file are used for
-           // all files.
-           else if (ibf_args.expression_levels.size() == 0)
-           {
-               get_expression_levels(ibf_args.number_expression_levels,
-                                     hash_table,
-                                     ibf_args.expression_levels);
-           }
-
-           if (ibf_args.set_expression_levels_samplewise & ((j < ibf_args.number_expression_levels - 1)))
-                fill_ibf(ibf, hash_table, expressions[j][i], expressions[j+1][i], i);
-           else if (ibf_args.set_expression_levels_samplewise)
-                fill_ibf(ibf, hash_table, expressions[j][i], 0, i);
-           else if ((j < ibf_args.number_expression_levels - 1))
-                fill_ibf(ibf, hash_table, ibf_args.expression_levels[j], ibf_args.expression_levels[j+1], i);
-           else
-                fill_ibf(ibf, hash_table, ibf_args.expression_levels[j], 0, i);
-
-           hash_table.clear();
-       }
-
-       // Store IBFs
-       std::filesystem::path filename{args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_levels[j])};
-       if (ibf_args.set_expression_levels_samplewise)
-           filename = args.path_out.string() + "IBF_Level_" + std::to_string(j);
-       if (args.compressed)
-       {
-            seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf2{ibf};
-		    store_ibf(ibf2, filename);
-       }
-       else
-       {
-           store_ibf(ibf, filename);
-       }
-    }
-
-    if (ibf_args.set_expression_levels_samplewise)
-    {
-        std::ofstream outfile;
-        outfile.open(std::string{args.path_out} +  "IBF_Levels.levels");
-        for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
-        {
-            for (unsigned i = 0; i < minimiser_files.size(); i++)
-                 outfile << expressions[j][i] << " ";
-            outfile << "\n";
-        }
-        outfile << "/\n";
-        outfile.close();
-    }
-
-	return ibf_args.expression_levels;
-}
-*/
 inline bool check_for_fasta_format(std::vector<std::string> const & valid_extensions, std::string const & file_path)
 {
 
@@ -636,8 +481,11 @@ inline bool check_for_fasta_format(std::vector<std::string> const & valid_extens
     return std::ranges::find_if(valid_extensions, case_insensitive_ends_with) != valid_extensions.end();
 }
 
-void calculate_minimiser(robin_hood::unordered_set<uint64_t> const & genome_set_table, arguments const & args, minimiser_arguments const & minimiser_args,
-                          unsigned const i)
+void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_files,
+                         robin_hood::unordered_set<uint64_t> const & genome_set_table,
+                         arguments const & args,
+                         minimiser_arguments const & minimiser_args,
+                         unsigned const i)
 {
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     std::ofstream outfile;
@@ -656,10 +504,10 @@ void calculate_minimiser(robin_hood::unordered_set<uint64_t> const & genome_set_
         // Since the curoffs are based on the filesize of a gzipped fastq file, we try account for the other cases:
         // We multiply by two if we have fasta input.
         // We divide by 3 if the input is not compressed.
-        bool const is_compressed = minimiser_args.sequence_files[file_iterator].extension() == ".gz" || minimiser_args.sequence_files[file_iterator].extension() == ".bgzf" || minimiser_args.sequence_files[file_iterator].extension() == ".bz2";
-        bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions, minimiser_args.sequence_files[file_iterator].stem())
-                                           : check_for_fasta_format(seqan3::format_fasta::file_extensions, minimiser_args.sequence_files[file_iterator].extension());
-        size_t const filesize = std::filesystem::file_size(minimiser_args.sequence_files[file_iterator]) * minimiser_args.samples[i] * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
+        bool const is_compressed = sequence_files[file_iterator].extension() == ".gz" || sequence_files[file_iterator].extension() == ".bgzf" || sequence_files[file_iterator].extension() == ".bz2";
+        bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions, sequence_files[file_iterator].stem())
+                                           : check_for_fasta_format(seqan3::format_fasta::file_extensions, sequence_files[file_iterator].extension());
+        size_t const filesize = std::filesystem::file_size(sequence_files[file_iterator]) * minimiser_args.samples[i] * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
 
         for (size_t k = 0; k < cutoff_bounds.size(); ++k)
         {
@@ -678,12 +526,12 @@ void calculate_minimiser(robin_hood::unordered_set<uint64_t> const & genome_set_
     // Fill hash_table with minimisers.
     for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
     {
-        seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_args.sequence_files[file_iterator+f]};
+        seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{sequence_files[file_iterator+f]};
         fill_hash_table(args, fin, hash_table, genome_set_table, (minimiser_args.include_file != ""), cutoff);
     }
 
     // Write minimiser and their counts to binary
-    outfile.open(std::string{args.path_out} + std::string{minimiser_args.sequence_files[file_iterator].stem()}
+    outfile.open(std::string{args.path_out} + std::string{sequence_files[file_iterator].stem()}
                  + ".minimiser", std::ios::binary);
 
     for (auto && hash : hash_table)
@@ -695,7 +543,7 @@ void calculate_minimiser(robin_hood::unordered_set<uint64_t> const & genome_set_
     hash_table.clear();
 
     // Write header file, containing information about the minimiser counts per expression level
-    outfile.open(std::string{args.path_out} + std::string{minimiser_args.sequence_files[file_iterator].stem()}
+    outfile.open(std::string{args.path_out} + std::string{sequence_files[file_iterator].stem()}
                  + ".header");
     outfile <<  args.s.get() << " " << std::to_string(args.k) << " " << args.w_size.get() << " " << args.shape.to_ulong() << " "
             << std::to_string(cutoff) << "\n";
@@ -704,20 +552,27 @@ void calculate_minimiser(robin_hood::unordered_set<uint64_t> const & genome_set_
     outfile.close();
 }
 
-void minimiser(arguments const & args, minimiser_arguments & minimiser_args)
+void minimiser(std::vector<std::filesystem::path> const & sequence_files, arguments const & args, minimiser_arguments & minimiser_args)
 {
     // Declarations
     robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimisers in genome sequences
 
-    set_arguments_ibf(args, minimiser_args.sequence_files, minimiser_args.include_file, minimiser_args.paired, minimiser_args.samples,
-                      minimiser_args.cutoffs, genome_set_table);
+    check_cutoffs_samples(args, sequence_files, minimiser_args.include_file, minimiser_args.paired, minimiser_args.samples,
+                      minimiser_args.cutoffs);
+
+    if (minimiser_args.include_file != "")
+        get_include_set_table(args, minimiser_args.include_file, genome_set_table);
 
     omp_set_num_threads(args.threads);
 
+    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(minimiser_args.samples.size() / args.threads),
+                                                 8u,
+                                                 64u);
+
     // Add minimisers to ibf
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(dynamic, chunk_size)
     for(unsigned i = 0; i < minimiser_args.samples.size(); i++)
     {
-        calculate_minimiser(genome_set_table, args, minimiser_args, i);
+        calculate_minimiser(sequence_files, genome_set_table, args, minimiser_args, i);
     }
 }

@@ -16,14 +16,11 @@ struct ibf_arguments
     std::vector<size_t> bin_size{}; // The bin size of one IBF, can be different for different expression levels
     size_t num_hash{1}; // Number of hash functions to use, default 1
     std::vector<uint16_t> expression_levels{}; // Expression levels which should be created
-    uint8_t number_expression_levels{};
-    // Flag, if true the "median" approach is used to determine the expression_levels individually for a sample
-    bool set_expression_levels_samplewise{false};
+    uint8_t number_expression_levels{}; // If set, the expression levels are determined by the program.
 };
 
 struct minimiser_arguments
 {
-    std::vector<std::filesystem::path> sequence_files;
     std::filesystem::path include_file; // Needs to be defined when only minimizers appearing in this file should be stored
     std::filesystem::path exclude_file; // Needs to be defined when minimizers appearing in this file should NOT be stored
     std::vector<int> samples{}; // Can be used to indicate that sequence files belong to the same experiment
@@ -123,13 +120,14 @@ void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table
 void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesystem::path filename);
 
 /*! \brief Create IBF.
+ * \param sequence_files  A vector of sequence file paths.
  * \param args            The minimiser arguments to use (seed, shape, window size).
  * \param ibf_args        The IBF specific arguments to use (bin size, number of hash functions, ...). See
  *                        struct ibf_arguments.
  * \param minimiser_args  The minimiser specific arguments to use.
  *  \returns The normalized expression values per experiment.
  */
-std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args, minimiser_arguments & minimiser_args);
+std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files, arguments const & args, ibf_arguments & ibf_args, minimiser_arguments & minimiser_args);
 
 /*! \brief Create IBF based on the minimiser and header files
  * \param minimiser_files  A vector of minimiser file paths.
@@ -138,7 +136,12 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args, mini
  *                         struct ibf_arguments.
  *  \returns The normalized expression values per experiment.
  */
-std::vector<uint16_t> ibf(std::vector<std::filesystem::path> minimiser_files, arguments const & args,
+std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files, arguments const & args,
                           ibf_arguments & ibf_args);
 
-void minimiser(arguments const & args, minimiser_arguments & minimiser_args);
+/*! \brief Create minimiser and header files.
+* \param sequence_files  A vector of sequence file paths.
+* \param args             The minimiser arguments to use (seed, shape, window size).
+* \param minimiser_args  The minimiser specific arguments to use.
+*/
+void minimiser(std::vector<std::filesystem::path> const & sequence_files, arguments const & args, minimiser_arguments & minimiser_args);
