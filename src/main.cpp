@@ -49,7 +49,6 @@ void parsing(seqan3::argument_parser & parser, arguments & args)
 // Initialize arguments for ibf and minimiser
 void initialise_arguments_minimiser(seqan3::argument_parser & parser, minimiser_arguments & minimiser_args)
 {
-    parser.add_positional_option(minimiser_args.sequence_files, "Please provide at least one sequence file.");
     parser.add_option(minimiser_args.include_file, 'g', "genom-mask", "Genom file used as a mask.");
     parser.add_option(minimiser_args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be "
                                                                  "equal to number of sequence files. Default: Every"
@@ -66,7 +65,7 @@ int run_needle_count(seqan3::argument_parser & parser)
 {
     arguments args;
     initialise_arguments_minimiser_hash(parser, args);
-    std::vector<std::filesystem::path> sequence_files;
+    std::vector<std::filesystem::path> sequence_files{};
     std::filesystem::path genome_file;
     std::filesystem::path out_path = "./";
     bool paired = false;
@@ -148,13 +147,17 @@ int run_needle_estimate(seqan3::argument_parser & parser)
 int run_needle_ibf(seqan3::argument_parser & parser)
 {
     arguments args;
-    initialise_arguments_minimiser_hash(parser, args);
     ibf_arguments ibf_args{};
-    initialise_arguments_ibf(parser, args, ibf_args);
     minimiser_arguments minimiser_args{};
+    std::vector<std::filesystem::path> sequence_files{};
+
+    initialise_arguments_minimiser_hash(parser, args);
+    initialise_arguments_ibf(parser, args, ibf_args);
     initialise_arguments_minimiser(parser, minimiser_args);
 
     parser.info.short_description = "Constructs an IBF.";
+
+    parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
     parser.add_option(minimiser_args.experiment_names, 'f', "experiment-names", "If set, names of the experiments are stored"
                                                                           " in a txt file.");
 
@@ -170,7 +173,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
 
     try
     {
-        ibf(args, ibf_args, minimiser_args);
+        ibf(sequence_files, args, ibf_args, minimiser_args);
     }
     catch (const std::invalid_argument & e)
     {
@@ -223,10 +226,13 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
 int run_needle_minimiser(seqan3::argument_parser & parser)
 {
     arguments args{};
-    initialise_arguments_minimiser_hash(parser, args);
     minimiser_arguments minimiser_args{};
+    std::vector<std::filesystem::path> sequence_files{};
+    initialise_arguments_minimiser_hash(parser, args);
     initialise_arguments_minimiser(parser, minimiser_args);
+
     parser.info.short_description = "Calculates minimiser for given experiments.";
+    parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
 
     try
     {
@@ -239,7 +245,7 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
     }
     try
     {
-        minimiser(args, minimiser_args);
+        minimiser(sequence_files, args, minimiser_args);
     }
     catch (const std::invalid_argument & e)
     {

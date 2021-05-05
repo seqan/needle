@@ -318,7 +318,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
             unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
             for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
             {
-               seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_args.sequence_files[file_iterator+f]};
+               seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_files[file_iterator+f]};
                fill_hash_table(args, fin, hash_table, genome_set_table, (minimiser_args.include_file != ""), minimiser_args.cutoffs[i]);
             }
         }
@@ -395,14 +395,15 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
     }
 }
 
-std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args, minimiser_arguments & minimiser_args)
+std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files, arguments const & args,
+                          ibf_arguments & ibf_args, minimiser_arguments & minimiser_args)
 {
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
     std::vector<std::vector<uint16_t>> expressions{};
 
-    set_arguments_ibf(args, minimiser_args.sequence_files, minimiser_args.include_file, minimiser_args.paired,
+    set_arguments_ibf(args, sequence_files, minimiser_args.include_file, minimiser_args.paired,
                       minimiser_args.samples, minimiser_args.cutoffs);
     if (minimiser_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
         minimiser_args.cutoffs.assign(minimiser_args.samples.size(), 0);
@@ -426,17 +427,16 @@ std::vector<uint16_t> ibf(arguments const & args, ibf_arguments & ibf_args, mini
         outfile.open(std::string{args.path_out} + "Stored_Files.txt");
         for (unsigned i = 0; i < minimiser_args.samples.size(); i++)
         {
-            outfile  << minimiser_args.sequence_files[std::accumulate(minimiser_args.samples.begin(),
+            outfile  << sequence_files[std::accumulate(minimiser_args.samples.begin(),
                                                 minimiser_args.samples.begin()+i, 0)] << "\n";
         }
         outfile.close();
     }
 
-    std::vector<std::filesystem::path> minimiser_files{};
     if (samplewise)
-        ibf_helper<true, false>(minimiser_files, args, ibf_args, minimiser_args);
+        ibf_helper<true, false>(sequence_files, args, ibf_args, minimiser_args);
     else
-        ibf_helper<false, false>(minimiser_files, args, ibf_args, minimiser_args);
+        ibf_helper<false, false>(sequence_files, args, ibf_args, minimiser_args);
 
     return ibf_args.expression_levels;
 }
@@ -481,8 +481,11 @@ inline bool check_for_fasta_format(std::vector<std::string> const & valid_extens
     return std::ranges::find_if(valid_extensions, case_insensitive_ends_with) != valid_extensions.end();
 }
 
-void calculate_minimiser(robin_hood::unordered_set<uint64_t> const & genome_set_table, arguments const & args, minimiser_arguments const & minimiser_args,
-                          unsigned const i)
+void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_files,
+                         robin_hood::unordered_set<uint64_t> const & genome_set_table,
+                         arguments const & args,
+                         minimiser_arguments const & minimiser_args,
+                         unsigned const i)
 {
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     std::ofstream outfile;
@@ -501,10 +504,10 @@ void calculate_minimiser(robin_hood::unordered_set<uint64_t> const & genome_set_
         // Since the curoffs are based on the filesize of a gzipped fastq file, we try account for the other cases:
         // We multiply by two if we have fasta input.
         // We divide by 3 if the input is not compressed.
-        bool const is_compressed = minimiser_args.sequence_files[file_iterator].extension() == ".gz" || minimiser_args.sequence_files[file_iterator].extension() == ".bgzf" || minimiser_args.sequence_files[file_iterator].extension() == ".bz2";
-        bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions, minimiser_args.sequence_files[file_iterator].stem())
-                                           : check_for_fasta_format(seqan3::format_fasta::file_extensions, minimiser_args.sequence_files[file_iterator].extension());
-        size_t const filesize = std::filesystem::file_size(minimiser_args.sequence_files[file_iterator]) * minimiser_args.samples[i] * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
+        bool const is_compressed = sequence_files[file_iterator].extension() == ".gz" || sequence_files[file_iterator].extension() == ".bgzf" || sequence_files[file_iterator].extension() == ".bz2";
+        bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions, sequence_files[file_iterator].stem())
+                                           : check_for_fasta_format(seqan3::format_fasta::file_extensions, sequence_files[file_iterator].extension());
+        size_t const filesize = std::filesystem::file_size(sequence_files[file_iterator]) * minimiser_args.samples[i] * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
 
         for (size_t k = 0; k < cutoff_bounds.size(); ++k)
         {
@@ -523,12 +526,12 @@ void calculate_minimiser(robin_hood::unordered_set<uint64_t> const & genome_set_
     // Fill hash_table with minimisers.
     for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
     {
-        seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_args.sequence_files[file_iterator+f]};
+        seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{sequence_files[file_iterator+f]};
         fill_hash_table(args, fin, hash_table, genome_set_table, (minimiser_args.include_file != ""), cutoff);
     }
 
     // Write minimiser and their counts to binary
-    outfile.open(std::string{args.path_out} + std::string{minimiser_args.sequence_files[file_iterator].stem()}
+    outfile.open(std::string{args.path_out} + std::string{sequence_files[file_iterator].stem()}
                  + ".minimiser", std::ios::binary);
 
     for (auto && hash : hash_table)
@@ -540,7 +543,7 @@ void calculate_minimiser(robin_hood::unordered_set<uint64_t> const & genome_set_
     hash_table.clear();
 
     // Write header file, containing information about the minimiser counts per expression level
-    outfile.open(std::string{args.path_out} + std::string{minimiser_args.sequence_files[file_iterator].stem()}
+    outfile.open(std::string{args.path_out} + std::string{sequence_files[file_iterator].stem()}
                  + ".header");
     outfile <<  args.s.get() << " " << std::to_string(args.k) << " " << args.w_size.get() << " " << args.shape.to_ulong() << " "
             << std::to_string(cutoff) << "\n";
@@ -549,12 +552,12 @@ void calculate_minimiser(robin_hood::unordered_set<uint64_t> const & genome_set_
     outfile.close();
 }
 
-void minimiser(arguments const & args, minimiser_arguments & minimiser_args)
+void minimiser(std::vector<std::filesystem::path> const & sequence_files, arguments const & args, minimiser_arguments & minimiser_args)
 {
     // Declarations
     robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimisers in genome sequences
 
-    set_arguments_ibf(args, minimiser_args.sequence_files, minimiser_args.include_file, minimiser_args.paired, minimiser_args.samples,
+    set_arguments_ibf(args, sequence_files, minimiser_args.include_file, minimiser_args.paired, minimiser_args.samples,
                       minimiser_args.cutoffs);
 
     if (minimiser_args.include_file != "")
@@ -570,6 +573,6 @@ void minimiser(arguments const & args, minimiser_arguments & minimiser_args)
     #pragma omp parallel for schedule(dynamic, chunk_size)
     for(unsigned i = 0; i < minimiser_args.samples.size(); i++)
     {
-        calculate_minimiser(genome_set_table, args, minimiser_args, i);
+        calculate_minimiser(sequence_files, genome_set_table, args, minimiser_args, i);
     }
 }
