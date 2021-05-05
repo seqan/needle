@@ -148,8 +148,8 @@ void check_expression(std::vector<uint16_t> & expression_levels, uint8_t & numbe
     }
 }
 
-// Set arguments that ibf use
-void set_arguments_ibf(arguments const & args, std::vector<std::filesystem::path> const & sequence_files,
+// Check and set samples and cutoffs
+void check_cutoffs_samples(arguments const & args, std::vector<std::filesystem::path> const & sequence_files,
                        std::filesystem::path const include_file, bool const paired, std::vector<int> & samples,
                        std::vector<uint8_t> & cutoffs)
 {
@@ -403,7 +403,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
     std::vector<std::vector<uint16_t>> expressions{};
 
-    set_arguments_ibf(args, sequence_files, minimiser_args.include_file, minimiser_args.paired,
+    check_cutoffs_samples(args, sequence_files, minimiser_args.include_file, minimiser_args.paired,
                       minimiser_args.samples, minimiser_args.cutoffs);
     if (minimiser_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
         minimiser_args.cutoffs.assign(minimiser_args.samples.size(), 0);
@@ -557,7 +557,7 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files, argume
     // Declarations
     robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimisers in genome sequences
 
-    set_arguments_ibf(args, sequence_files, minimiser_args.include_file, minimiser_args.paired, minimiser_args.samples,
+    check_cutoffs_samples(args, sequence_files, minimiser_args.include_file, minimiser_args.paired, minimiser_args.samples,
                       minimiser_args.cutoffs);
 
     if (minimiser_args.include_file != "")
