@@ -131,8 +131,8 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
     }
 }
 
-// Set arguments that ibf and minimiser use
-void set_arguments(std::vector<uint16_t> & expression_levels, uint8_t & number_expression_levels)
+// Check number of expression levels, sort expression levels
+void check_expression(std::vector<uint16_t> & expression_levels, uint8_t & number_expression_levels)
 {
     // Sort given expression rates
     sort(expression_levels.begin(), expression_levels.end());
@@ -408,7 +408,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     if (minimiser_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
         minimiser_args.cutoffs.assign(minimiser_args.samples.size(), 0);
 
-    set_arguments(ibf_args.expression_levels, ibf_args.number_expression_levels);
+    check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels);
     check_bin_size(ibf_args.number_expression_levels, ibf_args.bin_size);
 
     bool samplewise = (ibf_args.expression_levels.size() == 0);
@@ -445,7 +445,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files, arguments const & args,
                           ibf_arguments & ibf_args)
 {
-    set_arguments(ibf_args.expression_levels, ibf_args.number_expression_levels);
+    check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels);
     check_bin_size(ibf_args.number_expression_levels, ibf_args.bin_size);
 
     bool const samplewise = (ibf_args.expression_levels.size() == 0);
