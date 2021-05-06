@@ -21,54 +21,13 @@
 
 #include "estimate.h"
 
-
-// Check if one sequence is present in a given ibf
-template <class IBFType, bool last_exp>
-void check_ibf(arguments const & args, IBFType const & ibf, std::vector<uint16_t> & estimations_i, seqan3::dna4_vector const seq,
-               std::vector<uint32_t> & prev_counts, uint16_t expression, uint16_t prev_expression)
-{
-    std::vector<uint32_t> counter;
-    counter.assign(ibf.bin_count(), 0);
-    uint64_t minimiser_length = 0;
-    for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-    {
-        auto agent = ibf.membership_agent();
-        std::transform (counter.begin(), counter.end(), agent.bulk_contains(minHash).begin(), counter.begin(),
-                        std::plus<int>());
-        ++minimiser_length;
-    }
-
-    float minimiser_pos = minimiser_length/2.0;
-
-    for(unsigned j = 0; j < counter.size(); j++)
-    {
-        if ((prev_counts[j] + counter[j]) >= minimiser_pos)
-        {
-            if constexpr(last_exp)
-            {
-                estimations_i[j] = expression;
-            }
-            else
-            {
-                // Actually calculate estimation
-                estimations_i[j] = expression + ((abs(minimiser_pos - counter[j])/abs((prev_counts[j]*1.0) - counter[j])) * (prev_expression-expression));
-                // Make sure, every transcript is only estimated once
-                prev_counts[j] = 0;
-            }
-        }
-        else
-        {
-            prev_counts[j] = prev_counts[j] + counter[j];
-        }
-    }
-
-}
-
-template <class IBFType, bool last_exp>
+template <class IBFType, bool last_exp, typename exp_t>
 void check_ibf(arguments const & args, IBFType const & ibf, std::vector<uint16_t> & estimations_i,
                seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
-               std::vector<std::vector<uint16_t>> & expressions, int k)
+               exp_t const & expressions, uint16_t k)
 {
+    static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
+
     std::vector<uint32_t> counter;
     counter.assign(ibf.bin_count(), 0);
     uint64_t minimiser_length = 0;
@@ -89,12 +48,18 @@ void check_ibf(arguments const & args, IBFType const & ibf, std::vector<uint16_t
             // If there was nothing previous
             if constexpr(last_exp)
             {
-                estimations_i[j] = expressions[k][j];
+                if constexpr (multiple_expressions)
+                    estimations_i[j] = expressions[k][j];
+                else
+                    estimations_i[j] = expressions;
             }
             else
             {
                 // Actually calculate estimation
-                estimations_i[j] = expressions[k][j] + ((abs(minimiser_pos - counter[j])/abs((prev_counts[j]*1.0) - counter[j])) * (expressions[k+1][j]-expressions[k][j]));
+                if constexpr (multiple_expressions)
+                    estimations_i[j] = expressions[k][j] + ((abs(minimiser_pos - counter[j])/abs((prev_counts[j]*1.0) - counter[j])) * (expressions[k+1][j]-expressions[k][j]));
+                else
+                    estimations_i[j] = expressions + ((abs(minimiser_pos - counter[j])/abs((prev_counts[j]*1.0) - counter[j])) * (k-expressions));
                 // Make sure, every transcript is only estimated once
                 prev_counts[j] = 0;
             }
