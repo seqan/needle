@@ -2,6 +2,7 @@
 #include <iostream>
 #include <math.h>
 #include <numeric>
+#include <omp.h>
 #include <stdlib.h>
 #include <string>
 #include <vector>
@@ -24,7 +25,7 @@
 template <class IBFType, bool last_exp, typename exp_t>
 void check_ibf(arguments const & args, IBFType const & ibf, std::vector<uint16_t> & estimations_i,
                seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
-               exp_t const & expressions, uint16_t k)
+               exp_t const & expressions, uint16_t const k)
 {
     static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
 
@@ -55,7 +56,7 @@ void check_ibf(arguments const & args, IBFType const & ibf, std::vector<uint16_t
             }
             else
             {
-                // Actually calculate estimation
+                // Actually calculate estimation, in the else case k stands for the prev_expression
                 if constexpr (multiple_expressions)
                     estimations_i[j] = expressions[k][j] + ((abs(minimiser_pos - counter[j])/abs((prev_counts[j]*1.0) - counter[j])) * (expressions[k+1][j]-expressions[k][j]));
                 else
@@ -129,6 +130,8 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
     std::vector<std::vector<uint16_t>> estimations;
     std::vector<std::vector<uint16_t>> expressions;
 
+    omp_set_num_threads(args.threads);
+
     seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin{search_file};
     for (auto & [id, seq] : fin)
     {
@@ -178,6 +181,9 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
             load_ibf(ibf, path_in.string() + "IBF_Level_" + std::to_string(j));
         else
             load_ibf(ibf, path_in.string() + "IBF_" + std::to_string(estimate_args.expressions[j]));
+
+        // Go over the sequences
+        #pragma omp parallel for
         for (int i = 0; i < seqs.size(); ++i)
         {
             if constexpr (samplewise)
