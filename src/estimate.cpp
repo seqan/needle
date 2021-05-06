@@ -221,10 +221,8 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
     std::vector<uint32_t> counter;
     std::vector<uint16_t> counter_est;
 
-    uint64_t minimiser_length{};
-
-    seqan3::sequence_file_input<my_traits> fin{search_file};
-    for (auto & [seq, id, qual] : fin)
+    seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin{search_file};
+    for (auto & [id, seq] : fin)
     {
         ids.push_back(id);
         seqs.push_back(seq);
