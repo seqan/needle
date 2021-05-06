@@ -2,6 +2,7 @@
 #include <iostream>
 #include <math.h>
 #include <numeric>
+#include <omp.h>
 #include <stdlib.h>
 #include <string>
 #include <vector>
@@ -21,158 +22,54 @@
 
 #include "estimate.h"
 
-
-// Check if one sequence is present in a given ibf
-template <class IBFType>
-void check_ibf(arguments const & args, IBFType & ibf, std::vector<uint16_t> & estimations_i, std::vector<uint32_t> & counter, seqan3::dna4_vector const seq,
-                                std::vector<uint32_t> & prev_counts, uint16_t expression, uint16_t prev_expression, bool last_exp)
+template <class IBFType, bool last_exp, typename exp_t>
+void check_ibf(arguments const & args, IBFType const & ibf, std::vector<uint16_t> & estimations_i,
+               seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
+               exp_t const & expressions, uint16_t const k)
 {
-    uint64_t minimiser_length = 0;
-    for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-    {
-        auto agent = ibf.membership_agent();
-        std::transform (counter.begin(), counter.end(), agent.bulk_contains(minHash).begin(), counter.begin(),
-                        std::plus<int>());
-        ++minimiser_length;
-    }
-
-    float minimiser_pos = minimiser_length/2.0;
-    // Last expression level is looked at
-    if (last_exp)
-    {
-        for(unsigned j = 0; j < counter.size(); j++)
-        {
-            if ((counter[j]+prev_counts[j]) >= minimiser_pos)
-                estimations_i[j] = expression;
-            else
-                prev_counts[j] = counter[j];
-        }
-    }
-    else
-    {
-        for(unsigned j = 0; j < counter.size(); j++)
-        {
-            if ((prev_counts[j] + counter[j]) >= minimiser_pos)
-            {
-                // Actually calculate estimation
-                estimations_i[j] = expression + ((abs(minimiser_pos - counter[j])/abs((prev_counts[j]*1.0) - counter[j])) * (prev_expression-expression));
-                // Make sure, every transcript is only estimated once
-                prev_counts[j] = 0;
-            }
-            else
-            {
-                prev_counts[j] = prev_counts[j] + counter[j];
-            }
-        }
-    }
-}
-
-template <class IBFType>
-void check_ibf(arguments const & args, IBFType & ibf, std::vector<uint16_t> & estimations_i, std::vector<uint32_t> & counter,
-                                seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
-                                std::vector<std::vector<uint16_t>> & expressions, bool last_exp, int k)
-{
-    uint64_t minimiser_length = 0;
-    for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-    {
-        auto agent = ibf.membership_agent();
-        std::transform (counter.begin(), counter.end(), agent.bulk_contains(minHash).begin(), counter.begin(),
-                        std::plus<int>());
-        ++minimiser_length;
-    }
-
-    float minimiser_pos = minimiser_length/2.0;
-
-    // If there was nothing previous
-    if (last_exp)
-    {
-        for(int j = 0; j < counter.size(); j++)
-        {
-            if ((prev_counts[j] + counter[j]) >= minimiser_pos)
-                estimations_i[j] = expressions[k][j];
-            else
-                prev_counts[j] = counter[j];
-        }
-    }
-    else
-    {
-        for(int j = 0; j < counter.size(); j++)
-        {
-            if ((prev_counts[j] + counter[j]) >= minimiser_pos)
-            {
-                // Actually calculate estimation
-                estimations_i[j] = expressions[k][j] + ((abs(minimiser_pos - counter[j])/abs((prev_counts[j]*1.0) - counter[j])) * (expressions[k+1][j]-expressions[k][j]));
-                // Make sure, every transcript is only estimated once
-                prev_counts[j] = 0;
-            }
-            else
-            {
-                prev_counts[j] = prev_counts[j] + counter[j];
-            }
-        }
-    }
-}
-
-template <class IBFType>
-void estimate(arguments const & args, estimate_arguments & estimate_args, IBFType & ibf, std::filesystem::path file_out,
-              std::filesystem::path search_file, std::filesystem::path path_in)
-{
-    std::vector<std::string> ids;
-    std::vector<seqan3::dna4_vector> seqs;
-
-    uint64_t minimiser_length{};
-
-    seqan3::sequence_file_input<my_traits> fin{search_file};
-    for (auto & [seq, id, qual] : fin)
-    {
-        ids.push_back(id);
-        seqs.push_back(seq);
-    }
-
-    std::vector<std::vector<uint32_t>> prev_counts;
-    uint64_t prev_expression{0};
-    bool last_exp{true};
+    static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
 
     std::vector<uint32_t> counter;
-    std::vector<uint16_t> counter_est;
-    std::vector<std::vector<uint16_t>> estimations;
-    // Make sure expression levels are sorted.
-    sort(estimate_args.expressions.begin(), estimate_args.expressions.end());
-
-    for(int j = estimate_args.expressions.size() - 1; j >= 0; j--)
+    counter.assign(ibf.bin_count(), 0);
+    uint64_t minimiser_length = 0;
+    for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
     {
-        load_ibf(ibf, path_in.string() + "IBF_" + std::to_string(estimate_args.expressions[j]));
-        for (int i = 0; i < seqs.size(); ++i)
+        auto agent = ibf.membership_agent();
+        std::transform (counter.begin(), counter.end(), agent.bulk_contains(minHash).begin(), counter.begin(),
+                        std::plus<int>());
+        ++minimiser_length;
+    }
+
+    float minimiser_pos = minimiser_length/2.0;
+
+    for(int j = 0; j < counter.size(); j++)
+    {
+        if ((prev_counts[j] + counter[j]) >= minimiser_pos)
         {
-            counter.assign(ibf.bin_count(), 0);
-            counter_est.assign(ibf.bin_count(), 0);
-            if (estimations.size() <= i)
+            // If there was nothing previous
+            if constexpr(last_exp)
             {
-                estimations.push_back(counter_est);
-                prev_counts.push_back(counter);
+                if constexpr (multiple_expressions)
+                    estimations_i[j] = expressions[k][j];
+                else
+                    estimations_i[j] = expressions;
             }
-            counter_est.clear();
-
-            check_ibf(args, ibf, estimations[i], counter, seqs[i], prev_counts[i],
-                                estimate_args.expressions[j], prev_expression, last_exp);
-
-            counter.clear();
-
+            else
+            {
+                // Actually calculate estimation, in the else case k stands for the prev_expression
+                if constexpr (multiple_expressions)
+                    estimations_i[j] = expressions[k][j] + ((abs(minimiser_pos - counter[j])/abs((prev_counts[j]*1.0) - counter[j])) * (expressions[k+1][j]-expressions[k][j]));
+                else
+                    estimations_i[j] = expressions + ((abs(minimiser_pos - counter[j])/abs((prev_counts[j]*1.0) - counter[j])) * (k-expressions));
+                // Make sure, every transcript is only estimated once
+                prev_counts[j] = 0;
+            }
         }
-        prev_expression = estimate_args.expressions[j];
-        last_exp = false;
+        else
+        {
+            prev_counts[j] = prev_counts[j] + counter[j];
+        }
     }
-    std::ofstream outfile;
-    outfile.open(std::string{file_out});
-    for (int i = 0; i <  seqs.size(); ++i)
-    {
-        outfile << ids[i] << "\t";
-        for (int j = 0; j < ibf.bin_count(); ++j)
-             outfile << estimations[i][j] << "\t";
-
-        outfile << "\n";
-    }
-    outfile.close();
 
 }
 
@@ -211,53 +108,96 @@ void read_levels(std::vector<std::vector<uint16_t>> & expressions, std::filesyst
     fin.close();
 }
 
-template <class IBFType>
+/*! \brief Function to estimate expression value.
+*  \param args        The arguments.
+*  \param estimate_args The search arguments.
+*  \param ibf         The ibf determing what kind ibf is used (compressed or uncompressed).
+*  \param file_out    The file where results should be stored to.
+*  \param search_file The sequence file with the sequences which expression value should be estimated.
+*  \param path_in     The directory where the ibfs can be found.
+*  \param level_file Path to the header files, where expression levels can be found.
+*/
+template <class IBFType, bool samplewise>
 void estimate(arguments const & args, estimate_arguments & estimate_args, IBFType & ibf, std::filesystem::path file_out,
-              std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file)
+              std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file = "")
 {
     std::vector<std::string> ids;
     std::vector<seqan3::dna4_vector> seqs;
     std::vector<uint32_t> counter;
     std::vector<uint16_t> counter_est;
+    std::vector<std::vector<uint32_t>> prev_counts;
+    uint64_t prev_expression;
+    std::vector<std::vector<uint16_t>> estimations;
+    std::vector<std::vector<uint16_t>> expressions;
 
-    uint64_t minimiser_length{};
+    omp_set_num_threads(args.threads);
 
-    seqan3::sequence_file_input<my_traits> fin{search_file};
-    for (auto & [seq, id, qual] : fin)
+    seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin{search_file};
+    for (auto & [id, seq] : fin)
     {
         ids.push_back(id);
         seqs.push_back(seq);
     }
 
-    std::vector<std::vector<uint32_t>> prev_counts;
-    bool last_exp{true};
-    std::vector<std::vector<uint16_t>> expressions{};
+    if constexpr (samplewise)
+        read_levels(expressions, level_file);
+    else
+        prev_expression = 0;
 
-    read_levels(expressions, level_file);
-
-    std::vector<std::vector<uint16_t>> estimations;
     // Make sure expression levels are sorted.
     sort(estimate_args.expressions.begin(), estimate_args.expressions.end());
-    for (int j = estimate_args.expressions.size() - 1; j >= 0; j--)
+
+    // Initialse last expression
+    if constexpr (samplewise)
+        load_ibf(ibf, path_in.string() + "IBF_Level_" + std::to_string(estimate_args.expressions.size()-1));
+    else
+        load_ibf(ibf, path_in.string() + "IBF_" + std::to_string(estimate_args.expressions[estimate_args.expressions.size()-1]));
+    counter.assign(ibf.bin_count(), 0);
+    counter_est.assign(ibf.bin_count(), 0);
+
+    for (int i = 0; i < seqs.size(); ++i)
     {
-        load_ibf(ibf, path_in.string() + "IBF_Level_" + std::to_string(j));
+        estimations.push_back(counter_est);
+        prev_counts.push_back(counter);
+    }
+    counter_est.clear();
+    counter.clear();
+    for (int i = 0; i < seqs.size(); ++i)
+    {
+        if constexpr (samplewise)
+            check_ibf<IBFType, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
+                                     expressions, estimate_args.expressions.size() - 1);
+        else
+            check_ibf<IBFType, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
+                                     estimate_args.expressions[estimate_args.expressions.size() - 1], prev_expression);
+    }
+
+    if constexpr (!samplewise)
+        prev_expression = estimate_args.expressions[estimate_args.expressions.size() - 1];
+
+    for (int j = estimate_args.expressions.size() - 2; j >= 0; j--)
+    {
+        if constexpr (samplewise)
+            load_ibf(ibf, path_in.string() + "IBF_Level_" + std::to_string(j));
+        else
+            load_ibf(ibf, path_in.string() + "IBF_" + std::to_string(estimate_args.expressions[j]));
+
+        // Go over the sequences
+        #pragma omp parallel for
         for (int i = 0; i < seqs.size(); ++i)
         {
-            counter.assign(ibf.bin_count(), 0);
-            counter_est.assign(ibf.bin_count(), 0);
-            if (estimations.size() <= i)
-            {
-                estimations.push_back(counter_est);
-                prev_counts.push_back(counter);
-            }
-            counter_est.clear();
-
-            check_ibf(args, ibf, estimations[i], counter, seqs[i], prev_counts[i],
-                                expressions, last_exp, j);
-            counter.clear();
+            if constexpr (samplewise)
+                check_ibf<IBFType, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
+                                          expressions, j);
+            else
+                check_ibf<IBFType, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
+                                          estimate_args.expressions[j], prev_expression);
         }
-        last_exp = false;
+
+        if (!samplewise)
+            prev_expression = estimate_args.expressions[j];
     }
+
     std::ofstream outfile;
     outfile.open(std::string{file_out});
     for (int i = 0; i <  seqs.size(); ++i)
@@ -273,22 +213,22 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
 }
 
 void call_estimate(arguments const & args, estimate_arguments & estimate_args, std::filesystem::path file_out,
-              std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file = "")
+                   std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file)
 {
     if (args.compressed)
     {
         seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
         if (level_file == "")
-            estimate(args, estimate_args, ibf, file_out, search_file, path_in);
+            estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, false>(args, estimate_args, ibf, file_out, search_file, path_in);
         else
-            estimate(args, estimate_args, ibf, file_out, search_file, path_in, level_file);
+            estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, true>(args, estimate_args, ibf, file_out, search_file, path_in, level_file);
     }
     else
     {
         seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
         if (level_file == "")
-            estimate(args, estimate_args, ibf, file_out, search_file, path_in);
+            estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, false>(args, estimate_args, ibf, file_out, search_file, path_in);
         else
-            estimate(args, estimate_args, ibf, file_out, search_file, path_in, level_file);
+            estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, true>(args, estimate_args, ibf, file_out, search_file, path_in, level_file);
     }
 }

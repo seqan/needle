@@ -24,31 +24,6 @@ struct estimate_arguments
 
 };
 
-/*! \brief Function to estimate expression value.
-*  \param args        The arguments.
-*  \param estimate_args The search arguments.
-*  \param ibf         The ibf determing what kind ibf is used (compressed or uncompressed).
-*  \param file_out    The file where results should be stored to.
-*  \param search_file The sequence file with the sequences which expression value should be estimated.
-*  \param path_in     The directory where the ibfs can be found.
-*/
-template <class IBFType>
-void estimate(arguments const & args, estimate_arguments & estimate_args, IBFType & ibf, std::filesystem::path file_out,
-              std::filesystem::path search_file, std::filesystem::path path_in);
-
-/*! \brief Function to estimate expression value.
-*  \param args        The arguments.
-*  \param estimate_args The search arguments.
-*  \param ibf         The ibf determing what kind ibf is used (compressed or uncompressed).
-*  \param file_out    The file where results should be stored to.
-*  \param search_file The sequence file with the sequences which expression value should be estimated.
-*  \param path_in     The directory where the ibfs can be found.
-*  \param level_file Path to the header files, where expression levels can be found.
-*/
-template <class IBFType>
-void estimate(arguments const & args, estimate_arguments & estimate_args, IBFType & ibf, std::filesystem::path file_out,
-            std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file);
-
 /*! \brief Function, which calls the estimate function.
 *  \param args        The arguments.
 *  \param estimate_args The search arguments.
@@ -58,4 +33,4 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
 *  \param level_file  Path to the header files, where expression levels can be found.
 */
 void call_estimate(arguments const & args, estimate_arguments & estimate_args, std::filesystem::path file_out,
-            std::filesystem::path search_file, std::filesystem::path path_in,std::filesystem::path level_file);
+                   std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file = "");
