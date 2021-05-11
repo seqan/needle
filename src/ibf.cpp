@@ -298,7 +298,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
     omp_set_num_threads(args.threads);
 
     size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / args.threads),
-                                                 8u,
+                                                 1u,
                                                  64u);
 
     // Add minimisers to ibf
@@ -566,7 +566,7 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files, argume
     omp_set_num_threads(args.threads);
 
     size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(minimiser_args.samples.size() / args.threads),
-                                                 8u,
+                                                 1u,
                                                  64u);
 
     // Add minimisers to ibf
