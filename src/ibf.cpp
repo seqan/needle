@@ -82,7 +82,7 @@ void fill_hash_table(arguments const & args,
 }
 
 void count(arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,
-           std::filesystem::path out_path, bool paired)
+          bool paired)
 {
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{};
     robin_hood::unordered_set<uint64_t> genome_set_table{};
@@ -110,7 +110,7 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
             fill_hash_table(args, fin, hash_table, genome_set_table, true);
         }
 
-        outfile.open(std::string{out_path} + std::string{sequence_files[i].stem()} + ".count.out");
+        outfile.open(std::string{args.path_out} + std::string{sequence_files[i].stem()} + ".count.out");
         j = 0;
         seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin2{genome_file};
         for (auto & [id, seq] : fin2)

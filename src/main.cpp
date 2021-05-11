@@ -73,7 +73,6 @@ int run_needle_count(seqan3::argument_parser & parser)
     parser.info.short_description = "Get expression value depending on minimizers.";
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
     parser.add_option(genome_file, 'g', "genome", "Please provide one sequence file with transcripts.");
-    parser.add_option(out_path, 'o', "out", "Please provide an output path.");
     parser.add_flag(paired, 'q', "paired", "If set, experiments are paired. Default: Not paired.");
 
     try
@@ -87,7 +86,7 @@ int run_needle_count(seqan3::argument_parser & parser)
     }
     try
     {
-        count(args, sequence_files, genome_file, out_path, paired);
+        count(args, sequence_files, genome_file, paired);
     }
     catch (const std::invalid_argument & e)
     {

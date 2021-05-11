@@ -61,7 +61,7 @@ TEST(count, small_example)
     initialization_args(args);
 
     count(args, {std::string(DATA_INPUT_DIR) + "mini_example.fasta"}, std::string(DATA_INPUT_DIR) + "mini_gen.fasta",
-          std::string(DATA_INPUT_DIR), false);
+          false);
 
     std::ifstream output_file(tmp_dir/"mini_example.count.out");
     std::string line;
@@ -83,8 +83,7 @@ TEST(count, small_example_paired)
     initialization_args(args);
 
     count(args, {std::string(DATA_INPUT_DIR) + "mini_example.fasta", std::string(DATA_INPUT_DIR) + "mini_example.fasta"},
-          std::string(DATA_INPUT_DIR) + "mini_gen.fasta",
-          std::string(DATA_INPUT_DIR), true);
+          std::string(DATA_INPUT_DIR) + "mini_gen.fasta", true);
 
     std::ifstream output_file(tmp_dir/"mini_example.count.out");
     std::string line;
