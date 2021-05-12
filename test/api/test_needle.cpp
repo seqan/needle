@@ -128,6 +128,36 @@ TEST(ibf, given_expression_levels)
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
 }
 
+TEST(ibf, given_expression_levels_genome_file)
+{
+    arguments args{};
+    ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
+    initialization_args(args);
+    initialization_ibf_args(ibf_args);
+    ibf_args.expression_levels = {1, 2};
+    minimiser_args.include_file = std::string(DATA_INPUT_DIR) + "mini_example.fasta";
+    std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+
+    std::vector<uint16_t> expected{1, 2};
+
+    std::vector<uint16_t> medians = ibf(sequence_files, args, ibf_args, minimiser_args);
+
+    EXPECT_EQ(expected, medians);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+
+    load_ibf(ibf, tmp_dir/"Test_IBF_1");
+    auto agent = ibf.membership_agent();
+
+    sdsl::bit_vector expected_result(1, 0);
+    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    expected_result[0] = 1;
+    EXPECT_EQ(expected_result,  agent.bulk_contains(24));
+    std::filesystem::remove(tmp_dir/"Test_IBF_1");
+    std::filesystem::remove(tmp_dir/"Test_IBF_2");
+}
+
 TEST(ibf, no_given_expression_levels)
 {
     arguments args{};
@@ -696,7 +726,7 @@ TEST(estimate, example_multiple_threads)
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
                                                          std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     minimiser_args.samples = {2,2};
-    ibf_args.expression_levels = {32};
+    ibf_args.expression_levels = {4, 32};
     ibf_args.bin_size = {100000};
     args.path_out = tmp_dir/"Test_";
     args.compressed = false;
@@ -707,7 +737,7 @@ TEST(estimate, example_multiple_threads)
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
-    std::string expected{"GeneA\t0\t32\t"};
+    std::string expected{"GeneA\t12\t32\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
@@ -717,6 +747,7 @@ TEST(estimate, example_multiple_threads)
         output_file.close();
     }
     std::filesystem::remove(tmp_dir/"Test_IBF_32");
+    std::filesystem::remove(tmp_dir/"Test_IBF_4");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 

@@ -282,7 +282,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
         for (unsigned j = 0; j < num_files; j++)
             expressions.push_back(zero_vector);
     }
-    else
+    if constexpr (!minimiser_files_given)
     {
         if (minimiser_args.include_file != "")
             get_include_set_table(args, minimiser_args.include_file, genome_set_table);
@@ -401,7 +401,6 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
-    std::vector<std::vector<uint16_t>> expressions{};
 
     check_cutoffs_samples(args, sequence_files, minimiser_args.include_file, minimiser_args.paired,
                       minimiser_args.samples, minimiser_args.cutoffs);
@@ -412,13 +411,6 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     check_bin_size(ibf_args.number_expression_levels, ibf_args.bin_size);
 
     bool samplewise = (ibf_args.expression_levels.size() == 0);
-
-    if (samplewise)
-    {
-        std::vector<uint16_t> zero_vector(minimiser_args.samples.size());
-        for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
-            expressions.push_back(zero_vector);
-    }
 
     // Store experiment names
     if (minimiser_args.experiment_names)
