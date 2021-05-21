@@ -74,7 +74,7 @@ void fill_hash_table(arguments const & args,
                 // If none of the above, increase count in cutoff table.
                 else
                 {
-                    cutoff_table[minHash] = std::min<uint8_t>(254u, cutoff_table[minHash] + 1);
+                    cutoff_table[minHash]++;
                 }
             }
         }
