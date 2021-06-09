@@ -45,6 +45,7 @@ void get_include_set_table(arguments const & args, std::filesystem::path const i
 }
 
 void fill_hash_table_helper(arguments const & args, robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
+                            robin_hood::unordered_node_map<uint64_t, uint8_t> & cutoff_table,
                             ranges::range_reference_t<ranges::chunk_view_<ranges::ref_view<std::vector<std::vector<seqan3::dna4> > >, true> > const & sequences,
                             robin_hood::unordered_set<uint64_t> const & genome_set_table,
                             bool const only_genome = false, uint8_t cutoff = 0)
@@ -55,7 +56,27 @@ void fill_hash_table_helper(arguments const & args, robin_hood::unordered_node_m
         {
             if ((only_genome & (genome_set_table.contains(minHash))) | (!only_genome))
             {
-                hash_table[minHash] = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
+                //hash_table[minHash] = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
+
+                auto it = hash_table.find(minHash);
+                // If minHash is already in hash table, increase count in hash table
+                if (it != hash_table.end())
+                {
+                    //uint16_t tmp_value = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
+                    it->second = std::min<uint16_t>(65534u, it->second + 1);
+                }
+                // If minHash equals now the cutoff than add it to the hash table and add plus one for the current
+                // iteration.
+                else if (cutoff_table[minHash] == cutoff)
+                {
+                    hash_table[minHash] = cutoff_table[minHash] + 1;
+                    cutoff_table.erase(minHash);
+                }
+                // If none of the above, increase count in cutoff table.
+                else
+                {
+                    cutoff_table[minHash]++;
+                }
             }
         }
     }
@@ -83,15 +104,18 @@ void fill_hash_table(arguments const & args,
     // If multiple threads are used, chunk sequences and fill multiple hash tables with the minimisers
     auto chunked_seqs = sequences | ranges::views::chunk(static_cast<uint32_t>((sequences.size()*1.0/args.threads)+0.5));
     std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> chunked_hash_tables{};
+    std::vector<robin_hood::unordered_node_map<uint64_t, uint8_t>> chunked_cutoff_hash_tables{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> dummy{};
+    robin_hood::unordered_node_map<uint64_t, uint8_t> dummy2{};
     for (int i = 0; i <args.threads; i++)
     {
         chunked_hash_tables.push_back(dummy);
+        chunked_cutoff_hash_tables.push_back(dummy2);
     }
     #pragma omp parallel for
     for (int i = 0; i <args.threads; i++)
     {
-        fill_hash_table_helper(args, chunked_hash_tables[i], chunked_seqs[i], genome_set_table, only_genome, cutoff);
+        fill_hash_table_helper(args, chunked_hash_tables[i], chunked_cutoff_hash_tables[i], chunked_seqs[i], genome_set_table, only_genome, cutoff);
     }
     sequences.clear();
 
@@ -99,30 +123,14 @@ void fill_hash_table(arguments const & args,
     for(int i = 0; i <args.threads; i++)
     {
         for (auto && minHash : chunked_hash_tables[i])
-        {
-            if ((only_genome & (genome_set_table.contains(minHash.first))) | (!only_genome))
-            {
-                auto it = hash_table.find(minHash.first);
-                // If minHash is already in hash table, increase count in hash table
-                if (it != hash_table.end())
-                {
-                    //uint16_t tmp_value = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
-                    it->second = std::min<uint16_t>(65534u, it->second + minHash.second);
-                }
-                // If minHash equals now the cutoff than add it to the hash table and add plus one for the current
-                // iteration.
-                else if (cutoff_table[minHash.first] + minHash.second>= cutoff)
-                {
-                    hash_table[minHash.first] = cutoff_table[minHash.first] + minHash.second;
-                    cutoff_table.erase(minHash.first);
-                }
-                // If none of the above, increase count in cutoff table.
-                else
-                {
-                    cutoff_table[minHash.first] = cutoff_table[minHash.first] + minHash.second;
-                }
-            }
-        }
+            hash_table[minHash.first] = std::min<uint16_t>(65534u, hash_table[minHash.first] + minHash.second);
+    }
+
+    // Go over all hash tables and add the minimisers to the final hash table
+    for (auto && minHash : hash_table)
+    {
+        for(int i = 0; i <args.threads; i++)
+            hash_table[minHash.first] = std::min<uint16_t>(65534u, chunked_cutoff_hash_tables[i][minHash.first] + minHash.second);
     }
 }
 
