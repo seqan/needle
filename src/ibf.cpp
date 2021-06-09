@@ -124,9 +124,10 @@ void fill_hash_table(arguments const & args,
     {
         for (auto && minHash : chunked_hash_tables[i])
             hash_table[minHash.first] = std::min<uint16_t>(65534u, hash_table[minHash.first] + minHash.second);
+        chunked_hash_tables[i].clear();
     }
 
-    // Go over all hash tables and add the minimisers to the final hash table
+    // Go over all minimisers and add the numbers from the chunked_cutoff
     for (auto && minHash : hash_table)
     {
         for(int i = 0; i <args.threads; i++)
