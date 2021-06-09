@@ -47,12 +47,10 @@ void get_include_set_table(arguments const & args, std::filesystem::path const i
 void fill_hash_table(arguments const & args,
                      seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> & fin,
                      robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
+                     robin_hood::unordered_node_map<uint64_t, uint8_t> & cutoff_table,
                      robin_hood::unordered_set<uint64_t> const & genome_set_table,
                      bool const only_genome = false, uint8_t cutoff = 0)
 {
-    // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
-    // and afterwards discarded.
-    robin_hood::unordered_node_map<uint64_t, uint8_t>  cutoff_table;
     for (auto & [seq] : fin)
     {
         for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
@@ -85,6 +83,9 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
           bool paired)
 {
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{};
+    // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
+    // and afterwards discarded.
+    robin_hood::unordered_node_map<uint64_t, uint8_t>  cutoff_table;
     robin_hood::unordered_set<uint64_t> genome_set_table{};
     std::vector<uint64_t> counter{};
     uint64_t exp{};
@@ -99,16 +100,17 @@ void count(arguments const & args, std::vector<std::filesystem::path> sequence_f
         if (paired)
         {
             seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{sequence_files[i]};
-            fill_hash_table(args, fin, hash_table, genome_set_table, true);
+            fill_hash_table(args, fin, hash_table, cutoff_table, genome_set_table, true);
             i++;
             fin = sequence_files[i];
-            fill_hash_table(args, fin, hash_table, genome_set_table, true);
+            fill_hash_table(args, fin, hash_table, cutoff_table, genome_set_table, true);
         }
         else
         {
             seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{sequence_files[i]};
-            fill_hash_table(args, fin, hash_table, genome_set_table, true);
+            fill_hash_table(args, fin, hash_table, cutoff_table, genome_set_table, true);
         }
+        cutoff_table.clear();
 
         outfile.open(std::string{args.path_out} + std::string{sequence_files[i].stem()} + ".count.out");
         j = 0;
@@ -306,6 +308,9 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
     for (unsigned i = 0; i < num_files; i++)
     {
         robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
+        // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
+        // and afterwards discarded.
+        robin_hood::unordered_node_map<uint64_t, uint8_t>  cutoff_table;
         std::vector<uint16_t> expression_levels;
 
         // Fill hash table with minimisers.
@@ -319,7 +324,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
             for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
             {
                seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_files[file_iterator+f]};
-               fill_hash_table(args, fin, hash_table, genome_set_table, (minimiser_args.include_file != ""), minimiser_args.cutoffs[i]);
+               fill_hash_table(args, fin, hash_table, cutoff_table, genome_set_table, (minimiser_args.include_file != ""), minimiser_args.cutoffs[i]);
             }
         }
 
@@ -480,6 +485,9 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
                          unsigned const i)
 {
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
+    // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
+    // and afterwards discarded.
+    robin_hood::unordered_node_map<uint64_t, uint8_t>  cutoff_table;
     std::ofstream outfile;
     unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
 
@@ -519,8 +527,9 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
     for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
     {
         seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{sequence_files[file_iterator+f]};
-        fill_hash_table(args, fin, hash_table, genome_set_table, (minimiser_args.include_file != ""), cutoff);
+        fill_hash_table(args, fin, hash_table, cutoff_table, genome_set_table, (minimiser_args.include_file != ""), cutoff);
     }
+    cutoff_table.clear();
 
     // Write minimiser and their counts to binary
     outfile.open(std::string{args.path_out} + std::string{sequence_files[file_iterator].stem()}
