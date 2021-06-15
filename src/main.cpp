@@ -24,8 +24,8 @@ void initialise_arguments_minimiser_hash(seqan3::argument_parser & parser, argum
 void initialise_arguments_ibf(seqan3::argument_parser & parser, arguments & args, ibf_arguments & ibf_args)
 {
     parser.add_flag(args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
-    parser.add_option(ibf_args.bin_size, 'b', "bin-size", "List of bin sizes per expression level. If only one is given"
-                                                          ", then that bin size is used for all expression levels.");
+    parser.add_option(ibf_args.fpr, 'f', "fpr", "List of bin false positive rate per expression level. If only one is given"
+                                                          ", then that fpr is used for all expression levels.");
     parser.add_option(ibf_args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
                                                       "one IBF.");
     parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
@@ -116,6 +116,8 @@ int run_needle_estimate(seqan3::argument_parser & parser)
     parser.add_option(path_in, 'i', "in", "Directory where input files can be found.");
     parser.add_option(level_file, 'd', "level", "Level file.");
     parser.add_flag(args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
+    parser.add_option(estimate_args.fpr, 'f', "fpr", "List of bin false positive rate per expression level. If only one is given"
+                                                     ", then that fpr is used for all expression levels.");
 
     initialise_arguments_minimiser_hash(parser, args);
 

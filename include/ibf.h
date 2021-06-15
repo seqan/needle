@@ -13,7 +13,7 @@
 //!\brief specific arguments needed for constructing an IBF
 struct ibf_arguments
 {
-    std::vector<size_t> bin_size{}; // The bin size of one IBF, can be different for different expression levels
+    std::vector<float> fpr{}; // The fpr of one IBF, can be different for different expression levels
     size_t num_hash{1}; // Number of hash functions to use, default 1
     std::vector<uint16_t> expression_levels{}; // Expression levels which should be created
     uint8_t number_expression_levels{}; // If set, the expression levels are determined by the program.

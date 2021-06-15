@@ -21,11 +21,10 @@
 #include <seqan3/range/container/concatenated_sequences.hpp>
 
 #include "estimate.h"
-
 template <class IBFType, bool last_exp, typename exp_t>
 void check_ibf(arguments const & args, IBFType const & ibf, std::vector<uint16_t> & estimations_i,
                seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
-               exp_t const & expressions, uint16_t const k)
+               exp_t const & expressions, uint16_t const k, float const fpr)
 {
     static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
 
@@ -67,7 +66,8 @@ void check_ibf(arguments const & args, IBFType const & ibf, std::vector<uint16_t
         }
         else
         {
-            prev_counts[j] = prev_counts[j] + counter[j];
+            // Correct prev_counts by substracting the expected number of false positives
+            prev_counts[j] = prev_counts[j] + std::max((float) 0.0, ((counter[j]-(minimiser_length*fpr))/(1-fpr)));
         }
     }
 
@@ -166,10 +166,12 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
     {
         if constexpr (samplewise)
             check_ibf<IBFType, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                     expressions, estimate_args.expressions.size() - 1);
+                                     expressions, estimate_args.expressions.size() - 1,
+                                     estimate_args.fpr[estimate_args.expressions.size() - 1]);
         else
             check_ibf<IBFType, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                     estimate_args.expressions[estimate_args.expressions.size() - 1], prev_expression);
+                                     estimate_args.expressions[estimate_args.expressions.size() - 1], prev_expression,
+                                     estimate_args.fpr[estimate_args.expressions.size() - 1]);
     }
 
     if constexpr (!samplewise)
@@ -188,10 +190,10 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
         {
             if constexpr (samplewise)
                 check_ibf<IBFType, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                          expressions, j);
+                                          expressions, j, estimate_args.fpr[j]);
             else
                 check_ibf<IBFType, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                          estimate_args.expressions[j], prev_expression);
+                                          estimate_args.expressions[j], prev_expression, estimate_args.fpr[j]);
         }
 
         if (!samplewise)
@@ -215,6 +217,11 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
 void call_estimate(arguments const & args, estimate_arguments & estimate_args, std::filesystem::path file_out,
                    std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file)
 {
+    if (estimate_args.fpr.size() == 1)
+    {
+        estimate_args.fpr.assign(estimate_args.expressions.size(), estimate_args.fpr[0]);
+    }
+
     if (args.compressed)
     {
         seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
