@@ -323,6 +323,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
     std::vector<std::vector<uint16_t>> expressions{};
     std::vector<std::vector<uint64_t>> sizes{};
     sizes.assign(num_files, {});
+    uint64_t filesize{}; // Store filesize(minimiser_files_given=false) or number of minimisers(minimiser_files_given=true)
 
     robin_hood::unordered_set<uint64_t> genome_set_table; // Storage for minimisers in genome sequences
     if constexpr(samplewise)
@@ -347,12 +348,24 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
     //#pragma omp parallel for schedule(dynamic, chunk_size)
     for (unsigned i = 0; i < num_files; i++)
     {
+        if constexpr(minimiser_files_given)
+        {
+            filesize = 1000;
+        }
+        else
+        {
+            // Estimate sizes on filesize, assuming every byte translates to one letter (which is obiously not true,
+            // because ids contain letters as well), so size might be overestimated
+            unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
+            bool const is_compressed = minimiser_files[file_iterator].extension() == ".gz" || minimiser_files[file_iterator].extension() == ".bgzf" || minimiser_files[file_iterator].extension() == ".bz2";
+            bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions,minimiser_files[file_iterator].stem())
+                                                 : check_for_fasta_format(seqan3::format_fasta::file_extensions, minimiser_files[file_iterator].extension());
+            filesize = std::filesystem::file_size(minimiser_files[file_iterator]) * minimiser_args.samples[i] * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
+        }
         // If set_expression_levels_samplewise is not set the expressions as determined by the first file are used for
         // all files.
         if constexpr (samplewise)
         {
-            uint64_t const filesize = 10000;
-
             uint64_t diff{1};
             for (std::size_t c = 0; c < ibf_args.number_expression_levels - 1; c++)
             {
@@ -363,36 +376,14 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
         }
         else
         {
-            if constexpr (minimiser_files_given)
+            float diff{1};
+            for (std::size_t c = 0; c < ibf_args.number_expression_levels - 1; c++)
             {
-                uint64_t const filesize = 100;
-
-                float diff{1};
-                for (std::size_t c = 0; c < ibf_args.number_expression_levels - 1; c++)
-                {
-                    diff = ibf_args.expression_levels[c+1]/ibf_args.expression_levels[c];
-                    sizes[i].push_back(filesize/(diff));
-                }
-                sizes[i].push_back(filesize/(diff));
+                diff = ibf_args.expression_levels[c+1]/ibf_args.expression_levels[c];
+                sizes[i].push_back(filesize/diff);
             }
-            else
-            {
-                // Estimate sizes on filesize, assuming every byte translates to one letter (which is obiously not true,
-                // because ids contain letters as well), so size might be overestimated
-                unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
-                bool const is_compressed = minimiser_files[file_iterator].extension() == ".gz" || minimiser_files[file_iterator].extension() == ".bgzf" || minimiser_files[file_iterator].extension() == ".bz2";
-                bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions,minimiser_files[file_iterator].stem())
-                                                     : check_for_fasta_format(seqan3::format_fasta::file_extensions, minimiser_files[file_iterator].extension());
-                uint64_t const filesize = std::filesystem::file_size(minimiser_files[file_iterator]) * minimiser_args.samples[i] * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
+            sizes[i].push_back(filesize/diff);
 
-                float diff{1};
-                for (std::size_t c = 0; c < ibf_args.number_expression_levels - 1; c++)
-                {
-                    diff = ibf_args.expression_levels[c+1]/ibf_args.expression_levels[c];
-                    sizes[i].push_back(filesize/(diff*args.k));
-                }
-                sizes[i].push_back(filesize/(diff*args.k));
-            }
         }
     }
 
