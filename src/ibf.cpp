@@ -228,7 +228,8 @@ void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table
 }
 
 // Reads one header file minimiser creates
-void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesystem::path filename)
+void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesystem::path filename,
+                 uint64_t & num_of_minimisers)
 {
     std::ifstream fin;
     fin.open(filename);
@@ -258,9 +259,14 @@ void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesyst
         else
             args.shape = seqan3::bin_literal{shape};
 
-    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<'\n'>),
+    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
                                     std::cpp20::back_inserter(buffer));
     cutoffs.push_back(std::stoi(buffer));
+    buffer.clear();
+
+    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<'\n'>),
+                                    std::cpp20::back_inserter(buffer));
+    num_of_minimisers = (uint64_t) std::stoull(buffer);
 
     fin.close();
 }
@@ -351,7 +357,9 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
 
         if constexpr(minimiser_files_given)
         {
-            filesize = 1000;
+            arguments args2{};
+            std::vector<uint8_t> cutoffs2{};
+            read_header(args2, cutoffs2, std::string{minimiser_files[i].parent_path()} + "/" + std::string{minimiser_files[i].stem()} + ".header", filesize);
         }
         else
         {
@@ -618,15 +626,15 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
         outfile.write(reinterpret_cast<const char*>(&hash.second), sizeof(hash.second));
     }
     outfile.close();
-    hash_table.clear();
 
     // Write header file, containing information about the minimiser counts per expression level
     outfile.open(std::string{args.path_out} + std::string{sequence_files[file_iterator].stem()}
                  + ".header");
     outfile <<  args.s.get() << " " << std::to_string(args.k) << " " << args.w_size.get() << " " << args.shape.to_ulong() << " "
-            << std::to_string(cutoff) << "\n";
+            << std::to_string(cutoff) << " " << std::to_string(hash_table.size()) <<"\n";
 
     outfile << "\n";
+    hash_table.clear();
     outfile.close();
 }
 

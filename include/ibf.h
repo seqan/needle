@@ -115,8 +115,12 @@ void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table
 * \param args                 The minimiser arguments to use (seed, shape, window size).
 * \param cutoffs              The vector where the cutoff value should be push backed to.
 * \param filename             The filename of the binary file.
+* \param num_of_minimisers    The number of minimisers in a file.
 */
-void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesystem::path filename);
+void read_header(arguments & args,
+                 std::vector<uint8_t> & cutoffs,
+                 std::filesystem::path filename,
+                 uint64_t & num_of_minimisers);
 
 /*! \brief Create IBF.
  * \param sequence_files  A vector of sequence file paths.

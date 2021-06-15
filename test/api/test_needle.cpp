@@ -341,18 +341,21 @@ TEST(minimiser, small_example)
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     seqan3::shape expected_shape = seqan3::ungapped{args.k};
+    uint64_t num_of_minimisers{};
+    std::vector<uint64_t> expected_nums{12, 12};
 
     for (int i = 0; i < sequence_files.size(); ++i)
     {
         // Test Header file
         read_header(args, minimiser_args.cutoffs, std::string{args.path_out}  +
-                    std::string{sequence_files[i].stem()} + ".header");
+                    std::string{sequence_files[i].stem()} + ".header", num_of_minimisers);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
         EXPECT_EQ(0, minimiser_args.cutoffs[0]);
+        EXPECT_EQ(expected_nums[i], num_of_minimisers);
 
         // Test binary file
         read_binary(result_hash_table, tmp_dir/("Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
@@ -402,18 +405,21 @@ TEST(minimiser, small_example_samplewise)
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     seqan3::shape expected_shape = seqan3::ungapped{args.k};
+    uint64_t num_of_minimisers{};
+    std::vector<uint64_t> expected_nums{12, 12};
 
     for (int i = 0; i < sequence_files.size(); ++i)
     {
         // Test Header file
         ibf_args.expression_levels = {};
         read_header(args, minimiser_args.cutoffs, std::string{args.path_out}  +
-                    std::string{sequence_files[i].stem()} + ".header");
+                    std::string{sequence_files[i].stem()} + ".header", num_of_minimisers);
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
         EXPECT_EQ(0, minimiser_args.cutoffs[0]);
+        EXPECT_EQ(expected_nums[i], num_of_minimisers);
 
         // Test binary file
         read_binary(result_hash_table, tmp_dir/("Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
@@ -458,18 +464,21 @@ TEST(minimiser, cutoff_by_filesize)
     uint32_t normalized_exp_value{};
     std::vector<std::filesystem::path> minimiser_files{};
     seqan3::shape expected_shape = seqan3::ungapped{args.k};
+    uint64_t num_of_minimisers{};
+    std::vector<uint64_t> expected_nums{9, 2};
 
     for (int i = 0; i < sequence_files.size(); ++i)
     {
         // Test Header file
         read_header(args, minimiser_args.cutoffs, std::string{args.path_out}  +
-                    std::string{sequence_files[i].stem()} + ".header");
+                    std::string{sequence_files[i].stem()} + ".header", num_of_minimisers);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
         EXPECT_EQ(1, minimiser_args.cutoffs[0]);
+        EXPECT_EQ(expected_nums[i], num_of_minimisers);
         minimiser_files.push_back(tmp_dir/("Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
     }
 
@@ -512,18 +521,21 @@ TEST(minimiser, small_example_two_threads)
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     seqan3::shape expected_shape = seqan3::ungapped{args.k};
+    uint64_t num_of_minimisers{};
+    std::vector<uint64_t> expected_nums{12, 12};
 
     for (int i = 0; i < sequence_files.size(); ++i)
     {
         // Test Header file
         read_header(args, minimiser_args.cutoffs, std::string{args.path_out}  +
-                    std::string{sequence_files[i].stem()} + ".header");
+                    std::string{sequence_files[i].stem()} + ".header", num_of_minimisers);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
         EXPECT_EQ(0, minimiser_args.cutoffs[0]);
+        EXPECT_EQ(expected_nums[i], num_of_minimisers);
 
         // Test binary file
         read_binary(result_hash_table, tmp_dir/("Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
@@ -743,7 +755,7 @@ TEST(estimate, example_multiple_threads)
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
-    std::string expected{"GeneA\t12\t32\t"};
+    std::string expected{"GeneA\t11\t32\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
@@ -782,7 +794,7 @@ TEST(estimate, example_different_expressions_per_level)
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
     // Count would expect 6 and 34
-    std::string expected{"GeneA\t4\t26\t"};
+    std::string expected{"GeneA\t5\t26\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
@@ -824,7 +836,7 @@ TEST(estimate, example_different_expressions_per_level_multiple_threads)
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
     // Count would expect 6 and 34
-    std::string expected{"GeneA\t4\t26\t"};
+    std::string expected{"GeneA\t5\t26\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )

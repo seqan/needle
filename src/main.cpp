@@ -159,7 +159,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     parser.info.short_description = "Constructs an IBF.";
 
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
-    parser.add_option(minimiser_args.experiment_names, 'f', "experiment-names", "If set, names of the experiments are stored"
+    parser.add_option(minimiser_args.experiment_names, 'a', "experiment-names", "If set, names of the experiments are stored"
                                                                           " in a txt file.");
 
     try
