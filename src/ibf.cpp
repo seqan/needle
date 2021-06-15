@@ -323,7 +323,6 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
     std::vector<std::vector<uint16_t>> expressions{};
     std::vector<std::vector<uint64_t>> sizes{};
     sizes.assign(num_files, {});
-    uint64_t filesize{}; // Store filesize(minimiser_files_given=false) or number of minimisers(minimiser_files_given=true)
 
     robin_hood::unordered_set<uint64_t> genome_set_table; // Storage for minimisers in genome sequences
     if constexpr(samplewise)
@@ -345,9 +344,11 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
                                                  8u,
                                                  64u);
     // Get expression levels and sizes
-    //#pragma omp parallel for schedule(dynamic, chunk_size)
+    #pragma omp parallel for schedule(dynamic, chunk_size)
     for (unsigned i = 0; i < num_files; i++)
     {
+        uint64_t filesize{}; // Store filesize(minimiser_files_given=false) or number of minimisers(minimiser_files_given=true)
+
         if constexpr(minimiser_files_given)
         {
             filesize = 1000;
