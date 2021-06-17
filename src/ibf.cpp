@@ -57,10 +57,11 @@ void fill_hash_table(arguments const & args,
         {
             if ((only_genome & (genome_set_table.contains(minHash))) | (!only_genome))
             {
+                auto it = hash_table.find(minHash);
                 // If minHash is already in hash table, increase count in hash table
-                if (hash_table.contains(minHash))
+                if (it != hash_table.end())
                 {
-                    hash_table[minHash] = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
+                    it->second = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
                 }
                 // If minHash equals now the cutoff than add it to the hash table and add plus one for the current
                 // iteration.
@@ -72,7 +73,7 @@ void fill_hash_table(arguments const & args,
                 // If none of the above, increase count in cutoff table.
                 else
                 {
-                    cutoff_table[minHash] = std::min<uint8_t>(254u, cutoff_table[minHash] + 1);
+                    cutoff_table[minHash]++;
                 }
             }
         }
