@@ -711,7 +711,7 @@ TEST(estimate, example)
                                                          std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     minimiser_args.samples = {2,2};
     ibf_args.expression_levels = {32};
-    ibf_args.fpr = {0.05};
+    ibf_args.fpr = {0.3};
     args.path_out = tmp_dir/"Test_";
     args.compressed = false;
     estimate_args.expressions = ibf_args.expression_levels;
