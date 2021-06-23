@@ -13,7 +13,7 @@
 //!\brief specific arguments needed for constructing an IBF
 struct ibf_arguments
 {
-    std::vector<size_t> bin_size{}; // The bin size of one IBF, can be different for different expression levels
+    std::vector<float> fpr{}; // The fpr of one IBF, can be different for different expression levels
     size_t num_hash{1}; // Number of hash functions to use, default 1
     std::vector<uint16_t> expression_levels{}; // Expression levels which should be created
     uint8_t number_expression_levels{}; // If set, the expression levels are determined by the program.
@@ -115,8 +115,12 @@ void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table
 * \param args                 The minimiser arguments to use (seed, shape, window size).
 * \param cutoffs              The vector where the cutoff value should be push backed to.
 * \param filename             The filename of the binary file.
+* \param num_of_minimisers    The number of minimisers in a file.
 */
-void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesystem::path filename);
+void read_header(arguments & args,
+                 std::vector<uint8_t> & cutoffs,
+                 std::filesystem::path filename,
+                 uint64_t & num_of_minimisers);
 
 /*! \brief Create IBF.
  * \param sequence_files  A vector of sequence file paths.

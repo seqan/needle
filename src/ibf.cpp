@@ -168,21 +168,44 @@ void check_cutoffs_samples(arguments const & args, std::vector<std::filesystem::
         throw std::invalid_argument{"Error. Incorrect command line input for multiple-samples."};
 }
 
-void check_bin_size(uint8_t const number_expression_levels, std::vector<size_t> & bin_size)
+inline bool check_for_fasta_format(std::vector<std::string> const & valid_extensions, std::string const & file_path)
+{
+
+    auto case_insensitive_string_ends_with = [&] (std::string_view str, std::string_view suffix)
+    {
+        size_t const suffix_length{suffix.size()};
+        size_t const str_length{str.size()};
+        return suffix_length > str_length ?
+               false :
+               std::ranges::equal(str.substr(str_length - suffix_length), suffix, [] (char const chr1, char const chr2)
+               {
+                   return std::tolower(chr1) == std::tolower(chr2);
+               });
+    };
+
+    auto case_insensitive_ends_with = [&] (std::string const & ext)
+    {
+        return case_insensitive_string_ends_with(file_path, ext);
+    };
+
+    return std::ranges::find_if(valid_extensions, case_insensitive_ends_with) != valid_extensions.end();
+}
+
+void check_fpr(uint8_t const number_expression_levels, std::vector<float> & fprs)
 {
     // If no bin size is given or not the right amount, throw error.
-    if (bin_size.empty())
+    if (fprs.empty())
     {
-        throw std::invalid_argument{"Error. Please give a size for the IBFs in bit."};
+        throw std::invalid_argument{"Error. Please give a false positive rate for the IBFs."};
     }
     // If only one ibf size is given, set it for all levels.
-    if (bin_size.size() == 1)
+    if (fprs.size() == 1)
     {
-        bin_size.assign(number_expression_levels, bin_size[0]);
+        fprs.assign(number_expression_levels, fprs[0]);
     }
-    else if (bin_size.size() != number_expression_levels)
+    else if (fprs.size() != number_expression_levels)
     {
-        throw std::invalid_argument{"Error. Length of sizes for IBFs in bin_size is not equal to length of expression "
+        throw std::invalid_argument{"Error. Length of false positive rates for IBFs is not equal to length of expression "
                                     "levels."};
     }
 }
@@ -205,7 +228,8 @@ void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table
 }
 
 // Reads one header file minimiser creates
-void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesystem::path filename)
+void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesystem::path filename,
+                 uint64_t & num_of_minimisers)
 {
     std::ifstream fin;
     fin.open(filename);
@@ -235,17 +259,22 @@ void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesyst
         else
             args.shape = seqan3::bin_literal{shape};
 
-    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<'\n'>),
+    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
                                     std::cpp20::back_inserter(buffer));
     cutoffs.push_back(std::stoi(buffer));
+    buffer.clear();
+
+    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<'\n'>),
+                                    std::cpp20::back_inserter(buffer));
+    num_of_minimisers = (uint64_t) std::stoull(buffer);
 
     fin.close();
 }
 
-// Calculate expression levels
+// Calculate expression levels and sizes
 void get_expression_levels(uint8_t const number_expression_levels,
                            robin_hood::unordered_node_map<uint64_t, uint16_t> const & hash_table,
-                           std::vector<uint16_t> & expression_levels)
+                           std::vector<uint16_t> & expression_levels, std::vector<uint64_t> & sizes)
 {
     // Calculate expression levels by taking median recursively
     std::vector<uint16_t> counts;
@@ -262,8 +291,29 @@ void get_expression_levels(uint8_t const number_expression_levels,
         prev_pos = prev_pos + counts.size()/dev;
         dev = dev *2;
         expression_levels.push_back(counts[prev_pos]);
+        sizes.push_back(prev_pos);
     }
     counts.clear();
+}
+
+void get_sizes(uint8_t const number_expression_levels,
+               robin_hood::unordered_node_map<uint64_t, uint16_t> const & hash_table,
+               std::vector<uint16_t> const & expression_levels, std::vector<uint64_t> & sizes)
+{
+    std::vector<uint16_t> counts;
+    for (auto && elem : hash_table)
+    {
+        counts.push_back(elem.second);
+    }
+
+    uint64_t prev_size{0};
+    for (std::size_t c = 0; c < number_expression_levels; c++)
+    {
+        auto it = std::find(counts.begin(), counts.end(), expression_levels[c]);
+        uint64_t index = static_cast<uint64_t>(*it);
+        prev_size = counts.size() - std::count(counts.begin(), counts.end(), expression_levels[c]) + index - prev_size;
+        sizes.push_back(prev_size);
+    }
 }
 
 template<bool samplewise, bool minimiser_files_given = true>
@@ -277,6 +327,8 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
         num_files = minimiser_args.samples.size();
 
     std::vector<std::vector<uint16_t>> expressions{};
+    std::vector<std::vector<uint64_t>> sizes{};
+    sizes.assign(num_files, {});
 
     robin_hood::unordered_set<uint64_t> genome_set_table; // Storage for minimisers in genome sequences
     if constexpr(samplewise)
@@ -284,6 +336,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
         std::vector<uint16_t> zero_vector(ibf_args.number_expression_levels);
         for (unsigned j = 0; j < num_files; j++)
             expressions.push_back(zero_vector);
+
     }
     if constexpr (!minimiser_files_given)
     {
@@ -291,18 +344,71 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
             get_include_set_table(args, minimiser_args.include_file, genome_set_table);
     }
 
-    // Create IBFs
-    std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
-    for (unsigned i = 0; i < ibf_args.number_expression_levels; i++)
-        ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
-                     seqan3::bin_count{num_files}, seqan3::bin_size{ibf_args.bin_size[i]},
-                     seqan3::hash_function_count{ibf_args.num_hash}));
-
     omp_set_num_threads(args.threads);
 
     size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / args.threads),
                                                  8u,
                                                  64u);
+    // Get expression levels and sizes
+    #pragma omp parallel for schedule(dynamic, chunk_size)
+    for (unsigned i = 0; i < num_files; i++)
+    {
+        uint64_t filesize{}; // Store filesize(minimiser_files_given=false) or number of minimisers(minimiser_files_given=true)
+
+        if constexpr(minimiser_files_given)
+        {
+            arguments args2{};
+            std::vector<uint8_t> cutoffs2{};
+            read_header(args2, cutoffs2, std::string{minimiser_files[i].parent_path()} + "/" + std::string{minimiser_files[i].stem()} + ".header", filesize);
+        }
+        else
+        {
+            // Estimate sizes on filesize, assuming every byte translates to one letter (which is obiously not true,
+            // because ids contain letters as well), so size might be overestimated
+            unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
+            bool const is_compressed = minimiser_files[file_iterator].extension() == ".gz" || minimiser_files[file_iterator].extension() == ".bgzf" || minimiser_files[file_iterator].extension() == ".bz2";
+            bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions,minimiser_files[file_iterator].stem())
+                                                 : check_for_fasta_format(seqan3::format_fasta::file_extensions, minimiser_files[file_iterator].extension());
+            filesize = std::filesystem::file_size(minimiser_files[file_iterator]) * minimiser_args.samples[i] * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
+        }
+        // If set_expression_levels_samplewise is not set the expressions as determined by the first file are used for
+        // all files.
+        if constexpr (samplewise)
+        {
+            uint64_t diff{1};
+            for (std::size_t c = 0; c < ibf_args.number_expression_levels - 1; c++)
+            {
+                diff = diff * 2;
+                sizes[i].push_back(filesize/diff);
+            }
+            sizes[i].push_back(filesize/diff);
+        }
+        else
+        {
+            float diff{1};
+            for (std::size_t c = 0; c < ibf_args.number_expression_levels - 1; c++)
+            {
+                diff = ibf_args.expression_levels[c+1]/ibf_args.expression_levels[c];
+                sizes[i].push_back(filesize/diff);
+            }
+            sizes[i].push_back(filesize/diff);
+
+        }
+    }
+
+    // Create IBFs
+    std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
+    for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
+    {
+        uint64_t size{0};
+        for (unsigned i = 0; i < num_files; i++)
+            size = size + sizes[i][j];
+        // m = -hn/ln(1-p^(1/h))
+        size = static_cast<uint64_t>((-1.0*ibf_args.num_hash*((1.0*size)/num_files))/(std::log(1.0-std::pow(ibf_args.fpr[j], 1.0/ibf_args.num_hash))));
+        ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
+                     seqan3::bin_count{num_files}, seqan3::bin_size{size},
+                     seqan3::hash_function_count{ibf_args.num_hash}));
+    }
 
     // Add minimisers to ibf
     #pragma omp parallel for schedule(dynamic, chunk_size)
@@ -327,6 +433,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
                seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_files[file_iterator+f]};
                fill_hash_table(args, fin, hash_table, cutoff_table, genome_set_table, (minimiser_args.include_file != ""), minimiser_args.cutoffs[i]);
             }
+            cutoff_table.clear();
         }
 
         // If set_expression_levels_samplewise is not set the expressions as determined by the first file are used for
@@ -335,9 +442,9 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
         {
            get_expression_levels(ibf_args.number_expression_levels,
                                  hash_table,
-                                 expression_levels);
+                                 expression_levels,
+                                 sizes[i]);
            expressions[i] = expression_levels;
-
         }
 
         // Every minimiser is stored in IBF, if it occurence is greater than or equal to the expression level
@@ -347,7 +454,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
             {
                 if constexpr (samplewise)
                 {
-                    if (elem.second >= expression_levels[j])
+                    if (elem.second >= expressions[i][j])
                     {
                         ibfs[j].emplace(elem.first, seqan3::bin_index{i});
                         break;
@@ -414,7 +521,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
         minimiser_args.cutoffs.assign(minimiser_args.samples.size(), 0);
 
     check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels);
-    check_bin_size(ibf_args.number_expression_levels, ibf_args.bin_size);
+    check_fpr(ibf_args.number_expression_levels, ibf_args.fpr);
 
     bool samplewise = (ibf_args.expression_levels.size() == 0);
 
@@ -444,7 +551,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
                           ibf_arguments & ibf_args)
 {
     check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels);
-    check_bin_size(ibf_args.number_expression_levels, ibf_args.bin_size);
+    check_fpr(ibf_args.number_expression_levels, ibf_args.fpr);
 
     bool const samplewise = (ibf_args.expression_levels.size() == 0);
 
@@ -454,29 +561,6 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
         ibf_helper<false>(minimiser_files, args, ibf_args);
 
     return ibf_args.expression_levels;
-}
-
-inline bool check_for_fasta_format(std::vector<std::string> const & valid_extensions, std::string const & file_path)
-{
-
-    auto case_insensitive_string_ends_with = [&] (std::string_view str, std::string_view suffix)
-    {
-        size_t const suffix_length{suffix.size()};
-        size_t const str_length{str.size()};
-        return suffix_length > str_length ?
-               false :
-               std::ranges::equal(str.substr(str_length - suffix_length), suffix, [] (char const chr1, char const chr2)
-               {
-                   return std::tolower(chr1) == std::tolower(chr2);
-               });
-    };
-
-    auto case_insensitive_ends_with = [&] (std::string const & ext)
-    {
-        return case_insensitive_string_ends_with(file_path, ext);
-    };
-
-    return std::ranges::find_if(valid_extensions, case_insensitive_ends_with) != valid_extensions.end();
 }
 
 void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_files,
@@ -542,15 +626,15 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
         outfile.write(reinterpret_cast<const char*>(&hash.second), sizeof(hash.second));
     }
     outfile.close();
-    hash_table.clear();
 
     // Write header file, containing information about the minimiser counts per expression level
     outfile.open(std::string{args.path_out} + std::string{sequence_files[file_iterator].stem()}
                  + ".header");
     outfile <<  args.s.get() << " " << std::to_string(args.k) << " " << args.w_size.get() << " " << args.shape.to_ulong() << " "
-            << std::to_string(cutoff) << "\n";
+            << std::to_string(cutoff) << " " << std::to_string(hash_table.size()) <<"\n";
 
     outfile << "\n";
+    hash_table.clear();
     outfile.close();
 }
 
