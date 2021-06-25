@@ -55,10 +55,10 @@ void fill_hash_table(arguments const & args,
     for (auto & [seq] : fin)
         sequences.push_back(seq);
 
-    size_t const chunk_size = sequences.size()/(10*args.threads);
+    size_t const chunk_size = sequences.size()/(args.threads);
     std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> mini_hash_tables{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> empty_table{};
-    for(int i = 0; i < (10*args.threads); i++)
+    for(int i = 0; i < (args.threads); i++)
         mini_hash_tables.push_back(empty_table);
 
     omp_set_num_threads(args.threads);
@@ -369,12 +369,9 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
     }
 
     omp_set_num_threads(args.threads);
-
-    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / args.threads),
-                                                 8u,
-                                                 64u);
+    
     // Get expression levels and sizes
-    #pragma omp parallel for schedule(dynamic, chunk_size)
+    #pragma omp parallel for
     for (unsigned i = 0; i < num_files; i++)
     {
         uint64_t filesize{}; // Store filesize(minimiser_files_given=false) or number of minimisers(minimiser_files_given=true)
@@ -435,7 +432,6 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
     }
 
     // Add minimisers to ibf
-    //#pragma omp parallel for schedule(dynamic, chunk_size)
     for (unsigned i = 0; i < num_files; i++)
     {
         robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
@@ -673,14 +669,7 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files, argume
     if (minimiser_args.include_file != "")
         get_include_set_table(args, minimiser_args.include_file, genome_set_table);
 
-    omp_set_num_threads(args.threads);
-
-    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(minimiser_args.samples.size() / args.threads),
-                                                 1u,
-                                                 64u);
-
     // Add minimisers to ibf
-    //#pragma omp parallel for schedule(dynamic, chunk_size)
     for(unsigned i = 0; i < minimiser_args.samples.size(); i++)
     {
         calculate_minimiser(sequence_files, genome_set_table, args, minimiser_args, i);
