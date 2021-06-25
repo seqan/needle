@@ -55,14 +55,15 @@ void fill_hash_table(arguments const & args,
     for (auto & [seq] : fin)
         sequences.push_back(seq);
 
-    size_t const chunk_size = sequences.size()/(2*args.threads);
+    size_t const chunk_size = sequences.size()/(10*args.threads);
     std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> mini_hash_tables{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> empty_table{};
-    for(int i = 0; i < chunk_size; i++)
+    for(int i = 0; i < (10*args.threads); i++)
         mini_hash_tables.push_back(empty_table);
 
+    omp_set_num_threads(args.threads);
 
-    #pragma omp parallel
+    #pragma omp parallel for
     for(int j = 0; j < mini_hash_tables.size(); j++)
     {
         for(int i = j*chunk_size; i < std::min((j+1)*chunk_size, sequences.size()); i++)
@@ -75,8 +76,10 @@ void fill_hash_table(arguments const & args,
                 }
             }
         }
+    }
 
-        #pragma omp master
+    for(int j = 0; j < mini_hash_tables.size(); j++)
+    {
         for(auto && minHash : mini_hash_tables[j])
         {
             auto it = hash_table.find(minHash.first);
@@ -99,8 +102,6 @@ void fill_hash_table(arguments const & args,
             }
         }
     }
-
-
 }
 
 void count(arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,
@@ -679,7 +680,7 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files, argume
                                                  64u);
 
     // Add minimisers to ibf
-    #pragma omp parallel for schedule(dynamic, chunk_size)
+    //#pragma omp parallel for schedule(dynamic, chunk_size)
     for(unsigned i = 0; i < minimiser_args.samples.size(); i++)
     {
         calculate_minimiser(sequence_files, genome_set_table, args, minimiser_args, i);
