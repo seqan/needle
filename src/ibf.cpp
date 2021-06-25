@@ -58,7 +58,7 @@ void fill_hash_table(arguments const & args,
     size_t const chunk_size = sequences.size()/(args.threads);
     std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> mini_hash_tables{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> empty_table{};
-    for(int i = 0; i < (args.threads); i++)
+    for(int i = 0; i < (args.threads) + 1; i++)
         mini_hash_tables.push_back(empty_table);
 
     omp_set_num_threads(args.threads);
@@ -86,13 +86,13 @@ void fill_hash_table(arguments const & args,
             // If minHash is already in hash table, increase count in hash table
             if (it != hash_table.end())
             {
-                it->second = std::min<uint16_t>(65534u, hash_table[minHash.first] + 1);
+                it->second = std::min<uint16_t>(65535u, hash_table[minHash.first] + minHash.second);
             }
             // If minHash equals now the cutoff than add it to the hash table and add plus one for the current
             // iteration.
-            else if (cutoff_table[minHash.first] == cutoff)
+            else if ((cutoff_table[minHash.first] + minHash.second) > cutoff)
             {
-                hash_table[minHash.first] = cutoff_table[minHash.first] + 1;
+                hash_table[minHash.first] = cutoff_table[minHash.first] + minHash.second;
                 cutoff_table.erase(minHash.first);
             }
             // If none of the above, increase count in cutoff table.
@@ -369,7 +369,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
     }
 
     omp_set_num_threads(args.threads);
-    
+
     // Get expression levels and sizes
     #pragma omp parallel for
     for (unsigned i = 0; i < num_files; i++)
