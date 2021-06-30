@@ -55,10 +55,10 @@ void fill_hash_table(arguments const & args,
     for (auto & [seq] : fin)
         sequences.push_back(seq);
 
-    size_t const chunk_size = sequences.size()/(args.threads);
+    size_t const chunk_size = sequences.size()/(4*args.threads);
     std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> mini_hash_tables{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> empty_table{};
-    for(int i = 0; i < (args.threads) + 1; i++)
+    for(int i = 0; i < (4*args.threads) + 1; i++)
         mini_hash_tables.push_back(empty_table);
 
     omp_set_num_threads(args.threads);
@@ -76,10 +76,8 @@ void fill_hash_table(arguments const & args,
                 }
             }
         }
-    }
 
-    for(int j = 0; j < mini_hash_tables.size(); j++)
-    {
+        #pragma omp critical
         for(auto && minHash : mini_hash_tables[j])
         {
             auto it = hash_table.find(minHash.first);
