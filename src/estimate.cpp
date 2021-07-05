@@ -8,17 +8,17 @@
 #include <vector>
 #include <algorithm> //reorded because of this error:https://github.com/Homebrew/homebrew-core/issues/44579
 
+#include <seqan3/std/ranges>
 
 #if SEQAN3_WITH_CEREAL
 #include <cereal/archives/binary.hpp>
 #endif // SEQAN3_WITH_CEREAL
 
+#include <seqan3/alphabet/container/concatenated_sequences.hpp>
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 #include <seqan3/core/concept/cereal.hpp>
 #include <seqan3/core/debug_stream.hpp>
 #include <seqan3/io/sequence_file/all.hpp>
-#include <seqan3/std/ranges>
-#include <seqan3/range/container/concatenated_sequences.hpp>
 
 #include "estimate.h"
 template <class IBFType, bool last_exp, typename exp_t>

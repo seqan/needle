@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
+#include <seqan3/test/expect_range_eq.hpp>
+
 #include "ibf.h"
 #include "minimiser.h"
 #include "estimate.h"
@@ -120,10 +122,12 @@ TEST(ibf, given_expression_levels)
     load_ibf(ibf, tmp_dir/"Test_IBF_1");
     auto agent = ibf.membership_agent();
 
-    sdsl::bit_vector expected_result(1, 0);
-    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    std::vector<bool> expected_result(1, 0);
+    auto & res = agent.bulk_contains(2);
+    EXPECT_RANGE_EQ(expected_result,  res);
     expected_result[0] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(24));
+    auto & res2 = agent.bulk_contains(24);
+    EXPECT_RANGE_EQ(expected_result,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
 }
@@ -150,10 +154,12 @@ TEST(ibf, given_expression_levels_genome_file)
     load_ibf(ibf, tmp_dir/"Test_IBF_1");
     auto agent = ibf.membership_agent();
 
-    sdsl::bit_vector expected_result(1, 0);
-    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    std::vector<bool> expected_result(1, 0);
+    auto & res = agent.bulk_contains(2);
+    EXPECT_RANGE_EQ(expected_result,  res);
     expected_result[0] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(24));
+    auto & res2 = agent.bulk_contains(24);
+    EXPECT_RANGE_EQ(expected_result,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
 }
@@ -178,10 +184,12 @@ TEST(ibf, no_given_expression_levels)
     load_ibf(ibf, tmp_dir/"Test_IBF_Level_0");
     auto agent = ibf.membership_agent();
 
-    sdsl::bit_vector expected_result(1, 0);
-    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    std::vector<bool> expected_result(1, 0);
+    auto & res = agent.bulk_contains(2);
+    EXPECT_RANGE_EQ(expected_result,  res);
     expected_result[0] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(97));
+    auto & res2 = agent.bulk_contains(97);
+    EXPECT_RANGE_EQ(expected_result,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
 }
 
@@ -224,10 +232,12 @@ TEST(ibfmin, given_expression_levels)
     load_ibf(ibf, tmp_dir/"Test_IBF_1");
     auto agent = ibf.membership_agent();
 
-    sdsl::bit_vector expected_result(1, 0);
-    EXPECT_EQ(expected_result,  agent.bulk_contains(97));
+    std::vector<bool> expected_result(1, 0);
+    auto & res = agent.bulk_contains(97);
+    EXPECT_RANGE_EQ(expected_result,  res);
     expected_result[0] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(24));
+    auto & res2 = agent.bulk_contains(24);
+    EXPECT_RANGE_EQ(expected_result,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
 }
@@ -255,10 +265,12 @@ TEST(ibfmin, given_expression_levels_multiple_threads)
     load_ibf(ibf, tmp_dir/"Test_IBF_1");
     auto agent = ibf.membership_agent();
 
-    sdsl::bit_vector expected_result(1, 0);
-    EXPECT_EQ(expected_result,  agent.bulk_contains(97));
-    expected_result[0] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(24));
+    std::vector<bool> expected_result(16, 0);
+    auto & res = agent.bulk_contains(97);
+    EXPECT_RANGE_EQ(expected_result,  res);
+    std::vector<bool> expected_result2(16, 1);
+    auto & res2 = agent.bulk_contains(24);
+    EXPECT_RANGE_EQ(expected_result2,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
 }
@@ -284,10 +296,12 @@ TEST(ibfmin, no_given_expression_levels)
     load_ibf(ibf, tmp_dir/"Test_IBF_Level_0");
     auto agent = ibf.membership_agent();
 
-    sdsl::bit_vector expected_result(1, 0);
-    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    std::vector<bool> expected_result(1, 0);
+    auto & res = agent.bulk_contains(2);
+    EXPECT_RANGE_EQ(expected_result,  res);
     expected_result[0] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(97));
+    auto & res2 = agent.bulk_contains(97);
+    EXPECT_RANGE_EQ(expected_result,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
 }
@@ -315,10 +329,12 @@ TEST(ibfmin, no_given_expression_levels_multiple_threads)
     load_ibf(ibf, tmp_dir/"Test_IBF_Level_0");
     auto agent = ibf.membership_agent();
 
-    sdsl::bit_vector expected_result(1, 0);
-    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
-    expected_result[0] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(97));
+    std::vector<bool> expected_result(16, 0);
+    auto & res = agent.bulk_contains(2);
+    EXPECT_RANGE_EQ(expected_result,  res);
+    std::vector<bool> expected_result2(16, 1);
+    auto & res2 = agent.bulk_contains(97);
+    EXPECT_RANGE_EQ(expected_result2,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
 }
@@ -360,7 +376,10 @@ TEST(minimiser, small_example)
         // Test binary file
         read_binary(result_hash_table, tmp_dir/("Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
         minimiser_files.push_back(tmp_dir/("Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
-        EXPECT_EQ(expected_hash_tables[i], result_hash_table);
+        for (auto & hash : expected_hash_tables[i])
+        {
+            EXPECT_EQ(expected_hash_tables[i][hash.first], result_hash_table[hash.first]);
+        }
 
         result_hash_table.clear();
     }
@@ -371,12 +390,15 @@ TEST(minimiser, small_example)
     load_ibf(ibf, tmp_dir/"Test_IBF_0");
     auto agent = ibf.membership_agent();
 
-    sdsl::bit_vector expected_result(2, 0);
-    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    std::vector<bool> expected_result(2, 0);
+    auto & res = agent.bulk_contains(2);
+    EXPECT_RANGE_EQ(expected_result,  res);
     expected_result[0] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(0));
+    auto & res2 = agent.bulk_contains(0);
+    EXPECT_RANGE_EQ(expected_result,  res2);
     expected_result[1] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(27));
+    auto & res3 = agent.bulk_contains(27);
+    EXPECT_RANGE_EQ(expected_result,  res3);
 
     std::filesystem::remove(tmp_dir/"Test_IBF_0");
     std::filesystem::remove(tmp_dir/("Test_mini_example.header"));
@@ -424,7 +446,10 @@ TEST(minimiser, small_example_samplewise)
         // Test binary file
         read_binary(result_hash_table, tmp_dir/("Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
         minimiser_files.push_back(tmp_dir/("Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
-        EXPECT_EQ(expected_hash_tables[i], result_hash_table);
+        for (auto & hash : expected_hash_tables[i])
+        {
+            EXPECT_EQ(expected_hash_tables[i][hash.first], result_hash_table[hash.first]);
+        }
 
         result_hash_table.clear();
     }
@@ -436,12 +461,15 @@ TEST(minimiser, small_example_samplewise)
     load_ibf(ibf, tmp_dir/"Test_IBF_Level_0");
     auto agent = ibf.membership_agent();
 
-    sdsl::bit_vector expected_result(2, 0);
-    EXPECT_EQ(expected_result, agent.bulk_contains(2));
-    EXPECT_EQ(expected_result, agent.bulk_contains(0));
+    std::vector<bool> expected_result(2, 0);
+    auto & res = agent.bulk_contains(2);
+    EXPECT_RANGE_EQ(expected_result,  res);
+    auto & res2 = agent.bulk_contains(0);
+    EXPECT_RANGE_EQ(expected_result,  res2);
     expected_result[0] = 1;
     expected_result[1] = 1;
-    EXPECT_EQ(expected_result, agent.bulk_contains(27));
+    auto & res3 = agent.bulk_contains(27);
+    EXPECT_RANGE_EQ(expected_result,  res3);
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
     std::filesystem::remove(tmp_dir/("Test_mini_example.header"));
     std::filesystem::remove(tmp_dir/("Test_mini_example2.header"));
@@ -488,13 +516,16 @@ TEST(minimiser, cutoff_by_filesize)
     load_ibf(ibf, tmp_dir/"Test_IBF_0");
     auto agent = ibf.membership_agent();
 
-    sdsl::bit_vector expected_result(2, 0);
-    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    std::vector<bool> expected_result(2, 0);
+    auto & res = agent.bulk_contains(2);
+    EXPECT_RANGE_EQ(expected_result,  res);
     expected_result[0] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(0));
+    auto & res2 = agent.bulk_contains(0);
+    EXPECT_RANGE_EQ(expected_result, res2);
     expected_result[0] = 0;
     expected_result[1] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(85));
+    auto & res3 = agent.bulk_contains(85);
+    EXPECT_RANGE_EQ(expected_result, res3);
 
     std::filesystem::remove(tmp_dir/"Test_IBF_0");
     std::filesystem::remove(tmp_dir/("Test_mini_example.header"));
@@ -540,7 +571,10 @@ TEST(minimiser, small_example_two_threads)
         // Test binary file
         read_binary(result_hash_table, tmp_dir/("Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
         minimiser_files.push_back(tmp_dir/("Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
-        EXPECT_EQ(expected_hash_tables[i], result_hash_table);
+        for (auto & hash : expected_hash_tables[i])
+        {
+            EXPECT_EQ(expected_hash_tables[i][hash.first], result_hash_table[hash.first]);
+        }
 
         result_hash_table.clear();
     }
@@ -551,12 +585,15 @@ TEST(minimiser, small_example_two_threads)
     load_ibf(ibf, tmp_dir/"Test_IBF_0");
     auto agent = ibf.membership_agent();
 
-    sdsl::bit_vector expected_result(2, 0);
-    EXPECT_EQ(expected_result,  agent.bulk_contains(2));
+    std::vector<bool> expected_result(2, 0);
+    auto & res = agent.bulk_contains(2);
+    EXPECT_RANGE_EQ(expected_result,  res);
     expected_result[0] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(0));
+    auto & res2 = agent.bulk_contains(0);
+    EXPECT_RANGE_EQ(expected_result, res2);
     expected_result[1] = 1;
-    EXPECT_EQ(expected_result,  agent.bulk_contains(27));
+    auto & res3 = agent.bulk_contains(27);
+    EXPECT_RANGE_EQ(expected_result, res3);
 
     std::filesystem::remove(tmp_dir/"Test_IBF_0");
     std::filesystem::remove(tmp_dir/("Test_mini_example.header"));
