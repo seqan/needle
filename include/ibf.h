@@ -4,8 +4,8 @@
 #include <numeric>
 #include <string>
 
+#include <seqan3/alphabet/container/concatenated_sequences.hpp>
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
-#include <seqan3/range/container/concatenated_sequences.hpp>
 #include <seqan3/std/filesystem>
 
 #include "minimiser.h"

@@ -5,9 +5,9 @@
 
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 #include <seqan3/io/sequence_file/input.hpp>
-#include <seqan3/range/views/minimiser_hash.hpp>
 #include <seqan3/search/dream_index/interleaved_bloom_filter.hpp>
 #include <seqan3/search/kmer_index/shape.hpp>
+#include <seqan3/search/views/minimiser_hash.hpp>
 
 inline constexpr static uint64_t adjust_seed(uint8_t const kmer_size, uint64_t const seed = 0x8F3F73B5CF1C9ADEULL) noexcept
 {
