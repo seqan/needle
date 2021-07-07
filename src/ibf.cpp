@@ -188,6 +188,132 @@ void count_genome(min_arguments const & args, std::filesystem::path include_file
     outfile.close();
 }
 
+void fill_hash_table_parallel(arguments const & args,
+                              seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> & fin,
+                              robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
+                              [[maybe_unused]] robin_hood::unordered_node_map<uint64_t, uint8_t> & cutoff_table,
+                              [[maybe_unused]] robin_hood::unordered_set<uint64_t> const & genome_set_table,
+                              bool const only_genome = false,
+                              uint8_t cutoff = 0)
+{
+    // What model do we want to run here?
+
+    // Step 1: load file in batches
+    // Step 2: construct minimiser hash values
+    // Step 3: Sort minimiser hash values but pertain their original positions
+    // Step 4: Provid simple table with minimiser value and count pair
+    // Step 5: Store all non-referenced minimiser values per batch
+
+
+    // Run thread: block execution and load next 10000 sequences.
+
+    auto seq_file_it = std::ranges::begin(fin);
+    size_t chunk_count{};
+    auto load_next_chunk = [&] ()
+    {
+        using sequence_t = seqan3::dna4_vector;
+
+        std::cout << "chunk_count = " << chunk_count++ << "\n";
+
+        constexpr size_t batch_size = 100000;
+
+        std::vector<sequence_t> sequence_batch{};
+        sequence_batch.reserve(batch_size);
+
+        while (seq_file_it != std::ranges::end(fin) && sequence_batch.size() < batch_size)
+        {
+            sequence_batch.push_back(seqan3::get<seqan3::field::seq>(*seq_file_it));
+            ++seq_file_it;
+        }
+
+        return sequence_batch;
+    };
+
+    auto count_minimiser = [&] (std::vector<uint64_t> minimisers)
+    {
+        std::vector<uint64_t> orphaned_minimiser{};
+        // Prepare positional minimiser vector.
+        // std::vector<size_t> minimiser_indices{};
+        // minimiser_indices.resize(minimisers.size());
+        // std::iota(minimiser_indices.begin(), minimiser_indices.end(), 0u);
+        // auto projection = [&] (size_t const index) { return minimisers[index]; };
+
+        // std::cout << "Size of minimiser_indices " << minimiser_indices.size() << "\n";
+        // seqan3::debug_stream << "minimisers = " << minimisers << "\n";
+        // seqan3::debug_stream << "minimiser_indices = " << minimiser_indices << "\n";
+
+        // Sort the minimiser by their value.
+        std::ranges::sort(minimisers, std::less{});
+        // seqan3::debug_stream << "sorted minimiser_indices = " << minimiser_indices << "\n";
+
+        // Fill the table with all minimiser counts.
+        auto minimiser_it = minimisers.begin();
+        auto minimiser_end = minimisers.end();
+
+        while (minimiser_it != minimiser_end)
+        {
+            uint64_t current_minimiser = *minimiser_it;
+            auto predicate = [=] (uint64_t const other_hash) { return other_hash == current_minimiser; };
+            auto next_minimiser_it = std::ranges::find_if_not(minimiser_it, minimiser_end, predicate);
+            // minimiser_it now points to the first non equal position
+            size_t const minimiser_count = std::ranges::distance(minimiser_it, next_minimiser_it);
+            // If that would be a local hash table, otherwise.
+            if ((only_genome & (genome_set_table.contains(current_minimiser))) | (!only_genome))
+            {
+                if (minimiser_count > cutoff)
+                {
+                    if (auto it = hash_table.find(current_minimiser); it != hash_table.end()) // update
+                        it->second += minimiser_count; // FIXME: Overflow.
+                    else // insert first.
+                        hash_table[current_minimiser] = minimiser_count;
+                }
+                else
+                {
+                    orphaned_minimiser.push_back(current_minimiser); // not in range.
+                }
+            }
+
+            minimiser_it = next_minimiser_it;
+        }
+
+        return orphaned_minimiser;
+    };
+
+    // Block 1:
+    std::vector<uint64_t> remaining_minimiser{};
+    while (true)
+    {
+        // FIXME: critical section
+        auto sequence_batch = load_next_chunk();
+        std::cout << "Size of batch " << sequence_batch.size() << "\n";
+        if (sequence_batch.empty()) // Stop construction: no more elements are coming
+            break;
+
+        // Construct the set of all minimisers for all sequences.
+        std::vector<uint64_t> minimisers{};
+        minimisers.reserve(sequence_batch.size() * 4);
+        for (auto & sequence : sequence_batch)
+            std::ranges::move(sequence | seqan3::views::minimiser_hash(args.shape, args.w_size, args.s),
+                              std::back_inserter(minimisers));
+
+        std::cout << "Size of minimisers " << minimisers.size() << "\n";
+        auto orphaned_minimiser = count_minimiser(std::move(minimisers));
+        std::cout << "Size of orphaned minimisers " << orphaned_minimiser.size() << "\n";
+        remaining_minimiser.reserve(remaining_minimiser.size() + orphaned_minimiser.size());
+        std::ranges::move(orphaned_minimiser, std::back_inserter(remaining_minimiser));
+    }
+
+    auto final_minimiser = count_minimiser(std::move(remaining_minimiser));
+    std::cout << "Size of final_minimiser " << final_minimiser.size() << "\n";
+    // Final step: lookup all remaining minimiser in the hash table.
+    for (uint64_t minimiser : final_minimiser)
+    {
+        if (auto it = hash_table.find(minimiser); it != hash_table.end()) // update
+            ++it->second; // FIXME: Overflow.
+    }
+}
+
+
 void count(min_arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path include_file,
            std::filesystem::path genome_file, bool paired)
 {
