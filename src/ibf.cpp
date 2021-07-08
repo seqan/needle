@@ -2,13 +2,16 @@
 #include <deque>
 #include <iostream>
 #include <math.h>
+#include <mutex>
 #include <numeric>
 #include <omp.h>
 #include <string>
+#include <thread>
 #include <algorithm> //reorded because of this error:https://github.com/Homebrew/homebrew-core/issues/44579
 
 #include <seqan3/std/filesystem>
 #include <seqan3/std/ranges>
+#include <seqan3/contrib/parallel/buffer_queue.hpp>
 
 #if SEQAN3_WITH_CEREAL
 #include <cereal/archives/binary.hpp>
@@ -24,6 +27,7 @@
 #include <seqan3/io/stream/detail/fast_istreambuf_iterator.hpp>
 #include <seqan3/range/views/take_until.hpp>
 #include <seqan3/utility/container/dynamic_bitset.hpp>
+#include <seqan3/utility/parallel/detail/latch.hpp>
 
 #include "ibf.h"
 #include "minimiser.h"
@@ -88,6 +92,8 @@ void fill_hash_table_parallel(arguments const & args,
                               bool const only_genome = false,
                               uint8_t cutoff = 0)
 {
+    using value_t = typename robin_hood::unordered_node_map<uint64_t, uint16_t>::value_type;
+    using local_hash_table_t = robin_hood::unordered_node_map<uint64_t, std::atomic<uint16_t>>;
     // What model do we want to run here?
 
     // Step 1: load file in batches
@@ -96,22 +102,23 @@ void fill_hash_table_parallel(arguments const & args,
     // Step 4: Provid simple table with minimiser value and count pair
     // Step 5: Store all non-referenced minimiser values per batch
 
-
+    std::cout << "cutoff = " << (int32_t) cutoff << "\n";
+    constexpr size_t thread_count = 1;
     // Run thread: block execution and load next 10000 sequences.
 
     auto seq_file_it = std::ranges::begin(fin);
     size_t chunk_count{};
+    using sequence_t = seqan3::dna4_vector;
+
     auto load_next_chunk = [&] ()
     {
-        using sequence_t = seqan3::dna4_vector;
-
-        std::cout << "chunk_count = " << chunk_count++ << "\n";
 
         constexpr size_t batch_size = 100000;
 
         std::vector<sequence_t> sequence_batch{};
         sequence_batch.reserve(batch_size);
 
+        // std::cout << "chunk_count = " << chunk_count++ << "\n";
         while (seq_file_it != std::ranges::end(fin) && sequence_batch.size() < batch_size)
         {
             sequence_batch.push_back(seqan3::get<seqan3::field::seq>(*seq_file_it));
@@ -121,9 +128,10 @@ void fill_hash_table_parallel(arguments const & args,
         return sequence_batch;
     };
 
-    auto count_minimiser = [&] (std::vector<uint64_t> minimisers)
+    auto count_minimiser = [&] (auto & local_hash_table, std::vector<uint64_t> minimisers)
     {
         std::vector<uint64_t> orphaned_minimiser{};
+
         // Prepare positional minimiser vector.
         // std::vector<size_t> minimiser_indices{};
         // minimiser_indices.resize(minimisers.size());
@@ -149,60 +157,299 @@ void fill_hash_table_parallel(arguments const & args,
             auto next_minimiser_it = std::ranges::find_if_not(minimiser_it, minimiser_end, predicate);
             // minimiser_it now points to the first non equal position
             size_t const minimiser_count = std::ranges::distance(minimiser_it, next_minimiser_it);
+
+            // if (minimiser_count == 0)
+            //     std::cout << '.';
             // If that would be a local hash table, otherwise.
             if ((only_genome & (genome_set_table.contains(current_minimiser))) | (!only_genome))
             {
                 if (minimiser_count > cutoff)
                 {
-                    if (auto it = hash_table.find(current_minimiser); it != hash_table.end()) // update
+                    if (auto it = local_hash_table.find(current_minimiser); it != local_hash_table.end()) // update
                         it->second += minimiser_count; // FIXME: Overflow.
                     else // insert first.
-                        hash_table[current_minimiser] = minimiser_count;
+                        local_hash_table[current_minimiser] = minimiser_count;
                 }
                 else
-                {
-                    orphaned_minimiser.push_back(current_minimiser); // not in range.
+                { // not above cutoff.
+                    // std::cout << minimiser_count << '\t';
+                    orphaned_minimiser.insert(orphaned_minimiser.end(), minimiser_it, next_minimiser_it);
                 }
             }
 
             minimiser_it = next_minimiser_it;
         }
-
+        // std::cout << '\n';
         return orphaned_minimiser;
     };
 
+    auto create_queue = [] (size_t const capacity)
+    {
+        return seqan3::contrib::fixed_buffer_queue<std::pair<size_t, size_t>>{capacity};
+    };
+
     // Block 1:
-    std::vector<uint64_t> remaining_minimiser{};
-    while (true)
+    constexpr size_t growth_size{100'000'000};
+    size_t growth_factor{0};
+    std::vector<std::vector<uint64_t>> thread_local_remaining_minimisers{};
+    thread_local_remaining_minimisers.resize(thread_count);
+    std::vector<local_hash_table_t> thread_local_hash_tables{};
+    thread_local_hash_tables.resize(thread_count);
+    bool is_merged{false};
+    bool create_intervals{true};
+    bool fill_queue{true};
+    uint64_t min_hash{std::numeric_limits<uint64_t>::max()};
+    uint64_t max_hash{0};
+
+    seqan3::detail::latch sync_point{thread_count};
+    seqan3::detail::latch sync_point_2{thread_count};
+    std::atomic<size_t> remaining_minimisers_size{};
+    // std::vector<uint64_t> remaining_minimisers{};
+    auto job = [&] (size_t const thread_id)
     {
-        // FIXME: critical section
-        auto sequence_batch = load_next_chunk();
-        std::cout << "Size of batch " << sequence_batch.size() << "\n";
-        if (sequence_batch.empty()) // Stop construction: no more elements are coming
-            break;
+        std::cout << "start thread " << thread_id << "\n";
+        static std::mutex load_mutex{};
+        while (true)
+        {
+            std::vector<sequence_t> sequence_batch{};
+            { // critical region
+                std::scoped_lock load_lk{load_mutex};
+                sequence_batch = load_next_chunk();
+            }
+            std::cout << "Size of batch " << sequence_batch.size() << "\n";
+            if (sequence_batch.empty()) // Stop construction: no more elements are coming
+                break;
 
-        // Construct the set of all minimisers for all sequences.
-        std::vector<uint64_t> minimisers{};
-        minimisers.reserve(sequence_batch.size() * 4);
-        for (auto & sequence : sequence_batch)
-            std::ranges::move(sequence | seqan3::views::minimiser_hash(args.shape, args.w_size, args.s),
-                              std::back_inserter(minimisers));
+            // Construct the set of all minimisers for all sequences.
+            std::vector<uint64_t> minimisers{};
+            minimisers.reserve(sequence_batch.size() * (sequence_batch[0].size() - args.w_size.get() + 1));
+            for (auto & sequence : sequence_batch)
+                std::ranges::move(sequence | seqan3::views::minimiser_hash(args.shape, args.w_size, args.s),
+                                  std::back_inserter(minimisers));
 
-        std::cout << "Size of minimisers " << minimisers.size() << "\n";
-        auto orphaned_minimiser = count_minimiser(std::move(minimisers));
-        std::cout << "Size of orphaned minimisers " << orphaned_minimiser.size() << "\n";
-        remaining_minimiser.reserve(remaining_minimiser.size() + orphaned_minimiser.size());
-        std::ranges::move(orphaned_minimiser, std::back_inserter(remaining_minimiser));
+            // std::cout << "Size of minimisers " << minimisers.size() << "\n";
+            auto orphaned_minimiser = count_minimiser(thread_local_hash_tables[thread_id], std::move(minimisers));
+            std::cout << "Size of orphaned minimisers " << orphaned_minimiser.size() << "\n";
+            // remaining_minimiser.reserve(remaining_minimiser.size() + orphaned_minimiser.size());
+            thread_local_remaining_minimisers[thread_id].insert(thread_local_remaining_minimisers[thread_id].end(),
+                                                                orphaned_minimiser.begin(),
+                                                                orphaned_minimiser.end());
+
+            if (thread_local_remaining_minimisers[thread_id].size() > growth_factor * growth_size)
+            {
+                // Internal reduction step.
+                thread_local_remaining_minimisers[thread_id] =
+                    count_minimiser(thread_local_hash_tables[thread_id],
+                                    std::move(thread_local_remaining_minimisers[thread_id]));
+                thread_local_remaining_minimisers[thread_id].reserve((++growth_factor) * growth_size);
+            }
+
+            std::cout << "Size of remaining minimisers " << thread_local_remaining_minimisers[thread_id].size() << "\n";
+            std::cout << "Size of hash table " << thread_local_hash_tables[thread_id].size() << "\n";
+        }
+
+        sync_point.arrive_and_wait();
+
+        // size_t position{};
+        // for (uint64_t minimiser : thread_local_remaining_minimisers[thread_id])
+        // {
+        //     bool is_contained{false};
+        //     for (auto & other_hash_tables : thread_local_hash_tables)
+        //     {
+        //         if (auto it = other_hash_tables.find(minimiser); it != other_hash_tables.end()) // update
+        //         {
+        //             ++it->second; // FIXME: Overflow.
+        //             is_contained = true;
+        //             break;
+        //         }
+        //     }
+        //     if (!is_contained)
+        //         tmp_remaining_minimisers.push_back(minimiser);
+
+        //     ++position;
+        // }
+
+        // std::cout << "old = " <<  thread_local_remaining_minimisers[thread_id].size() << " new = " << tmp_remaining_minimisers.size() << "\n";
+        // thread_local_remaining_minimisers[thread_id] = std::move(tmp_remaining_minimisers);
+
+        std::cout << "Here \n";
+
+        {// sequential phase to merge sub tables.
+            std::scoped_lock lk{load_mutex};
+            std::cout << "Here i\n";
+            if (!is_merged)
+            {
+                std::cout << "Here j\n";
+                for (auto & tmp : thread_local_remaining_minimisers)
+                {
+                    if (tmp.empty())
+                        continue;
+
+                    min_hash = std::min(tmp.front(), min_hash);
+                    max_hash = std::max(tmp.back(), max_hash);
+                }
+
+                std::cout << "Smallest value = " << min_hash << "\n";
+                std::cout << "Largest value = " << max_hash << "\n";
+                std::cout << "Range value = " << ((max_hash - min_hash + thread_count - 1) / thread_count) << "\n";
+
+                // Merge local hash_tables.
+                for (auto & local_hash_table : thread_local_hash_tables)
+                {
+                    for (auto && [key, counter] : local_hash_table)
+                    {
+                        if (auto it = hash_table.find(key); it != hash_table.end())
+                            it->second += counter.load();
+                        else
+                            hash_table.insert(value_t{key, counter.load()});
+                    }
+
+                    local_hash_table.clear();
+                }
+                is_merged = true;
+            }
+        }
+        std::cout << "Here 2\n";
+
+        // So we split the range of hash values into number of threads
+        if (min_hash > max_hash)
+        {
+            std::cout << "Early exit\n";
+            return;
+        }
+
+        constexpr size_t chunk_count = 10;
+        size_t const hash_range = ((max_hash - min_hash + (thread_count * chunk_count) - 1) / (thread_count * chunk_count));
+
+        static std::vector<std::pair<size_t, size_t>> intervals{};
+        {// sequential phase to merge sub tables.
+            std::scoped_lock lk{load_mutex};
+            if (create_intervals)
+            {
+                std::cout << "Preparing the queue\n";
+                for (size_t i = 0; i < chunk_count * thread_count; ++i)
+                    intervals.emplace_back(min_hash + hash_range * i, min_hash + hash_range * (i + 1));
+
+                create_intervals = false;
+                seqan3::debug_stream << "intervals = " << intervals << "\n";
+            }
+        }
+        std::cout << "Here 3\n";
+
+        auto queue = create_queue(intervals.size());
+        {// sequential phase to merge sub tables.
+            std::scoped_lock lk{load_mutex};
+            if (fill_queue)
+            {
+                for (auto interval : intervals)
+                    queue.push(interval);
+
+                queue.close();
+
+                std::cout << "Size of intervals = " << intervals.size() << "\n";
+                std::cout << "Size of queue = " << queue.size() << "\n";
+                fill_queue = false;
+            }
+        }
+        std::cout << "Here 4\n";
+        sync_point_2.arrive_and_wait();
+
+        size_t min_count{};
+
+        // We split the minimiser interval into chunks.
+        while (true)
+        {
+            std::pair<size_t, size_t> interval{};
+            if (auto status = queue.wait_pop(interval); status == seqan3::contrib::queue_op_status::closed)
+                break;
+
+            auto [thread_range_begin, thread_range_end] = interval;
+            std::vector<uint64_t> tmp_remaining_minimisers{};
+            for (auto const & tmp : thread_local_remaining_minimisers)
+            {
+                auto begin_it = std::ranges::lower_bound(tmp, thread_range_begin);
+                auto end_it = std::ranges::upper_bound(tmp, thread_range_end);
+                min_count += std::ranges::distance(begin_it, end_it);
+
+                tmp_remaining_minimisers.insert(tmp_remaining_minimisers.end(), begin_it, end_it);
+
+                // Now, the remaining minimisers in the set are never reaching the count.
+            }
+            count_minimiser(thread_local_hash_tables[thread_id], std::move(tmp_remaining_minimisers));
+        }
+
+        // sync_point_2.arrive_and_wait();
+
+        {// sequential phase to merge sub tables.
+            std::scoped_lock lk{load_mutex};
+            // std::cout << "Thread " << thread_id << " [" << thread_range_begin << ", " << thread_range_end << "]\n";
+            std::cout << "Counts: " << min_count << "\n";
+            std::cout << "close thread " << thread_id << "\n";
+        }
+
+    };
+
+    auto start = std::chrono::high_resolution_clock::now();
+    std::vector<std::thread> thread_pool{};
+    for (size_t i = 0; i < thread_count; ++i)
+        thread_pool.emplace_back(job, i);
+
+    // Wait for all threads to finish.
+    for (auto & thread : thread_pool)
+        if (thread.joinable())
+            thread.join();
+
+    auto stop = std::chrono::high_resolution_clock::now();
+    std::cout << "time initial counting = " << std::chrono::duration_cast<std::chrono::seconds>(stop - start).count() << "s\n";
+
+    // Merge local hash_tables.
+    start = std::chrono::high_resolution_clock::now();
+
+    // Record end time
+    for (auto & local_hash_table : thread_local_hash_tables)
+    {
+        for (auto && [key, counter] : local_hash_table)
+        {
+            if (auto it = hash_table.find(key); it != hash_table.end())
+                it->second += counter.load();
+            else
+                hash_table.insert(value_t{key, counter.load()});
+        }
+
+        local_hash_table.clear();
     }
+    stop = std::chrono::high_resolution_clock::now();
+    std::cout << "time merge ht = " << std::chrono::duration_cast<std::chrono::seconds>(stop - start).count() << "s\n";
 
-    auto final_minimiser = count_minimiser(std::move(remaining_minimiser));
-    std::cout << "Size of final_minimiser " << final_minimiser.size() << "\n";
+
+    // Reduce minimisers.
+    // start = std::chrono::high_resolution_clock::now();
+    // std::vector<uint64_t> remaining_minimisers{};
+    // for (auto & local_minimisers : thread_local_remaining_minimisers)
+    // {
+    //     remaining_minimisers.insert(remaining_minimisers.end(), local_minimisers.begin(), local_minimisers.end());
+    //     local_minimisers.resize(0);
+    // }
+
+    // stop = std::chrono::high_resolution_clock::now();
+    // std::cout << "time merge minimisers = " << std::chrono::duration_cast<std::chrono::seconds>(stop - start).count() << "s\n";
+
+    // start = std::chrono::high_resolution_clock::now();
+    // auto final_minimiser = count_minimiser(hash_table, std::move(remaining_minimisers));
+    // stop = std::chrono::high_resolution_clock::now();
+    // std::cout << "time reduce final minimisers = " << std::chrono::duration_cast<std::chrono::seconds>(stop - start).count() << "s\n";
+    // std::cout << "Size of final_minimiser " << final_minimiser.size() << "\n";
+    std::cout << "Size of hash table " << hash_table.size() << "\n";
     // Final step: lookup all remaining minimiser in the hash table.
-    for (uint64_t minimiser : final_minimiser)
-    {
-        if (auto it = hash_table.find(minimiser); it != hash_table.end()) // update
-            ++it->second; // FIXME: Overflow.
-    }
+    // start = std::chrono::high_resolution_clock::now();
+    // for (uint64_t minimiser : final_minimiser)
+    // {
+    //     if (auto it = hash_table.find(minimiser); it != hash_table.end()) // update
+    //         ++it->second; // FIXME: Overflow.
+    // }
+    // stop = std::chrono::high_resolution_clock::now();
+    // std::cout << "time add last minimisers = " << std::chrono::duration_cast<std::chrono::seconds>(stop - start).count() << "s\n";
+    // std::cout << "Size of hash table " << hash_table.size() << "\n";
 }
 
 void count(arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,
@@ -540,6 +787,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
     for (unsigned i = 0; i < num_files; i++)
     {
         robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
+        robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table_test{}; // Storage for minimisers
         // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
         // and afterwards discarded.
         robin_hood::unordered_node_map<uint64_t, uint8_t>  cutoff_table;
