@@ -997,7 +997,6 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     for (unsigned i = 0; i < num_files; i++)
     {
         robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
-        robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table_test{}; // Storage for minimisers
         // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
         // and afterwards discarded.
         robin_hood::unordered_node_map<uint64_t, uint8_t>  cutoff_table;
