@@ -14,7 +14,7 @@
  * \param float expression                  The expression level that should be used when searching for a transcript
  *                                          (if no expression file is given to specify this individually for
  *                                          different transcripts).
- * \param floar fpr                         The fpr used to create the ibfs. #TODO: Save this with the ibf.
+ * \param floar fpr                         The fpr used to create the ibfs.
  * \param uint8_t normalization_method      The normalization method to be used. Between 0-3.
  *
  */
