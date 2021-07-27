@@ -41,7 +41,7 @@ std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> expected_hash_ta
                                                                               {168,1}, // GGGA
                                                                                      },};
 
-void initialization_args(arguments & args)
+void initialization_args(arguments & args, ibf_arguments & ibf_args)
 {
     args.compressed = true;
     args.k = 4;
@@ -49,11 +49,8 @@ void initialization_args(arguments & args)
     args.w_size = seqan3::window_size{4};
     args.s = seqan3::seed{0};
     args.path_out = tmp_dir/"Test_";
-}
 
-void initialization_ibf_args(ibf_arguments & args)
-{
-    args.fpr = {0.05};
+    ibf_args.fpr = {0.05};
 }
 
 TEST(minimiser, small_example)
@@ -61,8 +58,7 @@ TEST(minimiser, small_example)
     arguments args{};
     ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
-    initialization_args(args);
-    initialization_ibf_args(ibf_args);
+    initialization_args(args, ibf_args);
     minimiser_args.cutoffs = {0, 0};
     ibf_args.expression_levels = {0};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
@@ -128,8 +124,7 @@ TEST(minimiser, small_example_samplewise)
     arguments args{};
     ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
-    initialization_args(args);
-    initialization_ibf_args(ibf_args);
+    initialization_args(args, ibf_args);
 
     minimiser_args.cutoffs = {0, 0};
     ibf_args.number_expression_levels = 1;
@@ -198,8 +193,7 @@ TEST(minimiser, cutoff_by_filesize)
     arguments args{};
     ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
-    initialization_args(args);
-    initialization_ibf_args(ibf_args);
+    initialization_args(args, ibf_args);
     ibf_args.expression_levels = {0};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
                                                          std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
@@ -255,8 +249,7 @@ TEST(minimiser, small_example_two_threads)
     arguments args{};
     ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
-    initialization_args(args);
-    initialization_ibf_args(ibf_args);
+    initialization_args(args, ibf_args);
     args.threads = 2;
     minimiser_args.cutoffs = {0, 0};
     ibf_args.expression_levels = {0};
