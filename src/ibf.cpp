@@ -22,7 +22,6 @@
 #include <seqan3/core/debug_stream.hpp>
 #include <seqan3/io/sequence_file/all.hpp>
 #include <seqan3/io/stream/detail/fast_istreambuf_iterator.hpp>
-#include <seqan3/range/views/take_until.hpp>
 #include <seqan3/utility/container/dynamic_bitset.hpp>
 
 #include "ibf.h"
@@ -238,20 +237,24 @@ void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesyst
 
     // Read first line
     std::string buffer;
-    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
+    std::ranges::copy(stream_view | std::views::take_while(std::not_fn(seqan3::is_char<' '>)),
                                     std::cpp20::back_inserter(buffer));
+    stream_it++;
     args.s = seqan3::seed{(uint64_t) std::stoull(buffer)};
     buffer.clear();
-    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
+    std::ranges::copy(stream_view | std::views::take_while(std::not_fn(seqan3::is_char<' '>)),
                                     std::cpp20::back_inserter(buffer));
+    stream_it++;
     args.k = std::stoi(buffer);
     buffer.clear();
-    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
+    std::ranges::copy(stream_view | std::views::take_while(std::not_fn(seqan3::is_char<' '>)),
                                     std::cpp20::back_inserter(buffer));
+    stream_it++;
     args.w_size = seqan3::window_size{(uint32_t) std::stoi(buffer)};
     buffer.clear();
-    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
+    std::ranges::copy(stream_view | std::views::take_while(std::not_fn(seqan3::is_char<' '>)),
                                     std::cpp20::back_inserter(buffer));
+    stream_it++;
     uint64_t shape = (uint64_t) std::stoull(buffer);
     buffer.clear();
     if (shape == 0)
@@ -259,12 +262,13 @@ void read_header(arguments & args, std::vector<uint8_t> & cutoffs, std::filesyst
         else
             args.shape = seqan3::bin_literal{shape};
 
-    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<' '>),
+    std::ranges::copy(stream_view | std::views::take_while(std::not_fn(seqan3::is_char<' '>)),
                                     std::cpp20::back_inserter(buffer));
+    stream_it++;
     cutoffs.push_back(std::stoi(buffer));
     buffer.clear();
 
-    std::ranges::copy(stream_view | seqan3::views::take_until_and_consume(seqan3::is_char<'\n'>),
+    std::ranges::copy(stream_view | std::views::take_while(std::not_fn(seqan3::is_char<'\n'>)),
                                     std::cpp20::back_inserter(buffer));
     num_of_minimisers = (uint64_t) std::stoull(buffer);
 
