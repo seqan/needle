@@ -577,9 +577,9 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
     unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
 
     bool const calculate_cutoffs = minimiser_args.cutoffs.empty();
-    // Cutoff according to Mantis paper
-    uint16_t const default_cutoff{50};
-    std::array<uint16_t, 4> const cutoffs{1, 3, 10, 20};
+    // Cutoff according to Mantis paper, -1 because we use "<" and not "<="
+    uint16_t const default_cutoff{49};
+    std::array<uint16_t, 4> const cutoffs{0, 2, 9, 19};
     std::array<uint64_t, 4> const cutoff_bounds{314'572'800, 524'288'000, 1'073'741'824, 3'221'225'472};
     uint16_t cutoff{default_cutoff};
 

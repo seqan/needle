@@ -203,7 +203,7 @@ TEST(minimiser, cutoff_by_filesize)
     std::vector<std::filesystem::path> minimiser_files{};
     seqan3::shape expected_shape = seqan3::ungapped{args.k};
     uint64_t num_of_minimisers{};
-    std::vector<uint64_t> expected_nums{9, 2};
+    std::vector<uint64_t> expected_nums{12, 12};
 
     for (int i = 0; i < sequence_files.size(); ++i)
     {
@@ -215,7 +215,7 @@ TEST(minimiser, cutoff_by_filesize)
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
-        EXPECT_EQ(1, minimiser_args.cutoffs[0]);
+        EXPECT_EQ(0, minimiser_args.cutoffs[0]);
         EXPECT_EQ(expected_nums[i], num_of_minimisers);
         minimiser_files.push_back(tmp_dir/("Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
     }
