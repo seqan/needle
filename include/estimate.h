@@ -15,7 +15,7 @@
  *                                          (if no expression file is given to specify this individually for
  *                                          different transcripts).
  * \param floar fpr                         The fpr used to create the ibfs.
- * \param uint8_t normalization_method      The normalization method to be used. Between 0-3.
+ * \param bool normalization_method         Flag, if normalization should be used.
  *
  */
 struct estimate_arguments
@@ -24,8 +24,8 @@ struct estimate_arguments
     std::filesystem::path path_in{"./"};
     std::vector<uint16_t> expressions{};
     std::vector<float> fpr{}; // The fpr of one IBF, can be different for different expression levels
-    // 0: no normalization method, 1: division by first expression value, 2: mean of all expression values for a level
-    uint8_t normalization_method{0};
+    // false: no normalization method, true: division by first expression value
+    bool normalization_method{0};
 };
 
 /*! \brief Function, which calls the estimate function.

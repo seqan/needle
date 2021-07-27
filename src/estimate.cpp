@@ -120,7 +120,7 @@ void read_levels(std::vector<std::vector<uint16_t>> & expressions, std::filesyst
 *  \param path_in     The directory where the ibfs can be found.
 *  \param level_file Path to the header files, where expression levels can be found.
 */
-template <class IBFType, bool samplewise, uint8_t normalization_method = 0>
+template <class IBFType, bool samplewise, bool normalization_method = false>
 void estimate(arguments const & args, estimate_arguments & estimate_args, IBFType & ibf, std::filesystem::path file_out,
               std::filesystem::path search_file, std::filesystem::path path_in, std::filesystem::path level_file = "")
 {
@@ -167,7 +167,7 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
     counter.clear();
     for (int i = 0; i < seqs.size(); ++i)
     {
-        if constexpr (samplewise & (normalization_method == 1))
+        if constexpr (samplewise & normalization_method)
             check_ibf<IBFType, true, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
                                            expressions, estimate_args.expressions.size() - 1,
                                            estimate_args.fpr[estimate_args.expressions.size() - 1]);
@@ -195,7 +195,7 @@ void estimate(arguments const & args, estimate_arguments & estimate_args, IBFTyp
         #pragma omp parallel for
         for (int i = 0; i < seqs.size(); ++i)
         {
-            if constexpr (samplewise & (normalization_method == 1))
+            if constexpr (samplewise & normalization_method)
                 check_ibf<IBFType, false, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
                                       expressions, j, estimate_args.fpr[j]);
             else if constexpr (samplewise)
@@ -241,8 +241,8 @@ void call_estimate(arguments const & args, estimate_arguments & estimate_args, s
         }
         else
         {
-            if (estimate_args.normalization_method == 1)
-                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, true, 1>(args, estimate_args, ibf, file_out, search_file, path_in, level_file);
+            if (estimate_args.normalization_method)
+                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, true, true>(args, estimate_args, ibf, file_out, search_file, path_in, level_file);
             else
                 estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, true>(args, estimate_args, ibf, file_out, search_file, path_in, level_file);
         }
@@ -256,8 +256,8 @@ void call_estimate(arguments const & args, estimate_arguments & estimate_args, s
         }
         else
         {
-            if (estimate_args.normalization_method == 1)
-                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, true, 1>(args, estimate_args, ibf, file_out, search_file, path_in, level_file);
+            if (estimate_args.normalization_method)
+                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, true, true>(args, estimate_args, ibf, file_out, search_file, path_in, level_file);
             else
                 estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, true>(args, estimate_args, ibf, file_out, search_file, path_in, level_file);
         }
