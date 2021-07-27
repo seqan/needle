@@ -118,6 +118,11 @@ int run_needle_estimate(seqan3::argument_parser & parser)
     parser.add_flag(args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
     parser.add_option(estimate_args.fpr, 'f', "fpr", "List of bin false positive rate per expression level. If only one is given"
                                                      ", then that fpr is used for all expression levels.");
+    parser.add_flag(estimate_args.normalization_method, 'm', "normalization-mode",
+                                                            "Set, if normalization is wanted. Normalization is achieved by"
+                                                            "dividing the expression value with the expression value of the first ibf."
+                                                            "Only make sense if every bin has its own expression values."
+                                                            "Default: False.");
 
     initialise_arguments_minimiser_hash(parser, args);
 

@@ -700,12 +700,13 @@ TEST(estimate, small_example_gene_not_found)
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
-TEST(estimate, small_example_different_expressions_per_level)
+TEST(estimate, small_example_different_expressions_per_level_normalization_1)
 {
     arguments args{};
     ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
+    estimate_args.normalization_method = 1;
     initialization_args(args);
     initialization_ibf_args(ibf_args);
     ibf_args.number_expression_levels = 3;
@@ -722,7 +723,7 @@ TEST(estimate, small_example_different_expressions_per_level)
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
-    std::string expected{"gen1\t3\t"};
+    std::string expected{"gen1\t1\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
