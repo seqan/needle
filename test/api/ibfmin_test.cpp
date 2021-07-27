@@ -125,7 +125,7 @@ TEST(ibfmin, no_given_expression_levels_multiple_threads)
     ibf_args.fpr = {0.05, 0.05};
     args.threads = 2;
     std::vector<std::filesystem::path> minimiser_file{};
-    minimiser_file.assign(16, std::string(DATA_INPUT_DIR) + "mini_example.minimiser");
+    minimiser_file.assign(128, std::string(DATA_INPUT_DIR) + "mini_example.minimiser");
 
     std::vector<uint16_t> expected{};
 
@@ -137,10 +137,10 @@ TEST(ibfmin, no_given_expression_levels_multiple_threads)
     load_ibf(ibf, tmp_dir/"Test_IBF_Level_0");
     auto agent = ibf.membership_agent();
 
-    std::vector<bool> expected_result(16, 0);
+    std::vector<bool> expected_result(128, 0);
     auto & res = agent.bulk_contains(2);
     EXPECT_RANGE_EQ(expected_result,  res);
-    std::vector<bool> expected_result2(16, 1);
+    std::vector<bool> expected_result2(128, 1);
     auto & res2 = agent.bulk_contains(97);
     EXPECT_RANGE_EQ(expected_result2,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
