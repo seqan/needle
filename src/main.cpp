@@ -15,9 +15,9 @@ void initialise_arguments_minimiser_hash(seqan3::argument_parser & parser, argum
     parser.add_option(args.k, 'k', "kmer", "Define kmer size.");
     parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_option(w_size, 'w', "window", "Define window size. Default: 60.");
-    parser.add_option(shape, 'p', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
+    parser.add_option(shape, '\0', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
                                            "position to be ignored, 1 a position considered. Default: ungapped.");
-    parser.add_option(se, 's', "seed", "Define seed.");
+    parser.add_option(se, '\0', "seed", "Define seed.");
     parser.add_option(args.threads, 't', "threads", "Number of threads to use. Default: 1.");
 }
 
@@ -50,14 +50,14 @@ void parsing(seqan3::argument_parser & parser, arguments & args)
 void initialise_arguments_minimiser(seqan3::argument_parser & parser, minimiser_arguments & minimiser_args)
 {
     parser.add_option(minimiser_args.include_file, 'g', "genom-mask", "Genom file used as a mask.");
-    parser.add_option(minimiser_args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be "
-                                                                 "equal to number of sequence files. Default: Every"
-                                                                 " sequence file is one sample from one experiment.");
-    parser.add_flag(minimiser_args.paired, 'q', "paired", "If set, experiments are paired. Default: Not paired.");
-    parser.add_option(minimiser_args.cutoffs, 'u', "cut-offs", "Define for each sample, what number of found minimisers "
-                                                         "should be considered the result of a sequencing error and "
-                                                         "therefore be ignored. Default: Every sample has a cut off of "
-                                                         "zero.");
+    parser.add_option(minimiser_args.samples, '\0', "samples", "Define which samples belong together, sum has to be "
+                                                               "equal to number of sequence files. Default: Every"
+                                                               " sequence file is one sample from one experiment.");
+    parser.add_flag(minimiser_args.paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
+    parser.add_option(minimiser_args.cutoffs, '\0', "cutoff", "Define for each sample, what number of found minimisers "
+                                                              "should be considered the result of a sequencing error and "
+                                                              "therefore be ignored. Default: Every sample has a cut off of "
+                                                              "zero.");
 
 }
 
@@ -73,7 +73,7 @@ int run_needle_count(seqan3::argument_parser & parser)
     parser.info.short_description = "Get expression value depending on minimizers.";
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
     parser.add_option(genome_file, 'g', "genome", "Please provide one sequence file with transcripts.");
-    parser.add_flag(paired, 'q', "paired", "If set, experiments are paired. Default: Not paired.");
+    parser.add_flag(paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
 
     try
     {
@@ -164,7 +164,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     parser.info.short_description = "Constructs an IBF.";
 
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
-    parser.add_option(minimiser_args.experiment_names, 'a', "experiment-names", "If set, names of the experiments are stored"
+    parser.add_option(minimiser_args.experiment_names, '\0', "experiment-names", "If set, names of the experiments are stored"
                                                                           " in a txt file.");
 
     try
