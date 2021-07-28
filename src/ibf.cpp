@@ -42,6 +42,57 @@ void get_include_set_table(arguments const & args, std::filesystem::path const i
     }
 }
 
+inline bool check_for_fasta_format(std::vector<std::string> const & valid_extensions, std::string const & file_path)
+{
+
+    auto case_insensitive_string_ends_with = [&] (std::string_view str, std::string_view suffix)
+    {
+        size_t const suffix_length{suffix.size()};
+        size_t const str_length{str.size()};
+        return suffix_length > str_length ?
+               false :
+               std::ranges::equal(str.substr(str_length - suffix_length), suffix, [] (char const chr1, char const chr2)
+               {
+                   return std::tolower(chr1) == std::tolower(chr2);
+               });
+    };
+
+    auto case_insensitive_ends_with = [&] (std::string const & ext)
+    {
+        return case_insensitive_string_ends_with(file_path, ext);
+    };
+
+    return std::ranges::find_if(valid_extensions, case_insensitive_ends_with) != valid_extensions.end();
+}
+
+uint8_t calculate_cutoff(std::filesystem::path sequence_file, int samples)
+{
+    // Cutoff according to Mantis paper, -1 because we use "<" and not "<="
+    uint16_t const default_cutoff{49};
+    uint8_t cutoff{default_cutoff};
+    std::array<uint16_t, 4> const cutoffs{0, 2, 9, 19};
+    std::array<uint64_t, 4> const cutoff_bounds{314'572'800, 524'288'000, 1'073'741'824, 3'221'225'472};
+    cutoff = default_cutoff;
+
+    // Since the curoffs are based on the filesize of a gzipped fastq file, we try account for the other cases:
+    // We multiply by two if we have fasta input.
+    // We divide by 3 if the input is not compressed.
+    bool const is_compressed = sequence_file.extension() == ".gz" || sequence_file.extension() == ".bgzf" || sequence_file.extension() == ".bz2";
+    bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions, sequence_file.stem())
+                                       : check_for_fasta_format(seqan3::format_fasta::file_extensions, sequence_file.extension());
+    size_t const filesize = std::filesystem::file_size(sequence_file) * samples * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
+
+    for (size_t k = 0; k < cutoff_bounds.size(); ++k)
+    {
+        if (filesize <= cutoff_bounds[k])
+        {
+            cutoff = cutoffs[k];
+            break;
+        }
+    }
+    return cutoff;
+}
+
 // Fill hash table with minimisers with cutoff.
 void fill_hash_table(arguments const & args,
                      seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> & fin,
@@ -165,29 +216,6 @@ void check_cutoffs_samples(arguments const & args, std::vector<std::filesystem::
     // If sum of minimiser_args.samples is not equal to number of files, throw error
     else if (std::accumulate(samples.rbegin(), samples.rend(), 0) != sequence_files.size())
         throw std::invalid_argument{"Error. Incorrect command line input for multiple-samples."};
-}
-
-inline bool check_for_fasta_format(std::vector<std::string> const & valid_extensions, std::string const & file_path)
-{
-
-    auto case_insensitive_string_ends_with = [&] (std::string_view str, std::string_view suffix)
-    {
-        size_t const suffix_length{suffix.size()};
-        size_t const str_length{str.size()};
-        return suffix_length > str_length ?
-               false :
-               std::ranges::equal(str.substr(str_length - suffix_length), suffix, [] (char const chr1, char const chr2)
-               {
-                   return std::tolower(chr1) == std::tolower(chr2);
-               });
-    };
-
-    auto case_insensitive_ends_with = [&] (std::string const & ext)
-    {
-        return case_insensitive_string_ends_with(file_path, ext);
-    };
-
-    return std::ranges::find_if(valid_extensions, case_insensitive_ends_with) != valid_extensions.end();
 }
 
 void check_fpr(uint8_t const number_expression_levels, std::vector<float> & fprs)
@@ -334,6 +362,9 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
     std::vector<std::vector<uint64_t>> sizes{};
     sizes.assign(num_files, {});
 
+    bool const calculate_cutoffs = minimiser_args.cutoffs.empty();
+    std::vector<uint8_t> file_cutoffs{};
+
     robin_hood::unordered_set<uint64_t> genome_set_table; // Storage for minimisers in genome sequences
     if constexpr(samplewise)
     {
@@ -353,6 +384,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
     size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / args.threads),
                                                  8u,
                                                  64u);
+
     // Get expression levels and sizes
     #pragma omp parallel for schedule(dynamic, chunk_size)
     for (unsigned i = 0; i < num_files; i++)
@@ -370,6 +402,11 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
             // Estimate sizes on filesize, assuming every byte translates to one letter (which is obiously not true,
             // because ids contain letters as well), so size might be overestimated
             unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
+
+            // Determine cutoffs
+            if (calculate_cutoffs)
+                file_cutoffs.push_back(calculate_cutoff(minimiser_files[file_iterator], minimiser_args.samples[i]));
+
             bool const is_compressed = minimiser_files[file_iterator].extension() == ".gz" || minimiser_files[file_iterator].extension() == ".bgzf" || minimiser_files[file_iterator].extension() == ".bz2";
             bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions,minimiser_files[file_iterator].stem())
                                                  : check_for_fasta_format(seqan3::format_fasta::file_extensions, minimiser_files[file_iterator].extension());
@@ -435,7 +472,10 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files, argu
             for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
             {
                seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_files[file_iterator+f]};
-               fill_hash_table(args, fin, hash_table, cutoff_table, genome_set_table, (minimiser_args.include_file != ""), minimiser_args.cutoffs[i]);
+               if (calculate_cutoff)
+                    fill_hash_table(args, fin, hash_table, cutoff_table, genome_set_table, (minimiser_args.include_file != ""), file_cutoffs[i]);
+               else
+                    fill_hash_table(args, fin, hash_table, cutoff_table, genome_set_table, (minimiser_args.include_file != ""), minimiser_args.cutoffs[i]);
             }
             cutoff_table.clear();
         }
@@ -521,8 +561,6 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
 
     check_cutoffs_samples(args, sequence_files, minimiser_args.include_file, minimiser_args.paired,
                       minimiser_args.samples, minimiser_args.cutoffs);
-    if (minimiser_args.cutoffs.empty()) // If no cutoffs are given, every experiment gets a cutoff of zero
-        minimiser_args.cutoffs.assign(minimiser_args.samples.size(), 0);
 
     check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels);
     check_fpr(ibf_args.number_expression_levels, ibf_args.fpr);
@@ -574,6 +612,9 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
                          unsigned const i)
 {
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
+    uint16_t count{0};
+    uint8_t cutoff{0};
+
     // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
     // and afterwards discarded.
     robin_hood::unordered_node_map<uint64_t, uint8_t>  cutoff_table;
@@ -581,36 +622,11 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
     unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
 
     bool const calculate_cutoffs = minimiser_args.cutoffs.empty();
-    // Cutoff according to Mantis paper, -1 because we use "<" and not "<="
-    uint16_t const default_cutoff{49};
-    std::array<uint16_t, 4> const cutoffs{0, 2, 9, 19};
-    std::array<uint64_t, 4> const cutoff_bounds{314'572'800, 524'288'000, 1'073'741'824, 3'221'225'472};
-    uint16_t cutoff{default_cutoff};
 
     if (calculate_cutoffs)
-    {
-        uint16_t count{0};
-        // Since the curoffs are based on the filesize of a gzipped fastq file, we try account for the other cases:
-        // We multiply by two if we have fasta input.
-        // We divide by 3 if the input is not compressed.
-        bool const is_compressed = sequence_files[file_iterator].extension() == ".gz" || sequence_files[file_iterator].extension() == ".bgzf" || sequence_files[file_iterator].extension() == ".bz2";
-        bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions, sequence_files[file_iterator].stem())
-                                           : check_for_fasta_format(seqan3::format_fasta::file_extensions, sequence_files[file_iterator].extension());
-        size_t const filesize = std::filesystem::file_size(sequence_files[file_iterator]) * minimiser_args.samples[i] * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
-
-        for (size_t k = 0; k < cutoff_bounds.size(); ++k)
-        {
-            if (filesize <= cutoff_bounds[k])
-            {
-                cutoff = cutoffs[k];
-                break;
-            }
-        }
-    }
+        cutoff = calculate_cutoff(sequence_files[file_iterator], minimiser_args.samples[i]);
     else
-    {
         cutoff = minimiser_args.cutoffs[i];
-    }
 
     // Fill hash_table with minimisers.
     for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
