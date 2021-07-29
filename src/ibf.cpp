@@ -67,10 +67,11 @@ inline bool check_for_fasta_format(std::vector<std::string> const & valid_extens
 
 uint8_t calculate_cutoff(std::filesystem::path sequence_file, int samples)
 {
-    // Cutoff according to Mantis paper, -1 because we use "<" and not "<="
-    uint16_t const default_cutoff{49};
+    // Cutoff according to Mantis paper, divided by two because we store expression levels and
+    // -1 because we use "<" and not "<="
+    uint16_t const default_cutoff{24};
     uint8_t cutoff{default_cutoff};
-    std::array<uint16_t, 4> const cutoffs{0, 2, 9, 19};
+    std::array<uint16_t, 4> const cutoffs{0, 1, 4, 9};
     std::array<uint64_t, 4> const cutoff_bounds{314'572'800, 524'288'000, 1'073'741'824, 3'221'225'472};
     cutoff = default_cutoff;
 
