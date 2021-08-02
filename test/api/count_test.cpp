@@ -4,7 +4,7 @@
 #include <seqan3/test/expect_range_eq.hpp>
 
 #include "ibf.h"
-#include "minimiser.h"
+#include "shared.h"
 
 #ifndef DATA_INPUT_DIR
 #  define DATA_INPUT_DIR @DATA_INPUT_DIR@
@@ -13,7 +13,7 @@
 using seqan3::operator""_shape;
 std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
 
-void initialization_args(arguments & args)
+void initialization_args(estimate_ibf_arguments & args)
 {
     args.compressed = true;
     args.k = 4;
@@ -25,7 +25,7 @@ void initialization_args(arguments & args)
 
 TEST(count, small_example)
 {
-    arguments args{};
+    estimate_ibf_arguments args{};
     initialization_args(args);
 
     count(args, {std::string(DATA_INPUT_DIR) + "mini_example.fasta"}, std::string(DATA_INPUT_DIR) + "mini_gen.fasta",
@@ -47,7 +47,7 @@ TEST(count, small_example)
 
 TEST(count, small_example_paired)
 {
-    arguments args{};
+    estimate_ibf_arguments args{};
     initialization_args(args);
 
     count(args, {std::string(DATA_INPUT_DIR) + "mini_example.fasta", std::string(DATA_INPUT_DIR) + "mini_example.fasta"},

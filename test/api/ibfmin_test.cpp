@@ -4,7 +4,7 @@
 #include <seqan3/test/expect_range_eq.hpp>
 
 #include "ibf.h"
-#include "minimiser.h"
+#include "shared.h"
 
 #ifndef DATA_INPUT_DIR
 #  define DATA_INPUT_DIR @DATA_INPUT_DIR@
@@ -13,7 +13,7 @@
 using seqan3::operator""_shape;
 std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
 
-void initialization_args(arguments & args, ibf_arguments & ibf_args)
+void initialization_args(estimate_ibf_arguments & args)
 {
     args.compressed = true;
     args.k = 4;
@@ -21,21 +21,20 @@ void initialization_args(arguments & args, ibf_arguments & ibf_args)
     args.w_size = seqan3::window_size{4};
     args.s = seqan3::seed{0};
     args.path_out = tmp_dir/"Test_";
-    ibf_args.fpr = {0.05};
+    args.fpr = {0.05};
 }
 
 TEST(ibfmin, given_expression_levels)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
-    initialization_args(args, ibf_args);
+    estimate_ibf_arguments ibf_args{};
+    initialization_args(ibf_args);
     ibf_args.expression_levels = {1, 2};
     ibf_args.fpr = {0.05, 0.05};
     std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
 
     std::vector<uint16_t> expected{1, 2};
 
-    std::vector<uint16_t> medians = ibf(minimiser_file, args, ibf_args);
+    std::vector<uint16_t> medians = ibf(minimiser_file, ibf_args);
 
     EXPECT_EQ(expected, medians);
 
@@ -56,18 +55,17 @@ TEST(ibfmin, given_expression_levels)
 #if defined(__GNUC__) && ((__GNUC___ == 10 && __cplusplus == 201703L) || (__GNUC__ <10))
 TEST(ibfmin, given_expression_levels_multiple_threads)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
-    initialization_args(args, ibf_args);
+    estimate_ibf_arguments ibf_args{};
+    initialization_args(ibf_args);
     ibf_args.expression_levels = {1, 2};
     ibf_args.fpr = {0.05, 0.05};
-    args.threads = 2;
+    ibf_args.threads = 2;
     std::vector<std::filesystem::path> minimiser_file{};
     minimiser_file.assign(16, std::string(DATA_INPUT_DIR) + "mini_example.minimiser");
 
     std::vector<uint16_t> expected{1, 2};
 
-    std::vector<uint16_t> medians = ibf(minimiser_file, args, ibf_args);
+    std::vector<uint16_t> medians = ibf(minimiser_file, ibf_args);
 
     EXPECT_EQ(expected, medians);
 
@@ -88,16 +86,15 @@ TEST(ibfmin, given_expression_levels_multiple_threads)
 
 TEST(ibfmin, no_given_expression_levels)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
-    initialization_args(args, ibf_args);
+    estimate_ibf_arguments ibf_args{};
+    initialization_args(ibf_args);
     ibf_args.number_expression_levels = 2;
     ibf_args.fpr = {0.05, 0.05};
     std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
 
     std::vector<uint16_t> expected{};
 
-    std::vector<uint16_t> medians = ibf(minimiser_file, args, ibf_args);
+    std::vector<uint16_t> medians = ibf(minimiser_file, ibf_args);
 
     EXPECT_EQ(expected, medians);
 
@@ -118,18 +115,17 @@ TEST(ibfmin, no_given_expression_levels)
 #if defined(__GNUC__) && ((__GNUC___ == 10 && __cplusplus == 201703L) || (__GNUC__ <10))
 TEST(ibfmin, no_given_expression_levels_multiple_threads)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
-    initialization_args(args, ibf_args);
+    estimate_ibf_arguments ibf_args{};
+    initialization_args(ibf_args);
     ibf_args.number_expression_levels = 2;
     ibf_args.fpr = {0.05, 0.05};
-    args.threads = 2;
+    ibf_args.threads = 2;
     std::vector<std::filesystem::path> minimiser_file{};
     minimiser_file.assign(128, std::string(DATA_INPUT_DIR) + "mini_example.minimiser");
 
     std::vector<uint16_t> expected{};
 
-    std::vector<uint16_t> medians = ibf(minimiser_file, args, ibf_args);
+    std::vector<uint16_t> medians = ibf(minimiser_file, ibf_args);
 
     EXPECT_EQ(expected, medians);
 

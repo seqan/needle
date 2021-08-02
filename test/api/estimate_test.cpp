@@ -4,7 +4,7 @@
 #include <seqan3/test/expect_range_eq.hpp>
 
 #include "ibf.h"
-#include "minimiser.h"
+#include "shared.h"
 #include "estimate.h"
 
 #ifndef DATA_INPUT_DIR
@@ -14,7 +14,7 @@
 using seqan3::operator""_shape;
 std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
 
-void initialization_args(arguments & args, ibf_arguments & ibf_args)
+void initialization_args(estimate_ibf_arguments & args)
 {
     args.compressed = true;
     args.k = 4;
@@ -22,24 +22,23 @@ void initialization_args(arguments & args, ibf_arguments & ibf_args)
     args.w_size = seqan3::window_size{4};
     args.s = seqan3::seed{0};
     args.path_out = tmp_dir/"Test_";
-
-    ibf_args.fpr = {0.05};
+    args.fpr = {0.05};
 }
 
 TEST(estimate, small_example)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
-    initialization_args(args, ibf_args);
+    initialization_args(ibf_args);
     ibf_args.expression_levels = {1, 2, 4};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
-    estimate_args.expressions = ibf_args.expression_levels;
-    estimate_args.fpr = ibf_args.fpr;
+    estimate_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen.fasta";
+    estimate_args.path_in = ibf_args.path_out;
 
-    ibf(sequence_files, args, ibf_args, minimiser_args);
-    call_estimate(args, estimate_args, tmp_dir/"expression.out", std::string(DATA_INPUT_DIR) + "mini_gen.fasta", args.path_out);
+    ibf(sequence_files, ibf_args, minimiser_args);
+    ibf_args.path_out = tmp_dir/"expression.out";
+    call_estimate(ibf_args, estimate_args);
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -59,20 +58,19 @@ TEST(estimate, small_example)
 
 TEST(estimate, small_example_uncompressed)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
-    initialization_args(args, ibf_args);
-    args.compressed = false;
+    initialization_args(ibf_args);
+    ibf_args.compressed = false;
     ibf_args.expression_levels = {1, 2, 4};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
-    estimate_args.expressions = ibf_args.expression_levels;
-    estimate_args.fpr = ibf_args.fpr;
+    estimate_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen.fasta";
+    estimate_args.path_in = ibf_args.path_out;
 
-    ibf(sequence_files, args, ibf_args, minimiser_args);
-
-    call_estimate(args, estimate_args, tmp_dir/"expression.out", std::string(DATA_INPUT_DIR) + "mini_gen.fasta", args.path_out);
+    ibf(sequence_files, ibf_args, minimiser_args);
+    ibf_args.path_out = tmp_dir/"expression.out";
+    call_estimate(ibf_args, estimate_args);
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -92,18 +90,18 @@ TEST(estimate, small_example_uncompressed)
 
 TEST(estimate, small_example_gene_not_found)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
-    initialization_args(args, ibf_args);
+    initialization_args(ibf_args);
     ibf_args.expression_levels = {2, 4};
-    estimate_args.expressions = ibf_args.expression_levels;
-    estimate_args.fpr = ibf_args.fpr;
+    estimate_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen2.fasta";
+    estimate_args.path_in = ibf_args.path_out;
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
-    ibf(sequence_files, args, ibf_args, minimiser_args);
-    call_estimate(args, estimate_args, tmp_dir/"expression.out", std::string(DATA_INPUT_DIR) + "mini_gen2.fasta", args.path_out);
+    ibf(sequence_files, ibf_args, minimiser_args);
+    ibf_args.path_out = tmp_dir/"expression.out";
+    call_estimate(ibf_args, estimate_args);
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -123,23 +121,24 @@ TEST(estimate, small_example_gene_not_found)
 
 TEST(estimate, small_example_different_expressions_per_level_normalization_1)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     estimate_args.normalization_method = 1;
-    initialization_args(args, ibf_args);
+    initialization_args(ibf_args);
     ibf_args.number_expression_levels = 3;
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
-    minimiser(sequence_files, args, minimiser_args);
+    minimiser(sequence_files, ibf_args, minimiser_args);
     std::vector<std::filesystem::path> minimiser_files{tmp_dir/"Test_mini_example.minimiser"};
     ibf_args.expression_levels = {};
-    ibf(minimiser_files, args, ibf_args);
+    ibf(minimiser_files, ibf_args);
 
-    estimate_args.expressions = {0, 1, 2};
-    estimate_args.fpr = ibf_args.fpr;
-    call_estimate(args, estimate_args, tmp_dir/"expression.out", std::string(DATA_INPUT_DIR) + "mini_gen.fasta", args.path_out, tmp_dir/"Test_IBF_Levels.levels");
+    ibf_args.expression_levels = {0, 1, 2};
+    estimate_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen.fasta";
+    estimate_args.path_in = ibf_args.path_out;
+    ibf_args.path_out = tmp_dir/"expression.out";
+    call_estimate(ibf_args, estimate_args, tmp_dir/"Test_IBF_Levels.levels");
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -161,21 +160,22 @@ TEST(estimate, small_example_different_expressions_per_level_normalization_1)
 
 TEST(estimate, example)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
                                                          std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
-    minimiser_args.samples = {2,2};
+    minimiser_args.samples = {2, 2};
     ibf_args.expression_levels = {32};
     ibf_args.fpr = {0.3};
-    args.path_out = tmp_dir/"Test_";
-    args.compressed = false;
-    estimate_args.expressions = ibf_args.expression_levels;
-    estimate_args.fpr = ibf_args.fpr;
-    ibf(sequence_files, args, ibf_args, minimiser_args);
-    call_estimate(args, estimate_args, tmp_dir/"expression.out", std::string(DATA_INPUT_DIR) + "gene.fasta", args.path_out);
+    ibf_args.path_out = tmp_dir/"Test_";
+    ibf_args.compressed = false;
+    ibf(sequence_files, ibf_args, minimiser_args);
+
+    estimate_args.search_file = std::string(DATA_INPUT_DIR) + "gene.fasta";
+    estimate_args.path_in = ibf_args.path_out;
+    ibf_args.path_out = tmp_dir/"expression.out";
+    call_estimate(ibf_args, estimate_args);
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -194,8 +194,7 @@ TEST(estimate, example)
 
 TEST(estimate, example_multiple_threads)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
@@ -203,13 +202,15 @@ TEST(estimate, example_multiple_threads)
     minimiser_args.samples = {2,2};
     ibf_args.expression_levels = {4, 32};
     ibf_args.fpr = {0.05};
-    args.path_out = tmp_dir/"Test_";
-    args.compressed = false;
-    estimate_args.expressions = ibf_args.expression_levels;
-    estimate_args.fpr = ibf_args.fpr;
-    ibf(sequence_files, args, ibf_args, minimiser_args);
-    args.threads = 4;
-    call_estimate(args, estimate_args, tmp_dir/"expression.out", std::string(DATA_INPUT_DIR) + "gene.fasta", args.path_out);
+    ibf_args.path_out = tmp_dir/"Test_";
+    ibf_args.compressed = false;
+    ibf(sequence_files, ibf_args, minimiser_args);
+    ibf_args.threads = 4;
+
+    estimate_args.search_file = std::string(DATA_INPUT_DIR) + "gene.fasta";
+    estimate_args.path_in = ibf_args.path_out;
+    ibf_args.path_out = tmp_dir/"expression.out";
+    call_estimate(ibf_args, estimate_args);
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -229,8 +230,7 @@ TEST(estimate, example_multiple_threads)
 
 TEST(estimate, example_different_expressions_per_level)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
@@ -239,15 +239,17 @@ TEST(estimate, example_different_expressions_per_level)
     minimiser_args.samples = {2,2};
     ibf_args.number_expression_levels = 3;
     ibf_args.fpr = {0.05};
-    args.path_out = tmp_dir/"Test_";
-    args.compressed = false;
-    estimate_args.expressions = {0, 1, 2};
-    minimiser(sequence_files, args, minimiser_args);
+    ibf_args.path_out = tmp_dir/"Test_";
+    ibf_args.compressed = false;
+    minimiser(sequence_files, ibf_args, minimiser_args);
     std::vector<std::filesystem::path> minimiser_files{tmp_dir/"Test_exp_01.minimiser", tmp_dir/"Test_exp_11.minimiser"};
-    ibf_args.expression_levels = {};
-    estimate_args.fpr = ibf_args.fpr;
-    ibf(minimiser_files, args, ibf_args);
-    call_estimate(args, estimate_args, tmp_dir/"expression.out", std::string(DATA_INPUT_DIR) + "gene.fasta", args.path_out, tmp_dir/"Test_IBF_Levels.levels");
+    ibf(minimiser_files, ibf_args);
+
+    ibf_args.expression_levels = {0, 1, 2};
+    estimate_args.search_file = std::string(DATA_INPUT_DIR) + "gene.fasta";
+    estimate_args.path_in = ibf_args.path_out;
+    ibf_args.path_out = tmp_dir/"expression.out";
+    call_estimate(ibf_args, estimate_args, tmp_dir/"Test_IBF_Levels.levels");
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -270,8 +272,7 @@ TEST(estimate, example_different_expressions_per_level)
 
 TEST(estimate, example_different_expressions_per_level_multiple_threads)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
@@ -280,16 +281,19 @@ TEST(estimate, example_different_expressions_per_level_multiple_threads)
     minimiser_args.samples = {2,2};
     ibf_args.number_expression_levels = 3;
     ibf_args.fpr = {0.05};
-    args.path_out = tmp_dir/"Test_";
-    args.compressed = false;
-    estimate_args.expressions = {0, 1, 2};
-    estimate_args.fpr = ibf_args.fpr;
-    minimiser(sequence_files, args, minimiser_args);
+    ibf_args.path_out = tmp_dir/"Test_";
+    ibf_args.compressed = false;
+    minimiser(sequence_files, ibf_args, minimiser_args);
     std::vector<std::filesystem::path> minimiser_files{tmp_dir/"Test_exp_01.minimiser", tmp_dir/"Test_exp_11.minimiser"};
     ibf_args.expression_levels = {};
-    ibf(minimiser_files, args, ibf_args);
-    args.threads = 4;
-    call_estimate(args, estimate_args, tmp_dir/"expression.out", std::string(DATA_INPUT_DIR) + "gene.fasta", args.path_out, tmp_dir/"Test_IBF_Levels.levels");
+    ibf(minimiser_files, ibf_args);
+
+    ibf_args.threads = 4;
+    ibf_args.expression_levels = {0, 1, 2};
+    estimate_args.search_file = std::string(DATA_INPUT_DIR) + "gene.fasta";
+    estimate_args.path_in = ibf_args.path_out;
+    ibf_args.path_out = tmp_dir/"expression.out";
+    call_estimate(ibf_args, estimate_args, tmp_dir/"Test_IBF_Levels.levels");
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;

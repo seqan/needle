@@ -4,7 +4,7 @@
 #include <seqan3/test/expect_range_eq.hpp>
 
 #include "ibf.h"
-#include "minimiser.h"
+#include "shared.h"
 
 #ifndef DATA_INPUT_DIR
 #  define DATA_INPUT_DIR @DATA_INPUT_DIR@
@@ -41,26 +41,24 @@ std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> expected_hash_ta
                                                                               {168,1}, // GGGA
                                                                                      },};
 
-void initialization_args(arguments & args, ibf_arguments & ibf_args)
+void initialization_args(estimate_ibf_arguments & args)
 {
-    args.compressed = true;
     args.k = 4;
     args.shape = seqan3::ungapped{args.k};
     args.w_size = seqan3::window_size{4};
     args.s = seqan3::seed{0};
     args.path_out = tmp_dir/"Test_";
-
-    ibf_args.fpr = {0.05};
+    args.fpr = {0.05};
+    args.compressed = true;
 }
 
 TEST(minimiser, small_example)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments args{};
     minimiser_arguments minimiser_args{};
-    initialization_args(args, ibf_args);
+    initialization_args(args);
     minimiser_args.cutoffs = {0, 0};
-    ibf_args.expression_levels = {0};
+    args.expression_levels = {0};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
                                                          std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
 
@@ -96,8 +94,7 @@ TEST(minimiser, small_example)
         result_hash_table.clear();
     }
 
-    EXPECT_EQ(ibf_args.expression_levels, ibf(minimiser_files, args, ibf_args));
-
+    EXPECT_EQ(args.expression_levels, ibf(minimiser_files, args));
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
     load_ibf(ibf, tmp_dir/"Test_IBF_0");
     auto agent = ibf.membership_agent();
@@ -121,13 +118,12 @@ TEST(minimiser, small_example)
 
 TEST(minimiser, small_example_samplewise)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments args{};
     minimiser_arguments minimiser_args{};
-    initialization_args(args, ibf_args);
+    initialization_args(args);
 
     minimiser_args.cutoffs = {0, 0};
-    ibf_args.number_expression_levels = 1;
+    args.number_expression_levels = 1;
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
                                                          std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
 
@@ -144,7 +140,7 @@ TEST(minimiser, small_example_samplewise)
     for (int i = 0; i < sequence_files.size(); ++i)
     {
         // Test Header file
-        ibf_args.expression_levels = {};
+        args.expression_levels = {};
         read_header(args, minimiser_args.cutoffs, std::string{args.path_out}  +
                     std::string{sequence_files[i].stem()} + ".header", num_of_minimisers);
         EXPECT_EQ(4, args.k);
@@ -164,9 +160,9 @@ TEST(minimiser, small_example_samplewise)
 
         result_hash_table.clear();
     }
-    ibf_args.expression_levels = {};
+    args.expression_levels = {};
     expected_levels = {}; // Only levels from last experiment are returned.
-    EXPECT_EQ(expected_levels, ibf(minimiser_files, args, ibf_args));
+    EXPECT_EQ(expected_levels, ibf(minimiser_files, args));
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
     load_ibf(ibf, tmp_dir/"Test_IBF_Level_0");
@@ -190,11 +186,10 @@ TEST(minimiser, small_example_samplewise)
 
 TEST(minimiser, cutoff_by_filesize)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments args{};
     minimiser_arguments minimiser_args{};
-    initialization_args(args, ibf_args);
-    ibf_args.expression_levels = {0};
+    initialization_args(args);
+    args.expression_levels = {0};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
                                                          std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
 
@@ -220,7 +215,7 @@ TEST(minimiser, cutoff_by_filesize)
         minimiser_files.push_back(tmp_dir/("Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
     }
 
-    EXPECT_EQ(ibf_args.expression_levels, ibf(minimiser_files, args, ibf_args));
+    EXPECT_EQ(args.expression_levels, ibf(minimiser_files, args));
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
     load_ibf(ibf, tmp_dir/"Test_IBF_0");
@@ -246,13 +241,12 @@ TEST(minimiser, cutoff_by_filesize)
 
 TEST(minimiser, small_example_two_threads)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments args{};
     minimiser_arguments minimiser_args{};
-    initialization_args(args, ibf_args);
+    initialization_args(args);
     args.threads = 2;
     minimiser_args.cutoffs = {0, 0};
-    ibf_args.expression_levels = {0};
+    args.expression_levels = {0};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
                                                          std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
     minimiser(sequence_files, args, minimiser_args);
@@ -288,7 +282,7 @@ TEST(minimiser, small_example_two_threads)
         result_hash_table.clear();
     }
 
-    EXPECT_EQ(ibf_args.expression_levels, ibf(minimiser_files, args, ibf_args));
+    EXPECT_EQ(args.expression_levels, ibf(minimiser_files, args));
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
     load_ibf(ibf, tmp_dir/"Test_IBF_0");

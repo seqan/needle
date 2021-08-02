@@ -14,17 +14,71 @@ inline constexpr static uint64_t adjust_seed(uint8_t const kmer_size, uint64_t c
     return seed >> (64u - 2u * kmer_size);
 }
 
-//!\brief arguments used for construction of the IBF as well as the search
-struct arguments
+//!\brief arguments used for all tools
+struct all_arguments
 {
-    bool compressed = false;
-    uint8_t k{20};
     std::filesystem::path path_out{"./"};
+    uint8_t threads{1};
+};
+
+//!\brief arguments used for estimate, ibf, minimiser
+struct min_arguments : all_arguments
+{
+    uint8_t k{20};
     seqan3::seed s{0x8F3F73B5CF1C9ADEULL};
     seqan3::shape shape = seqan3::ungapped{k};
-    uint8_t threads{1};
     seqan3::window_size w_size{60};
+
+    template<class Archive>
+    void save(Archive & archive) const
+    {
+        archive(k);
+        archive(w_size.get());
+        archive(s.get());
+        archive(shape);
+    }
+
+    template<class Archive>
+    void load(Archive & archive)
+    {
+        archive(k);
+        archive(w_size.get());
+        archive(s.get());
+        archive(shape);
+    }
 };
+
+//!\brief arguments used for estimate, ibf, ibfmin
+struct estimate_ibf_arguments : min_arguments
+{
+    bool compressed = false;
+    std::vector<float> fpr{}; // The fpr of one IBF, can be different for different expression levels
+    std::vector<uint16_t> expression_levels{}; // Expression levels which should be created
+    uint8_t number_expression_levels{}; // If set, the expression levels are determined by the program.
+    std::filesystem::path level_file{};
+};
+
+/*! \brief Function, loading arguments
+ *  \param args   arguments to load
+ *  \param ipath Path, where the arguments can be found.
+ */
+static void load_min_args(min_arguments & args, std::filesystem::path ipath)
+{
+    std::ifstream is{ipath, std::ios::binary};
+    cereal::BinaryInputArchive iarchive{is};
+    iarchive(args);
+}
+
+/*! \brief Function, which stores the arguments
+ *  \param args  arguments to store
+ *  \param opath Path, where the arguments should be stored.
+ */
+static void store_args(min_arguments const & args, std::filesystem::path opath)
+{
+    std::ofstream os{opath, std::ios::binary};
+    cereal::BinaryOutputArchive oarchive{os};
+    oarchive(args);
+}
 
 //!\brief Use dna4 instead of default dna5
 struct my_traits : seqan3::sequence_file_input_default_traits_dna
@@ -49,7 +103,7 @@ void load_ibf(IBFType & ibf, std::filesystem::path ipath)
 
 /*! \brief Function, which stored compressed and uncompressed ibfs
  *  \param ibf   The IBF to store.
- *  \param opath Path, where the IBF can be found.
+ *  \param opath Path, where the IBF should be stored.
  */
 template <class IBFType>
 void store_ibf(IBFType const & ibf,
