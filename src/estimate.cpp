@@ -114,6 +114,7 @@ void read_levels(std::vector<std::vector<uint16_t>> & expressions, std::filesyst
 /*! \brief Function to estimate expression value.
 *  \param args        The arguments.
 *  \param ibf         The ibf determing what kind ibf is used (compressed or uncompressed).
+*  \param file_out    The output file.
 *  \param search_file The sequence file with the sequences which expression value should be estimated.
 *  \param path_in     The directory where the ibfs can be found.
 *  \param level_file Path to the header files, where expression levels can be found.
