@@ -104,24 +104,16 @@ int run_needle_estimate(seqan3::argument_parser & parser)
     parser.info.short_description = "Estimate expression value of transcript based on IBFs.";
     parser.info.version = "1.0.0";
     parser.info.author = "Mitra Darvish";
-    std::filesystem::path level_file{""};
-    args.path_out = "expressions.out";
-    size_t num_hash{};
 
-    initialise_min_arguments(parser, args);
-    initialise_arguments_ibf(parser, args, num_hash);
+    args.path_out = "expressions.out";
 
     parser.add_positional_option(estimate_args.search_file, "Please provide a sequence file.");
     parser.add_option(estimate_args.path_in, 'i', "in", "Directory where input files can be found.");
-    parser.add_option(level_file, 'd', "level", "Level file.");
     parser.add_flag(estimate_args.normalization_method, 'm', "normalization-mode",
                                                             "Set, if normalization is wanted. Normalization is achieved by"
                                                             "dividing the expression value with the expression value of the first ibf."
                                                             "Only make sense if every bin has its own expression values."
                                                             "Default: False.");
-
-    //initialise_min_arguments(parser, args);
-
 
     try
     {
@@ -135,7 +127,7 @@ int run_needle_estimate(seqan3::argument_parser & parser)
 
     try
     {
-        call_estimate(args, estimate_args, level_file);
+        call_estimate(args, estimate_args);
     }
     catch (const std::invalid_argument & e)
     {

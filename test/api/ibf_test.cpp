@@ -52,6 +52,20 @@ TEST(ibf, given_expression_levels)
     EXPECT_RANGE_EQ(expected_result,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
+
+    estimate_ibf_arguments args{};
+    load_args(args, tmp_dir/"Test_IBF_Data");
+    EXPECT_EQ(4, args.k);
+    EXPECT_EQ(4, args.w_size.get());
+    EXPECT_EQ(0, args.s.get());
+    EXPECT_EQ(15, args.shape.to_ulong());
+    EXPECT_EQ(true, args.compressed);
+    EXPECT_RANGE_EQ(ibf_args.fpr, args.fpr);
+    EXPECT_EQ(ibf_args.number_expression_levels, args.number_expression_levels);
+    EXPECT_RANGE_EQ(ibf_args.expression_levels, args.expression_levels);
+    EXPECT_EQ(ibf_args.samplewise, args.samplewise);
+
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
 }
 
 TEST(ibf, given_expression_levels_genome_file)
@@ -82,6 +96,7 @@ TEST(ibf, given_expression_levels_genome_file)
     EXPECT_RANGE_EQ(expected_result,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
 }
 
 TEST(ibf, no_given_expression_levels)
@@ -109,6 +124,7 @@ TEST(ibf, no_given_expression_levels)
     auto & res2 = agent.bulk_contains(97);
     EXPECT_RANGE_EQ(expected_result,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
 }
 
 TEST(ibf, throws)

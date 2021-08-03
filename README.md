@@ -56,10 +56,10 @@ Based on a minimiser file the ibfs can be computed by using the following comman
 ```
 
 ## Estimate
-To estimate the expression value of one transcript a sequence file has to be given and the expression levels that should be searched. If a compressed IBF was created the search needs the information that it is a compressed IBF as well.
+To estimate the expression value of one transcript a sequence file has to be given.
 Use -h/--help for more information and to see further parameters.
 The following example searches for one gene, which is expressed in the first experiment at expression rate 0.25 and in the second at expression rate 1. Therefore, it should be found only in the second experiment but not the first.
 
 ```
-./bin/needle estimate ../needle/test/data/gene.fasta -e 4 -e 32 -f 0.3 -c
+./bin/needle estimate ../needle/test/data/gene.fasta
 ```

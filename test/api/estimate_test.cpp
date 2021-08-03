@@ -138,7 +138,7 @@ TEST(estimate, small_example_different_expressions_per_level_normalization_1)
     estimate_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen.fasta";
     estimate_args.path_in = ibf_args.path_out;
     ibf_args.path_out = tmp_dir/"expression.out";
-    call_estimate(ibf_args, estimate_args, tmp_dir/"Test_IBF_Levels.levels");
+    call_estimate(ibf_args, estimate_args);
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -249,7 +249,7 @@ TEST(estimate, example_different_expressions_per_level)
     estimate_args.search_file = std::string(DATA_INPUT_DIR) + "gene.fasta";
     estimate_args.path_in = ibf_args.path_out;
     ibf_args.path_out = tmp_dir/"expression.out";
-    call_estimate(ibf_args, estimate_args, tmp_dir/"Test_IBF_Levels.levels");
+    call_estimate(ibf_args, estimate_args);
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -293,7 +293,7 @@ TEST(estimate, example_different_expressions_per_level_multiple_threads)
     estimate_args.search_file = std::string(DATA_INPUT_DIR) + "gene.fasta";
     estimate_args.path_in = ibf_args.path_out;
     ibf_args.path_out = tmp_dir/"expression.out";
-    call_estimate(ibf_args, estimate_args, tmp_dir/"Test_IBF_Levels.levels");
+    call_estimate(ibf_args, estimate_args);
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
@@ -307,6 +307,8 @@ TEST(estimate, example_different_expressions_per_level_multiple_threads)
         }
         output_file.close();
     }
+    std::filesystem::remove(tmp_dir/"Test_exp_01.minimiser");
+    std::filesystem::remove(tmp_dir/"Test_exp_11.minimiser");
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_2");

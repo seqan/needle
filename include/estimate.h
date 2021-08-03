@@ -22,7 +22,5 @@ struct estimate_arguments
 /*! \brief Function, which calls the estimate function.
 *  \param args          The arguments estimate and ibf use.
 *  \param estimate_args The estimate arguments.
-*  \param level_file    Path to the header files, where expression levels can be found.
 */
-void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_args,
-                   std::filesystem::path level_file = "");
+void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_args);

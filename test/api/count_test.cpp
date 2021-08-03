@@ -42,7 +42,7 @@ TEST(count, small_example)
         }
         output_file.close();
     }
-    std::filesystem::remove(tmp_dir/"mini_example.count.out");
+    std::filesystem::remove(tmp_dir/"Test_mini_example.count.out");
 }
 
 TEST(count, small_example_paired)
@@ -64,5 +64,5 @@ TEST(count, small_example_paired)
         }
         output_file.close();
     }
-    std::filesystem::remove(tmp_dir/"mini_example.count.out");
+    std::filesystem::remove(tmp_dir/"Test_mini_example.count.out");
 }

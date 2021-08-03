@@ -566,7 +566,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels);
     check_fpr(ibf_args.number_expression_levels, ibf_args.fpr);
 
-    bool samplewise = (ibf_args.expression_levels.size() == 0);
+    ibf_args.samplewise = (ibf_args.expression_levels.size() == 0);
 
     // Store experiment names
     if (minimiser_args.experiment_names)
@@ -581,10 +581,12 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
         outfile.close();
     }
 
-    if (samplewise)
+    if (ibf_args.samplewise)
         ibf_helper<true, false>(sequence_files, ibf_args, num_hash, minimiser_args);
     else
         ibf_helper<false, false>(sequence_files, ibf_args, num_hash, minimiser_args);
+
+    store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
 
     return ibf_args.expression_levels;
 }
@@ -596,12 +598,14 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
     check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels);
     check_fpr(ibf_args.number_expression_levels, ibf_args.fpr);
 
-    bool const samplewise = (ibf_args.expression_levels.size() == 0);
+    ibf_args.samplewise = (ibf_args.expression_levels.size() == 0);
 
-    if (samplewise)
+    if (ibf_args.samplewise)
         ibf_helper<true>(minimiser_files, ibf_args, num_hash);
     else
         ibf_helper<false>(minimiser_files, ibf_args, num_hash);
+
+    store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
 
     return ibf_args.expression_levels;
 }
