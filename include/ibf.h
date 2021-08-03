@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <math.h>
 #include <numeric>
 #include <string>
@@ -77,22 +78,20 @@ void get_minimisers(min_arguments const & args, seqan3::concatenated_sequences<s
 void count(min_arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,
            bool paired);
 
-/*!\brief Reads a binary file function minimiser creates
-* \param hash_table         The hash table to store minimisers into.
+/*!\brief Reads a binary file that needle minimiser creates.
 * \param filename           The filename of the binary file.
-*/
-void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table, std::filesystem::path filename);
+* \param hash_table         The hash table to store minimisers into.
 
-/*!\brief Reads a header file function minimiser creates
-* \param args                 The minimiser arguments to use (seed, shape, window size).
-* \param cutoffs              The vector where the cutoff value should be push backed to.
-* \param filename             The filename of the binary file.
-* \param num_of_minimisers    The number of minimisers in a file.
 */
-void read_header(min_arguments & args,
-                 std::vector<uint8_t> & cutoffs,
-                 std::filesystem::path filename,
-                 uint64_t & num_of_minimisers);
+void read_binary(std::filesystem::path filename, robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table);
+
+/*!\brief Reads the beginning of a binary file that needle minimiser creates.
+* \param args               Min arguments.
+* \param filename           The filename of the binary file.
+* \param num_of_minimisers  Variable, where to number of minimisers should be stored.
+
+*/
+void read_binary_start(min_arguments & args, std::filesystem::path filename, uint64_t & num_of_minimisers);
 
 /*! \brief Create IBF.
  * \param sequence_files  A vector of sequence file paths.

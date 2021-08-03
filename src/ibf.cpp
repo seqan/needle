@@ -185,6 +185,72 @@ void count(min_arguments const & args, std::vector<std::filesystem::path> sequen
     }
 }
 
+void read_binary(std::filesystem::path filename,
+                 robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table)
+{
+    std::ifstream fin;
+
+    uint8_t small_buffer;
+    uint32_t window;
+    uint64_t buffer;
+    fin.open(filename, std::ios::binary);
+    fin.read((char*)&buffer, sizeof(buffer));
+    fin.read((char*)&small_buffer, sizeof(small_buffer));
+    fin.read((char*)&window, sizeof(window));
+    fin.read((char*)&buffer, sizeof(buffer));
+    bool ungapped;
+    fin.read((char*)&ungapped, sizeof(ungapped));
+    if (!ungapped)
+    {
+        fin.read((char*)&buffer, sizeof(buffer));
+    }
+
+    uint64_t minimiser;
+    uint16_t minimiser_count;
+
+    while(fin.read((char*)&minimiser, sizeof(minimiser)))
+    {
+        fin.read((char*)&minimiser_count, sizeof(minimiser_count));
+        hash_table[minimiser] = minimiser_count;
+    }
+
+
+    fin.close();
+}
+
+void read_binary_start(min_arguments & args,
+                 std::filesystem::path filename,
+                 uint64_t & num_of_minimisers)
+{
+    std::ifstream fin;
+
+    uint32_t window;
+    uint64_t buffer;
+    fin.open(filename, std::ios::binary);
+    fin.read((char*)&buffer, sizeof(buffer));
+    num_of_minimisers = buffer;
+
+    fin.read((char*)&args.k, sizeof(args.k));
+    fin.read((char*)&window, sizeof(window));
+    args.w_size = seqan3::window_size{window};
+    fin.read((char*)&buffer, sizeof(buffer));
+    args.s = seqan3::seed{buffer};
+
+    bool ungapped;
+    fin.read((char*)&ungapped, sizeof(ungapped));
+    if (ungapped)
+    {
+        args.shape = seqan3::ungapped{args.k};
+    }
+    else
+    {
+        fin.read((char*)&buffer, sizeof(buffer));
+        args.shape = seqan3::bin_literal{buffer};
+    }
+
+    fin.close();
+}
+
 // Check number of expression levels, sort expression levels
 void check_expression(std::vector<uint16_t> & expression_levels, uint8_t & number_expression_levels)
 {
@@ -238,72 +304,6 @@ void check_fpr(uint8_t const number_expression_levels, std::vector<float> & fprs
     }
 }
 
-// Reads a binary file minimiser creates
-void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table, std::filesystem::path filename)
-{
-    std::ifstream fin;
-    uint64_t minimiser;
-    uint16_t minimiser_count;
-    fin.open(filename, std::ios::binary);
-
-    while(fin.read((char*)&minimiser, sizeof(minimiser)))
-    {
-        fin.read((char*)&minimiser_count, sizeof(minimiser_count));
-        hash_table[minimiser] = minimiser_count;
-    }
-
-    fin.close();
-}
-
-// Reads one header file minimiser creates
-void read_header(min_arguments & args, std::vector<uint8_t> & cutoffs, std::filesystem::path filename,
-                 uint64_t & num_of_minimisers)
-{
-    std::ifstream fin;
-    fin.open(filename);
-    auto stream_view = seqan3::views::istreambuf(fin);
-    auto stream_it = std::ranges::begin(stream_view);
-
-    // Read first line
-    std::string buffer;
-    std::ranges::copy(stream_view | std::views::take_while(std::not_fn(seqan3::is_char<' '>)),
-                                    std::cpp20::back_inserter(buffer));
-    stream_it++;
-    args.s = seqan3::seed{(uint64_t) std::stoull(buffer)};
-    buffer.clear();
-    std::ranges::copy(stream_view | std::views::take_while(std::not_fn(seqan3::is_char<' '>)),
-                                    std::cpp20::back_inserter(buffer));
-    stream_it++;
-    args.k = std::stoi(buffer);
-    buffer.clear();
-    std::ranges::copy(stream_view | std::views::take_while(std::not_fn(seqan3::is_char<' '>)),
-                                    std::cpp20::back_inserter(buffer));
-    stream_it++;
-    args.w_size = seqan3::window_size{(uint32_t) std::stoi(buffer)};
-    buffer.clear();
-    std::ranges::copy(stream_view | std::views::take_while(std::not_fn(seqan3::is_char<' '>)),
-                                    std::cpp20::back_inserter(buffer));
-    stream_it++;
-    uint64_t shape = (uint64_t) std::stoull(buffer);
-    buffer.clear();
-    if (shape == 0)
-            args.shape = seqan3::ungapped{args.k};
-        else
-            args.shape = seqan3::bin_literal{shape};
-
-    std::ranges::copy(stream_view | std::views::take_while(std::not_fn(seqan3::is_char<' '>)),
-                                    std::cpp20::back_inserter(buffer));
-    stream_it++;
-    cutoffs.push_back(std::stoi(buffer));
-    buffer.clear();
-
-    std::ranges::copy(stream_view | std::views::take_while(std::not_fn(seqan3::is_char<'\n'>)),
-                                    std::cpp20::back_inserter(buffer));
-    num_of_minimisers = (uint64_t) std::stoull(buffer);
-
-    fin.close();
-}
-
 // Calculate expression levels and sizes
 void get_expression_levels(uint8_t const number_expression_levels,
                            robin_hood::unordered_node_map<uint64_t, uint16_t> const & hash_table,
@@ -351,7 +351,7 @@ void get_sizes(uint8_t const number_expression_levels,
 
 template<bool samplewise, bool minimiser_files_given = true>
 void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
-                estimate_ibf_arguments const & ibf_args, size_t num_hash = 1, minimiser_arguments const & minimiser_args = {})
+                estimate_ibf_arguments & ibf_args, size_t num_hash = 1, minimiser_arguments const & minimiser_args = {})
 {
 
     size_t num_files;
@@ -395,9 +395,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
         if constexpr(minimiser_files_given)
         {
-            min_arguments args2{};
-            std::vector<uint8_t> cutoffs2{};
-            read_header(args2, cutoffs2, std::string{minimiser_files[i].parent_path()} + "/" + std::string{minimiser_files[i].stem()} + ".header", filesize);
+            read_binary_start(ibf_args, minimiser_files[i], filesize);
         }
         else
         {
@@ -466,7 +464,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         // Fill hash table with minimisers.
         if constexpr (minimiser_files_given)
         {
-            read_binary(hash_table, minimiser_files[i]);
+            read_binary(minimiser_files[i], hash_table);
         }
         else
         {
@@ -591,7 +589,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     return ibf_args.expression_levels;
 }
 
-// Create ibf based on the minimiser and header files
+// Create ibf based on the minimiser file
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files,
                           estimate_ibf_arguments & ibf_args, size_t num_hash)
 {
@@ -642,22 +640,25 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
     // Write minimiser and their counts to binary
     outfile.open(std::string{args.path_out} + std::string{sequence_files[file_iterator].stem()}
                  + ".minimiser", std::ios::binary);
+    auto hash_size = hash_table.size();
+    outfile.write(reinterpret_cast<const char*>(&hash_size), sizeof(hash_size));
+    outfile.write(reinterpret_cast<const char*>(&args.k), sizeof(args.k));
+    outfile.write(reinterpret_cast<const char*>(&args.w_size.get()), sizeof(args.w_size.get()));
+    outfile.write(reinterpret_cast<const char*>(&args.s.get()), sizeof(args.s.get()));
+    bool ungapped = args.shape.all();
+    outfile.write(reinterpret_cast<const char*>(&ungapped), sizeof(ungapped));
+
+    if (!ungapped)
+    {
+        uint64_t shapesize = args.shape.to_ulong();
+        outfile.write(reinterpret_cast<const char*>(&shapesize), sizeof(shapesize));
+    }
 
     for (auto && hash : hash_table)
     {
         outfile.write(reinterpret_cast<const char*>(&hash.first), sizeof(hash.first));
         outfile.write(reinterpret_cast<const char*>(&hash.second), sizeof(hash.second));
     }
-    outfile.close();
-
-    // Write header file, containing information about the minimiser counts per expression level
-    outfile.open(std::string{args.path_out} + std::string{sequence_files[file_iterator].stem()}
-                 + ".header");
-    outfile <<  args.s.get() << " " << std::to_string(args.k) << " " << args.w_size.get() << " " << args.shape.to_ulong() << " "
-            << std::to_string(cutoff) << " " << std::to_string(hash_table.size()) <<"\n";
-
-    outfile << "\n";
-    hash_table.clear();
     outfile.close();
 }
 
