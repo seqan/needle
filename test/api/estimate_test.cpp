@@ -207,7 +207,7 @@ TEST(estimate, example_multiple_threads)
     ibf(sequence_files, ibf_args, minimiser_args);
     ibf_args.threads = 4;
 
-    estimate_args.search_file = std::string(DATA_INPUT_DIR) + "gene.fasta";
+    estimate_args.search_file = std::string(DATA_INPUT_DIR) + "gene4.fasta";
     estimate_args.path_in = ibf_args.path_out;
     ibf_args.path_out = tmp_dir/"expression.out";
     call_estimate(ibf_args, estimate_args);
@@ -290,7 +290,7 @@ TEST(estimate, example_different_expressions_per_level_multiple_threads)
 
     ibf_args.threads = 4;
     ibf_args.expression_levels = {0, 1, 2};
-    estimate_args.search_file = std::string(DATA_INPUT_DIR) + "gene.fasta";
+    estimate_args.search_file = std::string(DATA_INPUT_DIR) + "gene4.fasta";
     estimate_args.path_in = ibf_args.path_out;
     ibf_args.path_out = tmp_dir/"expression.out";
     call_estimate(ibf_args, estimate_args);
