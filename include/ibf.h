@@ -69,7 +69,8 @@ void get_minimisers(min_arguments const & args, seqan3::concatenated_sequences<s
                     robin_hood::unordered_set<uint64_t> const & genome_set_table,
                     std::filesystem::path const & genome_file = "", bool only_genome = false);
 
-/*!\brief Get the concrete expression values (= median of all counts of one transcript).
+/*!\brief Get the concrete expression values (= median of all counts of one transcript) for given experiments.
+*         This function can be used to estimate how good the median approach can be, if all count values are available.
 * \param args               The minimiser arguments to use (seed, shape, window size).
 * \param sequence_files     The sequence files, which contains the reads.
 * \param genome_file        A file containing the transcripts which expression values should be determined.
