@@ -70,7 +70,7 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
         else
         {
             // Correct prev_counts by substracting the expected number of false positives
-            prev_counts[j] = prev_counts[j] + std::max((float) 0.0, ((counter[j]-(minimiser_length*fpr))/(1-fpr)));
+            prev_counts[j] = prev_counts[j] + std::max((float) 0.0, (float) ((counter[j]-(minimiser_length*fpr))/(1.0-fpr)));
         }
     }
 
@@ -162,6 +162,8 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     }
     counter_est.clear();
     counter.clear();
+    // Go over the sequences
+    #pragma omp parallel for
     for (int i = 0; i < seqs.size(); ++i)
     {
         if constexpr (samplewise & normalization_method)

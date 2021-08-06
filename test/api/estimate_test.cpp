@@ -167,7 +167,7 @@ TEST(estimate, example)
                                                          std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     minimiser_args.samples = {2, 2};
     ibf_args.expression_levels = {32};
-    ibf_args.fpr = {0.3};
+    ibf_args.fpr = {0.05};
     ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.compressed = false;
     ibf(sequence_files, ibf_args, minimiser_args);
@@ -237,7 +237,7 @@ TEST(estimate, example_different_expressions_per_level)
                                                          std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     minimiser_args.cutoffs = {0, 0};
     minimiser_args.samples = {2,2};
-    ibf_args.number_expression_levels = 3;
+    ibf_args.number_expression_levels = 4;
     ibf_args.fpr = {0.05};
     ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.compressed = false;
@@ -254,12 +254,13 @@ TEST(estimate, example_different_expressions_per_level)
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
     // Count would expect 6 and 34
-    std::string expected{"GeneA\t5\t26\t"};
+    std::string expected{"GeneA\t5\t32\t"};
+    std::string expected2{"GeneA\t5\t32\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
         {
-             EXPECT_EQ(expected,line);
+             EXPECT_TRUE((expected == line)  | (expected2 == line));
         }
         output_file.close();
     }
@@ -279,7 +280,7 @@ TEST(estimate, example_different_expressions_per_level_multiple_threads)
                                                          std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     minimiser_args.cutoffs = {0, 0};
     minimiser_args.samples = {2,2};
-    ibf_args.number_expression_levels = 3;
+    ibf_args.number_expression_levels = 4;
     ibf_args.fpr = {0.05};
     ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.compressed = false;
@@ -298,12 +299,13 @@ TEST(estimate, example_different_expressions_per_level_multiple_threads)
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
     // Count would expect 6 and 34
-    std::string expected{"GeneA\t5\t26\t"};
+    std::string expected{"GeneA\t5\t32\t"};
+    std::string expected2{"GeneA\t5\t32\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
         {
-             EXPECT_EQ(expected,line);
+             EXPECT_TRUE((expected == line)  | (expected2 == line));
         }
         output_file.close();
     }
