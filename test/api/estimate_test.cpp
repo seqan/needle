@@ -12,7 +12,6 @@
 #endif
 
 using seqan3::operator""_shape;
-std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
 
 void initialization_args(estimate_ibf_arguments & args)
 {
@@ -21,16 +20,17 @@ void initialization_args(estimate_ibf_arguments & args)
     args.shape = seqan3::ungapped{args.k};
     args.w_size = seqan3::window_size{4};
     args.s = seqan3::seed{0};
-    args.path_out = tmp_dir/"Test_";
     args.fpr = {0.05};
 }
 
 TEST(estimate, small_example)
 {
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     initialization_args(ibf_args);
+    ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.expression_levels = {1, 2, 4};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     estimate_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen.fasta";
@@ -53,15 +53,18 @@ TEST(estimate, small_example)
     }
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
     std::filesystem::remove(tmp_dir/"Test_IBF_4");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
 TEST(estimate, small_example_uncompressed)
 {
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     initialization_args(ibf_args);
+    ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.compressed = false;
     ibf_args.expression_levels = {1, 2, 4};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
@@ -85,15 +88,18 @@ TEST(estimate, small_example_uncompressed)
     }
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
     std::filesystem::remove(tmp_dir/"Test_IBF_4");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
 TEST(estimate, small_example_gene_not_found)
 {
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     initialization_args(ibf_args);
+    ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.expression_levels = {2, 4};
     estimate_args.search_file = std::string(DATA_INPUT_DIR) + "mini_gen2.fasta";
     estimate_args.path_in = ibf_args.path_out;
@@ -116,16 +122,19 @@ TEST(estimate, small_example_gene_not_found)
     }
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
     std::filesystem::remove(tmp_dir/"Test_IBF_4");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
 TEST(estimate, small_example_different_expressions_per_level_normalization_1)
 {
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     estimate_args.normalization_method = 1;
     initialization_args(ibf_args);
+    ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.number_expression_levels = 3;
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
@@ -155,14 +164,17 @@ TEST(estimate, small_example_different_expressions_per_level_normalization_1)
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_2");
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
 TEST(estimate, example)
 {
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
+    ibf_args.path_out = tmp_dir/"Test_";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
                                                          std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     minimiser_args.samples = {2, 2};
@@ -190,14 +202,17 @@ TEST(estimate, example)
     }
     std::filesystem::remove(tmp_dir/"Test_IBF_4");
     std::filesystem::remove(tmp_dir/"Test_IBF_32");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
 TEST(estimate, example_multiple_threads)
 {
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
+    ibf_args.path_out = tmp_dir/"Test_";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
                                                          std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     minimiser_args.samples = {2,2};
@@ -226,14 +241,17 @@ TEST(estimate, example_multiple_threads)
     }
     std::filesystem::remove(tmp_dir/"Test_IBF_32");
     std::filesystem::remove(tmp_dir/"Test_IBF_4");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
 TEST(estimate, example_different_expressions_per_level)
 {
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
+    ibf_args.path_out = tmp_dir/"Test_";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
                                                          std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     minimiser_args.cutoffs = {0, 0};
@@ -269,14 +287,17 @@ TEST(estimate, example_different_expressions_per_level)
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_2");
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
 TEST(estimate, example_different_expressions_per_level_multiple_threads)
 {
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
+    ibf_args.path_out = tmp_dir/"Test_";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
                                                          std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     minimiser_args.cutoffs = {0, 0};
@@ -316,5 +337,6 @@ TEST(estimate, example_different_expressions_per_level_multiple_threads)
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_2");
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }

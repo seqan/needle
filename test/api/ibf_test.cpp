@@ -11,7 +11,6 @@
 #endif
 
 using seqan3::operator""_shape;
-std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
 
 
 void initialization_args(estimate_ibf_arguments & args)
@@ -21,15 +20,16 @@ void initialization_args(estimate_ibf_arguments & args)
     args.shape = seqan3::ungapped{args.k};
     args.w_size = seqan3::window_size{4};
     args.s = seqan3::seed{0};
-    args.path_out = tmp_dir/"Test_";
     args.fpr = {0.05};
 }
 
 TEST(ibf, given_expression_levels)
 {
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     initialization_args(ibf_args);
+    ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.expression_levels = {1, 2};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
@@ -70,9 +70,11 @@ TEST(ibf, given_expression_levels)
 
 TEST(ibf, given_expression_levels_genome_file)
 {
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     initialization_args(ibf_args);
+    ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.expression_levels = {1, 2};
     minimiser_args.include_file = std::string(DATA_INPUT_DIR) + "mini_example.fasta";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
@@ -101,9 +103,11 @@ TEST(ibf, given_expression_levels_genome_file)
 
 TEST(ibf, no_given_expression_levels)
 {
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     initialization_args(ibf_args);
+    ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.number_expression_levels = 2;
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
@@ -129,9 +133,11 @@ TEST(ibf, no_given_expression_levels)
 
 TEST(ibf, throws)
 {
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     initialization_args(ibf_args);
+    ibf_args.path_out = tmp_dir/"Test_";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
     EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args), std::invalid_argument);
