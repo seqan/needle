@@ -118,6 +118,8 @@ TEST(ibf, no_given_expression_levels)
     EXPECT_EQ(expected, medians);
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+
+    std::cout << std::filesystem::exists(tmp_dir/"Test_IBF_Level_0") << " "<< std::filesystem::exists(tmp_dir/"Test_IBF_Level_1") << " " << std::filesystem::exists(tmp_dir/"Test_IBF_Data") << "\n";
     load_ibf(ibf, tmp_dir/"Test_IBF_Level_0");
     auto agent = ibf.membership_agent();
 
@@ -128,6 +130,8 @@ TEST(ibf, no_given_expression_levels)
     auto & res2 = agent.bulk_contains(97);
     EXPECT_RANGE_EQ(expected_result,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Level_1");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
     std::filesystem::remove(tmp_dir/"Test_IBF_Data");
 }
 

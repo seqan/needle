@@ -7,7 +7,7 @@ Due to the space-efficiency of one index, it is affordable to create multiple in
 Needle can be built by following these commands:
 
 ```
-git clone --recurse-submodules https://github.com/MitraDarja/needle.git
+git clone --recurse-submodules https://github.com/seqan/needle.git
 mkdir build-needle && cd build-needle
 cmake ../needle
 make
