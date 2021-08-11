@@ -166,7 +166,7 @@ TEST(estimate, example)
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta", std::string(DATA_INPUT_DIR) + "exp_02.fasta",
                                                          std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     minimiser_args.samples = {2, 2};
-    ibf_args.expression_levels = {32};
+    ibf_args.expression_levels = {4, 32};
     ibf_args.fpr = {0.05};
     ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.compressed = false;
@@ -179,7 +179,7 @@ TEST(estimate, example)
 
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
-    std::string expected{"GeneA\t0\t32\t"};
+    std::string expected{"GeneA\t11\t32\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )
@@ -188,6 +188,7 @@ TEST(estimate, example)
         }
         output_file.close();
     }
+    std::filesystem::remove(tmp_dir/"Test_IBF_4");
     std::filesystem::remove(tmp_dir/"Test_IBF_32");
     std::filesystem::remove(tmp_dir/"expression.out");
 }

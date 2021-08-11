@@ -147,10 +147,6 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     // Make sure expression levels are sorted.
     sort(args.expression_levels.begin(), args.expression_levels.end());
 
-    if constexpr (samplewise)
-        seqan3::debug_stream << estimate_args.path_in.string() + "IBF_Level_" + std::to_string(args.number_expression_levels-1) << "\n";
-    else
-        seqan3::debug_stream << estimate_args.path_in.string() + "IBF_" + std::to_string(args.expression_levels[args.expression_levels.size()-1]) << "\n";
     // Initialse last expression
     if constexpr (samplewise)
         load_ibf(ibf, estimate_args.path_in.string() + "IBF_Level_" + std::to_string(args.number_expression_levels-1));
