@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <math.h>
 #include <numeric>
 #include <string>
@@ -8,16 +9,7 @@
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 #include <seqan3/std/filesystem>
 
-#include "minimiser.h"
-
-//!\brief specific arguments needed for constructing an IBF
-struct ibf_arguments
-{
-    std::vector<float> fpr{}; // The fpr of one IBF, can be different for different expression levels
-    size_t num_hash{1}; // Number of hash functions to use, default 1
-    std::vector<uint16_t> expression_levels{}; // Expression levels which should be created
-    uint8_t number_expression_levels{}; // If set, the expression levels are determined by the program.
-};
+#include "shared.h"
 
 struct minimiser_arguments
 {
@@ -25,9 +17,7 @@ struct minimiser_arguments
     std::filesystem::path exclude_file; // Needs to be defined when minimizers appearing in this file should NOT be stored
     std::vector<int> samples{}; // Can be used to indicate that sequence files belong to the same experiment
     bool paired = false; // If true, than experiments are seen as paired-end experiments
-    // Which expression values should be ignored during calculation of the normalization_method, default is zero
     std::vector<uint8_t> cutoffs{};
-    //std::string expression_method{"median"}; // Method to calculate expression levels
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
 };
 
@@ -74,77 +64,59 @@ void get_sequences(std::vector<std::filesystem::path> const & sequence_files,
 * \param genome_file               The file to the genome mask. Default: "".
 * \param only_genome               True, if only minimisers found in the genome mask should be stored. Default: False.
 */
-void get_minimisers(arguments const & args, seqan3::concatenated_sequences<seqan3::dna4_vector> const & sequences,
+void get_minimisers(min_arguments const & args, seqan3::concatenated_sequences<seqan3::dna4_vector> const & sequences,
                     robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
                     robin_hood::unordered_set<uint64_t> const & genome_set_table,
                     std::filesystem::path const & genome_file = "", bool only_genome = false);
 
-/*!\brief Get the concrete expression values (= median of all counts of one transcript).
+/*!\brief Get the concrete expression values (= median of all counts of one transcript) for given experiments.
+*         This function can be used to estimate how good the median approach can be, if all count values are available.
 * \param args               The minimiser arguments to use (seed, shape, window size).
 * \param sequence_files     The sequence files, which contains the reads.
 * \param genome_file        A file containing the transcripts which expression values should be determined.
 * \param paired             Flag to indicate if input data is paired or not.
 */
-void count(arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,
+void count(min_arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,
            bool paired);
 
-/*!\brief Set arguments for creating IBF.
-* \param args               The minimiser arguments to use (seed, shape, window size).
-* \param ibf_args           The IBF specific arguments to use (bin size, number of hash functions, ...). See
-*                           struct ibf_arguments.
-* \param genome_sequences   Data structure, where the sequences of the genome file are stored.
-* \param genome_set_table   Data structure, where the minimisers found in a genome mask are stored.
-*/
-void set_arguments_ibf(arguments const & args, ibf_arguments & ibf_args,
-                   seqan3::concatenated_sequences<seqan3::dna4_vector> & genome_sequences,
-                   robin_hood::unordered_set<uint64_t> & genome_set_table);
-
-/*!\brief Set arguments for creating IBF.
-* \param ibf_args           The IBF specific arguments to use (bin size, number of hash functions, ...). See
-*                           struct ibf_arguments.
-*/
-void set_arguments(ibf_arguments & ibf_args);
-
-/*!\brief Reads a binary file function minimiser creates
-* \param hash_table         The hash table to store minimisers into.
+/*!\brief Reads a binary file that needle minimiser creates.
 * \param filename           The filename of the binary file.
-*/
-void read_binary(robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table, std::filesystem::path filename);
+* \param hash_table         The hash table to store minimisers into.
 
-/*!\brief Reads a header file function minimiser creates
-* \param args                 The minimiser arguments to use (seed, shape, window size).
-* \param cutoffs              The vector where the cutoff value should be push backed to.
-* \param filename             The filename of the binary file.
-* \param num_of_minimisers    The number of minimisers in a file.
 */
-void read_header(arguments & args,
-                 std::vector<uint8_t> & cutoffs,
-                 std::filesystem::path filename,
-                 uint64_t & num_of_minimisers);
+void read_binary(std::filesystem::path filename, robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table);
+
+/*!\brief Reads the beginning of a binary file that needle minimiser creates.
+* \param args               Min arguments.
+* \param filename           The filename of the binary file.
+* \param num_of_minimisers  Variable, where to number of minimisers should be stored.
+
+*/
+void read_binary_start(min_arguments & args, std::filesystem::path filename, uint64_t & num_of_minimisers);
 
 /*! \brief Create IBF.
  * \param sequence_files  A vector of sequence file paths.
- * \param args            The minimiser arguments to use (seed, shape, window size).
  * \param ibf_args        The IBF specific arguments to use (bin size, number of hash functions, ...). See
  *                        struct ibf_arguments.
  * \param minimiser_args  The minimiser specific arguments to use.
+ * \param num_hash        The number of hash functions to use.
  *  \returns The normalized expression values per experiment.
  */
-std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files, arguments const & args, ibf_arguments & ibf_args, minimiser_arguments & minimiser_args);
+std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files, estimate_ibf_arguments & ibf_args, minimiser_arguments & minimiser_args, size_t num_hash = 1);
 
 /*! \brief Create IBF based on the minimiser and header files
  * \param minimiser_files  A vector of minimiser file paths.
- * \param args             The minimiser arguments to use (seed, shape, window size).
  * \param ibf_args         The IBF specific arguments to use (bin size, number of hash functions, ...). See
  *                         struct ibf_arguments.
+ * \param num_hash        The number of hash functions to use.
  *  \returns The normalized expression values per experiment.
  */
-std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files, arguments const & args,
-                          ibf_arguments & ibf_args);
+std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files,
+                          estimate_ibf_arguments & ibf_args, size_t num_hash = 1);
 
 /*! \brief Create minimiser and header files.
 * \param sequence_files  A vector of sequence file paths.
 * \param args             The minimiser arguments to use (seed, shape, window size).
 * \param minimiser_args  The minimiser specific arguments to use.
 */
-void minimiser(std::vector<std::filesystem::path> const & sequence_files, arguments const & args, minimiser_arguments & minimiser_args);
+void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_arguments const & args, minimiser_arguments & minimiser_args);

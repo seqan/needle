@@ -79,3 +79,27 @@ TEST_F(cli_test, ibfmin_with_argument)
     EXPECT_EQ(result.out, "");
     EXPECT_EQ(result.err, std::string{});
 }
+
+TEST_F(cli_test, compressed)
+{
+    cli_test_result result = execute_app("needle ibfmin -f 0.05 -l 1 -c ", data("mini_example.minimiser"));
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, "");
+    EXPECT_EQ(result.err, std::string{});
+}
+
+TEST_F(cli_test, more_hash_functions)
+{
+    cli_test_result result = execute_app("needle ibfmin -f 0.05 -l 1 -n 4 ", data("mini_example.minimiser"));
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, "");
+    EXPECT_EQ(result.err, std::string{});
+}
+
+TEST_F(cli_test, expression_levels)
+{
+    cli_test_result result = execute_app("needle ibfmin -f 0.05 -e 2 -e 4", data("mini_example.minimiser"));
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, "");
+    EXPECT_EQ(result.err, std::string{});
+}

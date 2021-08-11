@@ -2,7 +2,7 @@
 #include <seqan3/std/filesystem>
 #include <seqan3/core/debug_stream.hpp>
 
-#include "minimiser.h"
+#include "shared.h"
 #include "ibf.h"
 #include "estimate.h"
 
@@ -10,30 +10,30 @@ uint32_t w_size;
 uint64_t shape{};
 uint64_t se;
 
-void initialise_arguments_minimiser_hash(seqan3::argument_parser & parser, arguments & args)
+void initialise_min_arguments(seqan3::argument_parser & parser, min_arguments & args)
 {
     parser.add_option(args.k, 'k', "kmer", "Define kmer size.");
     parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_option(w_size, 'w', "window", "Define window size. Default: 60.");
-    parser.add_option(shape, 'p', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
+    parser.add_option(shape, '\0', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
                                            "position to be ignored, 1 a position considered. Default: ungapped.");
-    parser.add_option(se, 's', "seed", "Define seed.");
+    parser.add_option(se, '\0', "seed", "Define seed.");
     parser.add_option(args.threads, 't', "threads", "Number of threads to use. Default: 1.");
 }
 
-void initialise_arguments_ibf(seqan3::argument_parser & parser, arguments & args, ibf_arguments & ibf_args)
+void initialise_arguments_ibf(seqan3::argument_parser & parser, estimate_ibf_arguments & ibf_args, size_t & num_hash)
 {
-    parser.add_flag(args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
+    parser.add_flag(ibf_args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
     parser.add_option(ibf_args.fpr, 'f', "fpr", "List of bin false positive rate per expression level. If only one is given"
                                                           ", then that fpr is used for all expression levels.");
-    parser.add_option(ibf_args.num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
-                                                      "one IBF.");
     parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
                                                                             " constructing the IBFs.");
     parser.add_option(ibf_args.number_expression_levels, 'l', "number_expression_levels", "Number of expression levels.");
+    parser.add_option(num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
+                                                    "one IBF.");
 }
 
-void parsing(seqan3::argument_parser & parser, arguments & args)
+void parsing(seqan3::argument_parser & parser, min_arguments & args)
 {
     w_size = args.w_size.get();
     se = args.s.get();
@@ -50,21 +50,21 @@ void parsing(seqan3::argument_parser & parser, arguments & args)
 void initialise_arguments_minimiser(seqan3::argument_parser & parser, minimiser_arguments & minimiser_args)
 {
     parser.add_option(minimiser_args.include_file, 'g', "genom-mask", "Genom file used as a mask.");
-    parser.add_option(minimiser_args.samples, 'm', "multiple-samples", "Define which samples belong together, sum has to be "
-                                                                 "equal to number of sequence files. Default: Every"
-                                                                 " sequence file is one sample from one experiment.");
-    parser.add_flag(minimiser_args.paired, 'q', "paired", "If set, experiments are paired. Default: Not paired.");
-    parser.add_option(minimiser_args.cutoffs, 'u', "cut-offs", "Define for each sample, what number of found minimisers "
-                                                         "should be considered the result of a sequencing error and "
-                                                         "therefore be ignored. Default: Every sample has a cut off of "
-                                                         "zero.");
+    parser.add_option(minimiser_args.samples, '\0', "samples", "Define which samples belong together, sum has to be "
+                                                               "equal to number of sequence files. Default: Every"
+                                                               " sequence file is one sample from one experiment.");
+    parser.add_flag(minimiser_args.paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
+    parser.add_option(minimiser_args.cutoffs, '\0', "cutoff", "Define for each sample, what number of found minimisers "
+                                                              "should be considered the result of a sequencing error and "
+                                                              "therefore be ignored. Default: Every sample has a cut off of "
+                                                              "zero.");
 
 }
 
 int run_needle_count(seqan3::argument_parser & parser)
 {
-    arguments args;
-    initialise_arguments_minimiser_hash(parser, args);
+    min_arguments args;
+    initialise_min_arguments(parser, args);
     std::vector<std::filesystem::path> sequence_files{};
     std::filesystem::path genome_file;
     std::filesystem::path out_path = "./";
@@ -73,7 +73,7 @@ int run_needle_count(seqan3::argument_parser & parser)
     parser.info.short_description = "Get expression value depending on minimizers.";
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
     parser.add_option(genome_file, 'g', "genome", "Please provide one sequence file with transcripts.");
-    parser.add_flag(paired, 'q', "paired", "If set, experiments are paired. Default: Not paired.");
+    parser.add_flag(paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
 
     try
     {
@@ -99,32 +99,21 @@ int run_needle_count(seqan3::argument_parser & parser)
 
 int run_needle_estimate(seqan3::argument_parser & parser)
 {
-    arguments args{};
+    estimate_ibf_arguments args{};
     estimate_arguments estimate_args{};
     parser.info.short_description = "Estimate expression value of transcript based on IBFs.";
     parser.info.version = "1.0.0";
     parser.info.author = "Mitra Darvish";
-    std::filesystem::path search_file;
-    std::filesystem::path path_in{"./"};
-    std::filesystem::path level_file{""};
-    std::filesystem::path file_out{"expressions.out"};
-    std::vector<uint32_t> expressions{};
 
-    parser.add_positional_option(search_file, "Please provide a sequence file.");
-    parser.add_option(estimate_args.expressions, 'e', "expression", "Which expression levels should be considered during a "
-                                                      "search.");
-    parser.add_option(path_in, 'i', "in", "Directory where input files can be found.");
-    parser.add_option(level_file, 'd', "level", "Level file.");
-    parser.add_flag(args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
-    parser.add_option(estimate_args.fpr, 'f', "fpr", "List of bin false positive rate per expression level. If only one is given"
-                                                     ", then that fpr is used for all expression levels.");
+    args.path_out = "expressions.out";
+
+    parser.add_positional_option(estimate_args.search_file, "Please provide a sequence file.");
+    parser.add_option(estimate_args.path_in, 'i', "in", "Directory where input files can be found.");
     parser.add_flag(estimate_args.normalization_method, 'm', "normalization-mode",
                                                             "Set, if normalization is wanted. Normalization is achieved by"
                                                             "dividing the expression value with the expression value of the first ibf."
                                                             "Only make sense if every bin has its own expression values."
                                                             "Default: False.");
-
-    initialise_arguments_minimiser_hash(parser, args);
 
     try
     {
@@ -138,7 +127,7 @@ int run_needle_estimate(seqan3::argument_parser & parser)
 
     try
     {
-        call_estimate(args, estimate_args, args.path_out, search_file, path_in, level_file);
+        call_estimate(args, estimate_args);
     }
     catch (const std::invalid_argument & e)
     {
@@ -152,24 +141,24 @@ int run_needle_estimate(seqan3::argument_parser & parser)
 
 int run_needle_ibf(seqan3::argument_parser & parser)
 {
-    arguments args;
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     std::vector<std::filesystem::path> sequence_files{};
+    size_t num_hash{1}; // Number of hash functions to use, default 1
 
-    initialise_arguments_minimiser_hash(parser, args);
-    initialise_arguments_ibf(parser, args, ibf_args);
+    initialise_min_arguments(parser, ibf_args);
+    initialise_arguments_ibf(parser, ibf_args, num_hash);
     initialise_arguments_minimiser(parser, minimiser_args);
 
     parser.info.short_description = "Constructs an IBF.";
 
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
-    parser.add_option(minimiser_args.experiment_names, 'a', "experiment-names", "If set, names of the experiments are stored"
+    parser.add_option(minimiser_args.experiment_names, '\0', "experiment-names", "If set, names of the experiments are stored"
                                                                           " in a txt file.");
 
     try
     {
-        parsing(parser, args);
+        parsing(parser, ibf_args);
     }
     catch (seqan3::argument_parser_error const & ext)
     {
@@ -179,7 +168,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
 
     try
     {
-        ibf(sequence_files, args, ibf_args, minimiser_args);
+        ibf(sequence_files, ibf_args, minimiser_args, num_hash);
     }
     catch (const std::invalid_argument & e)
     {
@@ -192,23 +181,23 @@ int run_needle_ibf(seqan3::argument_parser & parser)
 
 int run_needle_ibf_min(seqan3::argument_parser & parser)
 {
-    arguments args{};
-    ibf_arguments ibf_args{};
+    estimate_ibf_arguments ibf_args{};
     std::vector<std::filesystem::path> minimiser_files{};
+    size_t num_hash{1}; // Number of hash functions to use, default 1
 
     parser.info.short_description = "Constructs an IBF from the minimiser and header files created by needle minimiser.";
 
     parser.add_positional_option(minimiser_files, "Please provide at least one minimiser file. It is assumed that the "
                                                   "header file exits in the same directory.");
 
-    parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
-    parser.add_option(args.threads, 't', "threads", "Number of threads to use. Default: 1.");
+    parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
+    parser.add_option(ibf_args.threads, 't', "threads", "Number of threads to use. Default: 1.");
 
-    initialise_arguments_ibf(parser, args, ibf_args);
+    initialise_arguments_ibf(parser, ibf_args, num_hash);
 
     try
     {
-        parsing(parser, args);
+        parsing(parser, ibf_args);
     }
     catch (seqan3::argument_parser_error const & ext)
     {
@@ -218,7 +207,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
 
     try
     {
-        ibf(minimiser_files, args, ibf_args);
+        ibf(minimiser_files, ibf_args, num_hash);
     }
     catch (const std::invalid_argument & e)
     {
@@ -231,10 +220,10 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
 
 int run_needle_minimiser(seqan3::argument_parser & parser)
 {
-    arguments args{};
+    min_arguments args{};
     minimiser_arguments minimiser_args{};
     std::vector<std::filesystem::path> sequence_files{};
-    initialise_arguments_minimiser_hash(parser, args);
+    initialise_min_arguments(parser, args);
     initialise_arguments_minimiser(parser, minimiser_args);
 
     parser.info.short_description = "Calculates minimiser for given experiments.";
