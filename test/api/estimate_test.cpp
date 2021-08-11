@@ -53,6 +53,7 @@ TEST(estimate, small_example)
     }
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
     std::filesystem::remove(tmp_dir/"Test_IBF_4");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
@@ -85,6 +86,7 @@ TEST(estimate, small_example_uncompressed)
     }
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
     std::filesystem::remove(tmp_dir/"Test_IBF_4");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
@@ -116,6 +118,7 @@ TEST(estimate, small_example_gene_not_found)
     }
     std::filesystem::remove(tmp_dir/"Test_IBF_2");
     std::filesystem::remove(tmp_dir/"Test_IBF_4");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
@@ -155,6 +158,7 @@ TEST(estimate, small_example_different_expressions_per_level_normalization_1)
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_2");
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
@@ -190,6 +194,7 @@ TEST(estimate, example)
     }
     std::filesystem::remove(tmp_dir/"Test_IBF_4");
     std::filesystem::remove(tmp_dir/"Test_IBF_32");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
@@ -226,6 +231,7 @@ TEST(estimate, example_multiple_threads)
     }
     std::filesystem::remove(tmp_dir/"Test_IBF_32");
     std::filesystem::remove(tmp_dir/"Test_IBF_4");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
@@ -269,6 +275,7 @@ TEST(estimate, example_different_expressions_per_level)
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_2");
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
 
@@ -316,5 +323,6 @@ TEST(estimate, example_different_expressions_per_level_multiple_threads)
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_2");
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");
 }
