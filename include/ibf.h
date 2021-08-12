@@ -74,10 +74,11 @@ void get_minimisers(min_arguments const & args, seqan3::concatenated_sequences<s
 * \param args               The minimiser arguments to use (seed, shape, window size).
 * \param sequence_files     The sequence files, which contains the reads.
 * \param genome_file        A file containing the transcripts which expression values should be determined.
+* \param exclude_file       A file containing minimizers which should be ignored.
 * \param paired             Flag to indicate if input data is paired or not.
 */
 void count(min_arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,
-           bool paired);
+           std::filesystem::path exclude_file, bool paired);
 
 /*!\brief Reads a binary file that needle minimiser creates.
 * \param filename           The filename of the binary file.
@@ -102,7 +103,8 @@ void read_binary_start(min_arguments & args, std::filesystem::path filename, uin
  * \param num_hash        The number of hash functions to use.
  *  \returns The normalized expression values per experiment.
  */
-std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files, estimate_ibf_arguments & ibf_args, minimiser_arguments & minimiser_args, size_t num_hash = 1);
+std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files, estimate_ibf_arguments & ibf_args,
+                          minimiser_arguments & minimiser_args, size_t num_hash = 1);
 
 /*! \brief Create IBF based on the minimiser and header files
  * \param minimiser_files  A vector of minimiser file paths.
@@ -119,4 +121,5 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
 * \param args             The minimiser arguments to use (seed, shape, window size).
 * \param minimiser_args  The minimiser specific arguments to use.
 */
-void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_arguments const & args, minimiser_arguments & minimiser_args);
+void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_arguments const & args,
+               minimiser_arguments & minimiser_args);
