@@ -49,15 +49,18 @@ void parsing(seqan3::argument_parser & parser, min_arguments & args)
 // Initialize arguments for ibf and minimiser
 void initialise_arguments_minimiser(seqan3::argument_parser & parser, minimiser_arguments & minimiser_args)
 {
-    parser.add_option(minimiser_args.include_file, 'g', "genom-mask", "Genom file used as a mask.");
+    parser.add_option(minimiser_args.include_file, '\0', "include", "Sequence file containing minimizers, only those "
+                                                                    "minimizers will be considered.");
+    parser.add_option(minimiser_args.exclude_file, '\0', "exclude", "Sequence file containing minimizers that should "
+                                                                    "not be stored.");
     parser.add_option(minimiser_args.samples, '\0', "samples", "Define which samples belong together, sum has to be "
                                                                "equal to number of sequence files. Default: Every"
                                                                " sequence file is one sample from one experiment.");
     parser.add_flag(minimiser_args.paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
     parser.add_option(minimiser_args.cutoffs, '\0', "cutoff", "Define for each sample, what number of found minimisers "
-                                                              "should be considered the result of a sequencing error and "
-                                                              "therefore be ignored. Default: Every sample has a cut off of "
-                                                              "zero.");
+                                                              "should be considered the result of a sequencing error "
+                                                              "and therefore be ignored. Default: Every sample has a"
+                                                              "cutoff of zero.");
 
 }
 
@@ -67,12 +70,14 @@ int run_needle_count(seqan3::argument_parser & parser)
     initialise_min_arguments(parser, args);
     std::vector<std::filesystem::path> sequence_files{};
     std::filesystem::path genome_file;
+    std::filesystem::path exclude_file{""};
     std::filesystem::path out_path = "./";
     bool paired = false;
 
     parser.info.short_description = "Get expression value depending on minimizers.";
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
     parser.add_option(genome_file, 'g', "genome", "Please provide one sequence file with transcripts.");
+    parser.add_option(exclude_file, '\0', "exclude", "Please provide one sequence file with minimizers to ignore.");
     parser.add_flag(paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
 
     try
@@ -86,7 +91,7 @@ int run_needle_count(seqan3::argument_parser & parser)
     }
     try
     {
-        count(args, sequence_files, genome_file, paired);
+        count(args, sequence_files, genome_file, exclude_file, paired);
     }
     catch (const std::invalid_argument & e)
     {

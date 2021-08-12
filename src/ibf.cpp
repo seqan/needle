@@ -27,7 +27,7 @@
 #include "ibf.h"
 #include "shared.h"
 
-// Create set with hashes from the minimisers from an include file.
+// Create set with hashes from the minimisers from an include or exclude file.
 void get_include_set_table(min_arguments const & args, std::filesystem::path const include_file,
                            robin_hood::unordered_set<uint64_t> & include_table)
 {
@@ -99,14 +99,15 @@ void fill_hash_table(min_arguments const & args,
                      seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> & fin,
                      robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
                      robin_hood::unordered_node_map<uint64_t, uint8_t> & cutoff_table,
-                     robin_hood::unordered_set<uint64_t> const & genome_set_table,
-                     bool const only_genome = false, uint8_t cutoff = 0)
+                     robin_hood::unordered_set<uint64_t> const & include_set_table,
+                     robin_hood::unordered_set<uint64_t> const & exclude_set_table,
+                     bool const only_include = false, uint8_t cutoff = 0)
 {
     for (auto & [seq] : fin)
     {
         for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
         {
-            if ((only_genome & (genome_set_table.contains(minHash))) | (!only_genome))
+            if ((only_include & (include_set_table.contains(minHash))) | (!only_include) & !(exclude_set_table.contains(minHash)))
             {
                 auto it = hash_table.find(minHash);
                 // If minHash is already in hash table, increase count in hash table
@@ -131,20 +132,23 @@ void fill_hash_table(min_arguments const & args,
     }
 }
 
-void count(min_arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path genome_file,
-          bool paired)
+void count(min_arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path include_file,
+           std::filesystem::path exclude_file, bool paired)
 {
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{};
     // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
     // and afterwards discarded.
     robin_hood::unordered_node_map<uint64_t, uint8_t>  cutoff_table;
-    robin_hood::unordered_set<uint64_t> genome_set_table{};
+    robin_hood::unordered_set<uint64_t> include_set_table{};
+    robin_hood::unordered_set<uint64_t> exclude_set_table{};
     std::vector<uint64_t> counter{};
     uint64_t exp{};
     std::ofstream outfile;
     int j;
 
-    get_include_set_table(args, genome_file, genome_set_table);
+    get_include_set_table(args, include_file, include_set_table);
+    if (exclude_file != "")
+        get_include_set_table(args, exclude_file, exclude_set_table);
 
     for (unsigned i = 0; i < sequence_files.size(); i++)
     {
@@ -152,21 +156,21 @@ void count(min_arguments const & args, std::vector<std::filesystem::path> sequen
         if (paired)
         {
             seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{sequence_files[i]};
-            fill_hash_table(args, fin, hash_table, cutoff_table, genome_set_table, true);
+            fill_hash_table(args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table, true);
             i++;
             fin = sequence_files[i];
-            fill_hash_table(args, fin, hash_table, cutoff_table, genome_set_table, true);
+            fill_hash_table(args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table, true);
         }
         else
         {
             seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{sequence_files[i]};
-            fill_hash_table(args, fin, hash_table, cutoff_table, genome_set_table, true);
+            fill_hash_table(args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table, true);
         }
         cutoff_table.clear();
 
         outfile.open(std::string{args.path_out} + std::string{sequence_files[i].stem()} + ".count.out");
         j = 0;
-        seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin2{genome_file};
+        seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin2{include_file};
         for (auto & [id, seq] : fin2)
         {
             if (seq.size() >= args.w_size.get())
@@ -185,8 +189,7 @@ void count(min_arguments const & args, std::vector<std::filesystem::path> sequen
     }
 }
 
-void read_binary(std::filesystem::path filename,
-                 robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table)
+void read_binary(std::filesystem::path filename, robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table)
 {
     std::ifstream fin;
 
@@ -269,9 +272,9 @@ void check_expression(std::vector<uint16_t> & expression_levels, uint8_t & numbe
 }
 
 // Check and set samples and cutoffs
-void check_cutoffs_samples(min_arguments const & args, std::vector<std::filesystem::path> const & sequence_files,
-                       std::filesystem::path const include_file, bool const paired, std::vector<int> & samples,
-                       std::vector<uint8_t> & cutoffs)
+void check_cutoffs_samples(std::vector<std::filesystem::path> const & sequence_files,
+                           bool const paired, std::vector<int> & samples,
+                           std::vector<uint8_t> & cutoffs)
 {
     if (paired) // If paired is true, a pair is seen as one sample
         samples.assign(sequence_files.size()/2,2);
@@ -367,7 +370,8 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     bool const calculate_cutoffs = minimiser_args.cutoffs.empty();
     std::vector<uint8_t> file_cutoffs{};
 
-    robin_hood::unordered_set<uint64_t> genome_set_table; // Storage for minimisers in genome sequences
+    robin_hood::unordered_set<uint64_t> include_set_table; // Storage for minimisers in include file
+    robin_hood::unordered_set<uint64_t> exclude_set_table; // Storage for minimisers in exclude file
     if constexpr(samplewise)
     {
         std::vector<uint16_t> zero_vector(ibf_args.number_expression_levels);
@@ -378,14 +382,14 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     if constexpr (!minimiser_files_given)
     {
         if (minimiser_args.include_file != "")
-            get_include_set_table(ibf_args, minimiser_args.include_file, genome_set_table);
+            get_include_set_table(ibf_args, minimiser_args.include_file, include_set_table);
+        if (minimiser_args.exclude_file != "")
+            get_include_set_table(ibf_args, minimiser_args.exclude_file, exclude_set_table);
     }
 
     omp_set_num_threads(ibf_args.threads);
 
-    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / ibf_args.threads),
-                                                 8u,
-                                                 64u);
+    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / ibf_args.threads), 8u, 64u);
 
     // Get expression levels and sizes
     #pragma omp parallel for schedule(dynamic, chunk_size)
@@ -472,10 +476,12 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
             {
                seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_files[file_iterator+f]};
-               if (calculate_cutoff)
-                    fill_hash_table(ibf_args, fin, hash_table, cutoff_table, genome_set_table, (minimiser_args.include_file != ""), file_cutoffs[i]);
+               if (calculate_cutoffs)
+                    fill_hash_table(ibf_args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table,
+                                    (minimiser_args.include_file != ""), file_cutoffs[i]);
                else
-                    fill_hash_table(ibf_args, fin, hash_table, cutoff_table, genome_set_table, (minimiser_args.include_file != ""), minimiser_args.cutoffs[i]);
+                    fill_hash_table(ibf_args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table,
+                                    (minimiser_args.include_file != ""), minimiser_args.cutoffs[i]);
             }
             cutoff_table.clear();
         }
@@ -559,8 +565,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
 
-    check_cutoffs_samples(ibf_args, sequence_files, minimiser_args.include_file, minimiser_args.paired,
-                          minimiser_args.samples, minimiser_args.cutoffs);
+    check_cutoffs_samples(sequence_files, minimiser_args.paired, minimiser_args.samples, minimiser_args.cutoffs);
 
 
     check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels);
@@ -611,7 +616,8 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
 }
 
 void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_files,
-                         robin_hood::unordered_set<uint64_t> const & genome_set_table,
+                         robin_hood::unordered_set<uint64_t> const & include_set_table,
+                         robin_hood::unordered_set<uint64_t> const & exclude_set_table,
                          min_arguments const & args,
                          minimiser_arguments const & minimiser_args,
                          unsigned const i)
@@ -637,7 +643,7 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
     for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
     {
         seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{sequence_files[file_iterator+f]};
-        fill_hash_table(args, fin, hash_table, cutoff_table, genome_set_table, (minimiser_args.include_file != ""), cutoff);
+        fill_hash_table(args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table, (minimiser_args.include_file != ""), cutoff);
     }
     cutoff_table.clear();
 
@@ -669,13 +675,15 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
 void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_arguments const & args, minimiser_arguments & minimiser_args)
 {
     // Declarations
-    robin_hood::unordered_set<uint64_t> genome_set_table{}; // Storage for minimisers in genome sequences
+    robin_hood::unordered_set<uint64_t> include_set_table{}; // Storage for minimisers in include file
+    robin_hood::unordered_set<uint64_t> exclude_set_table{}; // Storage for minimisers in exclude file
 
-    check_cutoffs_samples(args, sequence_files, minimiser_args.include_file, minimiser_args.paired, minimiser_args.samples,
-                      minimiser_args.cutoffs);
+    check_cutoffs_samples(sequence_files, minimiser_args.paired, minimiser_args.samples, minimiser_args.cutoffs);
 
     if (minimiser_args.include_file != "")
-        get_include_set_table(args, minimiser_args.include_file, genome_set_table);
+        get_include_set_table(args, minimiser_args.include_file, include_set_table);
+    if (minimiser_args.exclude_file != "")
+        get_include_set_table(args, minimiser_args.exclude_file, exclude_set_table);
 
     omp_set_num_threads(args.threads);
 
@@ -687,6 +695,6 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_ar
     #pragma omp parallel for schedule(dynamic, chunk_size)
     for(unsigned i = 0; i < minimiser_args.samples.size(); i++)
     {
-        calculate_minimiser(sequence_files, genome_set_table, args, minimiser_args, i);
+        calculate_minimiser(sequence_files, include_set_table, exclude_set_table, args, minimiser_args, i);
     }
 }
