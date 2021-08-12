@@ -476,7 +476,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
             {
                seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_files[file_iterator+f]};
-               if (calculate_cutoff)
+               if (calculate_cutoffs)
                     fill_hash_table(ibf_args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table,
                                     (minimiser_args.include_file != ""), file_cutoffs[i]);
                else
