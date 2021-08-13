@@ -154,7 +154,7 @@ TEST(minimiser, small_example_samplewise)
     minimiser(sequence_files, args, minimiser_args);
     uint32_t normalized_exp_value{};
     std::vector<std::vector<uint32_t>> expected_counts{{7}, {12}};
-    std::vector<uint16_t> expected_levels{3, 1};
+    std::vector<uint16_t> expected_levels{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     uint64_t num_of_minimisers{};
@@ -182,7 +182,6 @@ TEST(minimiser, small_example_samplewise)
         result_hash_table.clear();
     }
     args.expression_levels = {};
-    expected_levels = {}; // Only levels from last experiment are returned.
     EXPECT_EQ(expected_levels, ibf(minimiser_files, args));
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
@@ -199,6 +198,7 @@ TEST(minimiser, small_example_samplewise)
     auto & res3 = agent.bulk_contains(27);
     EXPECT_RANGE_EQ(expected_result,  res3);
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
     std::filesystem::remove(tmp_dir/("Test_mini_example.minimiser"));
     std::filesystem::remove(tmp_dir/("Test_mini_example2.minimiser"));
 }
