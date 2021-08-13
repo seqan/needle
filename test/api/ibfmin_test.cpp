@@ -109,6 +109,7 @@ TEST(ibfmin, no_given_expression_levels)
     auto & res2 = agent.bulk_contains(97);
     EXPECT_RANGE_EQ(expected_result,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Level_1"); 
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
 }
 
@@ -140,6 +141,7 @@ TEST(ibfmin, no_given_expression_levels_multiple_threads)
     auto & res2 = agent.bulk_contains(97);
     EXPECT_RANGE_EQ(expected_result2,  res2);
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Level_1");
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
 }
 #endif
