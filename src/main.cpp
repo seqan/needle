@@ -114,6 +114,7 @@ int run_needle_estimate(seqan3::argument_parser & parser)
 
     parser.add_positional_option(estimate_args.search_file, "Please provide a sequence file.");
     parser.add_option(estimate_args.path_in, 'i', "in", "Directory where input files can be found.");
+    parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_flag(estimate_args.normalization_method, 'm', "normalization-mode",
                                                             "Set, if normalization is wanted. Normalization is achieved by"
                                                             "dividing the expression value with the expression value of the first ibf."
