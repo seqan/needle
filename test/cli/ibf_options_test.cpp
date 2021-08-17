@@ -29,6 +29,33 @@ TEST_F(cli_test, ibf_fail_no_argument)
     EXPECT_EQ(result.err, expected);
 }
 
+TEST_F(cli_test, ibf_fail_contradiction)
+{
+    cli_test_result result = execute_app("needle ibf -f 0.05 -e 1 -e 2 -l 1", data("exp_01.fasta"));
+    std::string expected
+    {
+        "Error. Please set the expression levels OR give the number of expression levels.\n"
+    };
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, std::string{""});
+    EXPECT_EQ(result.err, expected);
+}
+
+TEST_F(cli_test, ibf_fail_contradiction2)
+{
+    cli_test_result result = execute_app("needle ibf -f 0.05 -e 1 -e 2 --levels-by-genome ", data("exp_01.fasta"),
+                                         data("exp_01.fasta"));
+    std::string expected
+    {
+        "Error. The determination of expression levels can not be used with individual levels already given. Please set "
+        "the expression levels without the option --level-by-genome OR use the number of expression levels with that option."
+        "\n"
+    };
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, std::string{""});
+    EXPECT_EQ(result.err, expected);
+}
+
 TEST_F(cli_test, ibf_with_argument)
 {
     cli_test_result result = execute_app("needle ibf -f 0.05 -l 1", data("exp_01.fasta"));
@@ -69,6 +96,33 @@ TEST_F(cli_test, ibfmin_fail_no_argument)
     };
     EXPECT_EQ(result.exit_code, 0);
     EXPECT_EQ(result.out, std::string{});
+    EXPECT_EQ(result.err, expected);
+}
+
+TEST_F(cli_test, ibfmin_fail_contradiction)
+{
+    cli_test_result result = execute_app("needle ibfmin -f 0.05 -e 1 -e 2 -l 1", data("mini_example.minimiser"));
+    std::string expected
+    {
+        "Error. Please set the expression levels OR give the number of expression levels.\n"
+    };
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, std::string{""});
+    EXPECT_EQ(result.err, expected);
+}
+
+TEST_F(cli_test, ibfmin_fail_contradiction2)
+{
+    cli_test_result result = execute_app("needle ibfmin -f 0.05 -e 1 -e 2 --levels-by-genome ", data("exp_01.fasta"),
+                                         data("mini_example.minimiser"));
+    std::string expected
+    {
+        "Error. The determination of expression levels can not be used with individual levels already given. Please set "
+        "the expression levels without the option --level-by-genome OR use the number of expression levels with that option."
+        "\n"
+    };
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, std::string{""});
     EXPECT_EQ(result.err, expected);
 }
 

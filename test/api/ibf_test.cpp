@@ -178,6 +178,42 @@ TEST(ibf, no_given_expression_levels)
     std::filesystem::remove(tmp_dir/"Test_IBF_Data");
 }
 
+TEST(ibf, expression_levels_by_genome)
+{
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
+    estimate_ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
+    initialization_args(ibf_args);
+    ibf_args.path_out = tmp_dir/"Test_";
+    ibf_args.number_expression_levels = 1;
+    std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+
+    std::vector<uint16_t> expected{};
+
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args,
+                                        std::string(DATA_INPUT_DIR) + "mini_gen.fasta");
+
+    EXPECT_EQ(expected, medians);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+
+    if (std::filesystem::exists(tmp_dir/"Test_IBF_Level_0"))
+    {
+        load_ibf(ibf, tmp_dir/"Test_IBF_Level_0");
+        auto agent = ibf.membership_agent();
+
+        std::vector<bool> expected_result(1, 0);
+        auto & res = agent.bulk_contains(0);
+        EXPECT_RANGE_EQ(expected_result,  res);
+        expected_result[0] = 1;
+        auto & res2 = agent.bulk_contains(97);
+        EXPECT_RANGE_EQ(expected_result,  res2);
+    }
+    std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
+    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
+}
+
 TEST(ibf, throws)
 {
     std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
