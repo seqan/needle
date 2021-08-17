@@ -255,7 +255,8 @@ void read_binary_start(min_arguments & args,
 }
 
 // Check number of expression levels, sort expression levels
-void check_expression(std::vector<uint16_t> & expression_levels, uint8_t & number_expression_levels)
+void check_expression(std::vector<uint16_t> & expression_levels, uint8_t & number_expression_levels,
+                      std::filesystem::path const expression_by_genome_file)
 {
     // Sort given expression rates
     sort(expression_levels.begin(), expression_levels.end());
@@ -265,10 +266,21 @@ void check_expression(std::vector<uint16_t> & expression_levels, uint8_t & numbe
     {
         throw std::invalid_argument{"Error. Please set the expression levels OR give the number of expression levels."};
     }
+    else if ((expression_by_genome_file != "") & (expression_levels.size() > 0))
+    {
+        throw std::invalid_argument{"Error. The determination of expression levels can not be used with individual levels"
+                                    " already given. Please set the expression levels without the option "
+                                    "--level-by-genome OR use the number of expression levels with that option."};
+    }
     else if (number_expression_levels == 0)
     {
         number_expression_levels = expression_levels.size();
     }
+    else if ((number_expression_levels != expression_levels.size()) & (expression_levels.size() > 0))
+    {
+        throw std::invalid_argument{"Error. Please set the expression levels OR give the number of expression levels."};
+    }
+
 }
 
 // Check and set samples and cutoffs
@@ -310,13 +322,15 @@ void check_fpr(uint8_t const number_expression_levels, std::vector<float> & fprs
 // Calculate expression levels and sizes
 void get_expression_levels(uint8_t const number_expression_levels,
                            robin_hood::unordered_node_map<uint64_t, uint16_t> const & hash_table,
-                           std::vector<uint16_t> & expression_levels, std::vector<uint64_t> & sizes)
+                           std::vector<uint16_t> & expression_levels, std::vector<uint64_t> & sizes,
+                           robin_hood::unordered_set<uint64_t> const & genome, bool all = true)
 {
     // Calculate expression levels by taking median recursively
     std::vector<uint16_t> counts;
     for (auto && elem : hash_table)
     {
-        counts.push_back(elem.second);
+        if (all | genome.contains(elem.first))
+            counts.push_back(elem.second);
     }
 
     std::size_t dev{2};
@@ -354,7 +368,8 @@ void get_sizes(uint8_t const number_expression_levels,
 
 template<bool samplewise, bool minimiser_files_given = true>
 void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
-                estimate_ibf_arguments & ibf_args, size_t num_hash = 1, minimiser_arguments const & minimiser_args = {})
+                estimate_ibf_arguments & ibf_args, size_t num_hash = 1, std::filesystem::path expression_by_genome_file = "",
+                minimiser_arguments const & minimiser_args = {})
 {
 
     size_t num_files;
@@ -455,6 +470,13 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                      seqan3::hash_function_count{num_hash}));
     }
 
+    // If expression_levels should only be depending on minimsers in a certain genome file, genome is created.
+    robin_hood::unordered_set<uint64_t> genome{};
+    if (expression_by_genome_file != "")
+        get_include_set_table(ibf_args, expression_by_genome_file, genome);
+    bool const expression_by_genome = (expression_by_genome_file == "");
+
+
     // Add minimisers to ibf
     #pragma omp parallel for schedule(dynamic, chunk_size)
     for (unsigned i = 0; i < num_files; i++)
@@ -493,7 +515,9 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
            get_expression_levels(ibf_args.number_expression_levels,
                                  hash_table,
                                  expression_levels,
-                                 sizes[i]);
+                                 sizes[i],
+                                 genome,
+                                 expression_by_genome);
            expressions[i] = expression_levels;
         }
 
@@ -559,7 +583,8 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 }
 
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files,
-                          estimate_ibf_arguments & ibf_args, minimiser_arguments & minimiser_args, size_t num_hash)
+                          estimate_ibf_arguments & ibf_args, minimiser_arguments & minimiser_args,
+                          std::filesystem::path const expression_by_genome_file, size_t num_hash)
 {
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
@@ -568,7 +593,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     check_cutoffs_samples(sequence_files, minimiser_args.paired, minimiser_args.samples, minimiser_args.cutoffs);
 
 
-    check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels);
+    check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels, expression_by_genome_file);
     check_fpr(ibf_args.number_expression_levels, ibf_args.fpr);
 
     ibf_args.samplewise = (ibf_args.expression_levels.size() == 0);
@@ -587,9 +612,9 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     }
 
     if (ibf_args.samplewise)
-        ibf_helper<true, false>(sequence_files, ibf_args, num_hash, minimiser_args);
+        ibf_helper<true, false>(sequence_files, ibf_args, num_hash, expression_by_genome_file, minimiser_args);
     else
-        ibf_helper<false, false>(sequence_files, ibf_args, num_hash, minimiser_args);
+        ibf_helper<false, false>(sequence_files, ibf_args, num_hash, expression_by_genome_file, minimiser_args);
 
     store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
 
@@ -598,17 +623,18 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
 
 // Create ibf based on the minimiser file
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files,
-                          estimate_ibf_arguments & ibf_args, size_t num_hash)
+                          estimate_ibf_arguments & ibf_args, std::filesystem::path const expression_by_genome_file,
+                          size_t num_hash)
 {
-    check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels);
+    check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels, expression_by_genome_file);
     check_fpr(ibf_args.number_expression_levels, ibf_args.fpr);
 
     ibf_args.samplewise = (ibf_args.expression_levels.size() == 0);
 
     if (ibf_args.samplewise)
-        ibf_helper<true>(minimiser_files, ibf_args, num_hash);
+        ibf_helper<true>(minimiser_files, ibf_args, num_hash, expression_by_genome_file);
     else
-        ibf_helper<false>(minimiser_files, ibf_args, num_hash);
+        ibf_helper<false>(minimiser_files, ibf_args, num_hash, expression_by_genome_file);
 
     store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
 

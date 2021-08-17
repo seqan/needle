@@ -151,6 +151,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     minimiser_arguments minimiser_args{};
     std::vector<std::filesystem::path> sequence_files{};
     size_t num_hash{1}; // Number of hash functions to use, default 1
+    std::filesystem::path expression_by_genome_file = "";
 
     initialise_min_arguments(parser, ibf_args);
     initialise_arguments_ibf(parser, ibf_args, num_hash);
@@ -161,6 +162,9 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
     parser.add_option(minimiser_args.experiment_names, '\0', "experiment-names", "If set, names of the experiments are stored"
                                                                           " in a txt file.");
+    parser.add_option(expression_by_genome_file, '\0', "levels-by-genome", "Sequence file containing minimizers, only "
+                                                                            "those minimizers will be considered for "
+                                                                            "determining the expression levels.");
 
     try
     {
@@ -174,7 +178,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
 
     try
     {
-        ibf(sequence_files, ibf_args, minimiser_args, num_hash);
+        ibf(sequence_files, ibf_args, minimiser_args, expression_by_genome_file, num_hash);
     }
     catch (const std::invalid_argument & e)
     {
@@ -190,6 +194,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     estimate_ibf_arguments ibf_args{};
     std::vector<std::filesystem::path> minimiser_files{};
     size_t num_hash{1}; // Number of hash functions to use, default 1
+    std::filesystem::path expression_by_genome_file = "";
 
     parser.info.short_description = "Constructs an IBF from the minimiser and header files created by needle minimiser.";
 
@@ -198,6 +203,9 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
 
     parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_option(ibf_args.threads, 't', "threads", "Number of threads to use. Default: 1.");
+    parser.add_option(expression_by_genome_file, '\0', "levels-by-genome", "Sequence file containing minimizers, only "
+                                                                            "those minimizers will be considered for "
+                                                                            "determining the expression levels.");
 
     initialise_arguments_ibf(parser, ibf_args, num_hash);
 
@@ -213,7 +221,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
 
     try
     {
-        ibf(minimiser_files, ibf_args, num_hash);
+        ibf(minimiser_files, ibf_args, expression_by_genome_file, num_hash);
     }
     catch (const std::invalid_argument & e)
     {
