@@ -430,12 +430,16 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions,minimiser_files[file_iterator].stem())
                                                  : check_for_fasta_format(seqan3::format_fasta::file_extensions, minimiser_files[file_iterator].extension());
             filesize = std::filesystem::file_size(minimiser_files[file_iterator]) * minimiser_args.samples[i] * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
+            if (calculate_cutoffs)
+                filesize = filesize/((file_cutoffs[i] + 1) * (is_fasta ? 1 : 2));
+            else
+                filesize = filesize/((minimiser_args.cutoffs[i] + 1) * (is_fasta ? 1 : 2));
         }
         // If set_expression_levels_samplewise is not set the expressions as determined by the first file are used for
         // all files.
         if constexpr (samplewise)
         {
-            uint64_t diff{1};
+            uint64_t diff{2};
             for (std::size_t c = 0; c < ibf_args.number_expression_levels - 1; c++)
             {
                 diff = diff * 2;
@@ -452,7 +456,6 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 sizes[i].push_back(filesize/diff);
             }
             sizes[i].push_back(filesize/diff);
-
         }
     }
 

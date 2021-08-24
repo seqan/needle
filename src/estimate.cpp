@@ -55,11 +55,13 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
             }
             else
             {
+                if (counter[j] == 0)
+                    counter[j] == 1;
                 // Actually calculate estimation, in the else case k stands for the prev_expression
                 if constexpr (multiple_expressions)
-                    estimations_i[j] = expressions[k][j] + ((abs(minimiser_pos - counter[j])/abs((prev_counts[j]*1.0) - counter[j])) * (expressions[k+1][j]-expressions[k][j]));
+                    estimations_i[j] = expressions[k][j] + ((abs(minimiser_pos - prev_counts[j])/(counter[j] * 1.0)) * (expressions[k+1][j]-expressions[k][j]));
                 else
-                    estimations_i[j] = expressions + ((abs(minimiser_pos - counter[j])/abs((prev_counts[j]*1.0) - counter[j])) * (k-expressions));
+                    estimations_i[j] = expressions + ((abs(minimiser_pos - prev_counts[j])/(counter[j] * 1.0)) * (k-expressions));
                 // Make sure, every transcript is only estimated once
                 prev_counts[j] = 0;
             }
@@ -73,6 +75,7 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
             prev_counts[j] = prev_counts[j] + std::max((float) 0.0, (float) ((counter[j]-(minimiser_length*fpr))/(1.0-fpr)));
         }
     }
+
 
 }
 
