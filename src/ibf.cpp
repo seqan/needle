@@ -179,6 +179,7 @@ void count(min_arguments const & args, std::vector<std::filesystem::path> sequen
                     counter.push_back(hash_table[minHash]);
                 std::nth_element(counter.begin(), counter.begin() + counter.size()/2, counter.end());
                 exp =  counter[counter.size()/2];
+
                 counter.clear();
                 outfile << id << "\t" << exp << "\n";
                 ++j;
@@ -335,13 +336,37 @@ void get_expression_levels(uint8_t const number_expression_levels,
 
     std::size_t dev{2};
     std::size_t prev_pos{0};
+    auto prev_exp{0};
+    auto exp{0};
+
     for (std::size_t c = 0; c < number_expression_levels; c++)
+   {
+       std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
+       prev_pos = prev_pos + counts.size()/dev;
+       dev = dev *2;
+       expression_levels.push_back(counts[prev_pos]);
+       sizes.push_back(prev_pos);
+   }
+
+    while(expression_levels.size() < number_expression_levels)
     {
+
         std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
+        exp = counts[prev_pos + counts.size()/dev];
         prev_pos = prev_pos + counts.size()/dev;
-        dev = dev *2;
-        expression_levels.push_back(counts[prev_pos]);
-        sizes.push_back(prev_pos);
+
+        if (exp - prev_exp > 1)
+        {
+            expression_levels.push_back(exp);
+            sizes.push_back(prev_pos);
+            dev = dev*2;
+        }
+        else
+        {
+            dev = dev*1.5;
+        }
+
+        prev_exp = exp;
     }
     counts.clear();
 }
@@ -467,6 +492,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         for (unsigned i = 0; i < num_files; i++)
             size = size + sizes[i][j];
         // m = -hn/ln(1-p^(1/h))
+
         size = static_cast<uint64_t>((-1.0*num_hash*((1.0*size)/num_files))/(std::log(1.0-std::pow(ibf_args.fpr[j], 1.0/num_hash))));
         ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
                      seqan3::bin_count{num_files}, seqan3::bin_size{size},

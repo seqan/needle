@@ -43,8 +43,15 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
 
     for(int j = 0; j < counter.size(); j++)
     {
-        if ((prev_counts[j] + counter[j]) >= minimiser_pos)
+        // Correction by substracting the expected number of false positives
+        float seen = std::max((float) 0.0, (float) ((prev_counts[j]-(minimiser_length*fpr))/(1.0-fpr)));
+        float seen2 = std::max((float) 0.0, (float) ((counter[j]-(minimiser_length*fpr))/(1.0-fpr)));
+
+        if ((seen + seen2) >= minimiser_pos)
         {
+            prev_counts[j] = (int) seen;
+            counter[j] = (int) seen2;
+
             // If there was nothing previous
             if constexpr(last_exp)
             {
@@ -56,14 +63,15 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
             else
             {
                 if (counter[j] == 0)
-                    counter[j] == 1;
-                // Actually calculate estimation, in the else case k stands for the prev_expression
-                if constexpr (multiple_expressions)
-                    estimations_i[j] = expressions[k][j] + ((abs(minimiser_pos - prev_counts[j])/(counter[j] * 1.0)) * (expressions[k+1][j]-expressions[k][j]));
-                else
-                    estimations_i[j] = expressions + ((abs(minimiser_pos - prev_counts[j])/(counter[j] * 1.0)) * (k-expressions));
-                // Make sure, every transcript is only estimated once
-                prev_counts[j] = 0;
+                    counter[j] = 1;
+
+               // Actually calculate estimation, in the else case k stands for the prev_expression
+               if constexpr (multiple_expressions)
+                   estimations_i[j] = expressions[k][j] + ((abs(minimiser_pos - prev_counts[j])/(counter[j] * 1.0)) * (expressions[k+1][j]-expressions[k][j]));
+               else
+                   estimations_i[j] = expressions + ((abs(minimiser_pos - prev_counts[j])/(counter[j] * 1.0)) * (k-expressions));
+               // Make sure, every transcript is only estimated once
+               prev_counts[j] = 0;
             }
 
             if constexpr (normalization & multiple_expressions)
@@ -71,8 +79,7 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
         }
         else
         {
-            // Correct prev_counts by substracting the expected number of false positives
-            prev_counts[j] = prev_counts[j] + std::max((float) 0.0, (float) ((counter[j]-(minimiser_length*fpr))/(1.0-fpr)));
+            prev_counts[j] = prev_counts[j] + counter[j];
         }
     }
 
@@ -165,6 +172,7 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     }
     counter_est.clear();
     counter.clear();
+
     // Go over the sequences
     #pragma omp parallel for
     for (int i = 0; i < seqs.size(); ++i)
@@ -172,11 +180,11 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
         if constexpr (samplewise & normalization_method)
             check_ibf<IBFType, true, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
                                            expressions,args.number_expression_levels - 1,
-                                           args.fpr[args.expression_levels.size() - 1]);
+                                           args.fpr[args.number_expression_levels - 1]);
         else if constexpr (samplewise)
             check_ibf<IBFType, true, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
                                             expressions, args.number_expression_levels - 1,
-                                            args.fpr[args.expression_levels.size() - 1]);
+                                            args.fpr[args.number_expression_levels - 1]);
         else
             check_ibf<IBFType, true, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
                                             args.expression_levels[args.expression_levels.size() - 1], prev_expression,
