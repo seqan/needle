@@ -179,7 +179,6 @@ void count(min_arguments const & args, std::vector<std::filesystem::path> sequen
                     counter.push_back(hash_table[minHash]);
                 std::nth_element(counter.begin(), counter.begin() + counter.size()/2, counter.end());
                 exp =  counter[counter.size()/2];
-
                 counter.clear();
                 outfile << id << "\t" << exp << "\n";
                 ++j;
@@ -492,7 +491,6 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         for (unsigned i = 0; i < num_files; i++)
             size = size + sizes[i][j];
         // m = -hn/ln(1-p^(1/h))
-
         size = static_cast<uint64_t>((-1.0*num_hash*((1.0*size)/num_files))/(std::log(1.0-std::pow(ibf_args.fpr[j], 1.0/num_hash))));
         ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
                      seqan3::bin_count{num_files}, seqan3::bin_size{size},
