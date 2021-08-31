@@ -217,7 +217,6 @@ void read_binary(std::filesystem::path filename, robin_hood::unordered_node_map<
         hash_table[minimiser] = minimiser_count;
     }
 
-
     fin.close();
 }
 
@@ -370,24 +369,44 @@ void get_expression_levels(uint8_t const number_expression_levels,
     counts.clear();
 }
 
-void get_sizes(uint8_t const number_expression_levels,
-               robin_hood::unordered_node_map<uint64_t, uint16_t> const & hash_table,
-               std::vector<uint16_t> const & expression_levels, std::vector<uint64_t> & sizes)
+void get_filsize_per_expression_level(std::filesystem::path filename, uint8_t const number_expression_levels,
+                                      std::vector<uint16_t> const & expression_levels, std::vector<uint64_t> & sizes,
+                                      robin_hood::unordered_set<uint64_t> const & genome, bool all = true)
 {
-    std::vector<uint16_t> counts;
-    for (auto && elem : hash_table)
+    std::ifstream fin;
+    uint8_t small_buffer;
+    uint32_t window;
+    uint64_t buffer;
+    fin.open(filename, std::ios::binary);
+    fin.read((char*)&buffer, sizeof(buffer));
+    fin.read((char*)&small_buffer, sizeof(small_buffer));
+    fin.read((char*)&window, sizeof(window));
+    fin.read((char*)&buffer, sizeof(buffer));
+    bool ungapped;
+    fin.read((char*)&ungapped, sizeof(ungapped));
+    if (!ungapped)
     {
-        counts.push_back(elem.second);
+        fin.read((char*)&buffer, sizeof(buffer));
     }
 
-    uint64_t prev_size{0};
-    for (std::size_t c = 0; c < number_expression_levels; c++)
+    uint64_t minimiser;
+    uint16_t minimiser_count;
+    sizes.assign(number_expression_levels, 0);
+
+    while(fin.read((char*)&minimiser, sizeof(minimiser)))
     {
-        auto it = std::find(counts.begin(), counts.end(), expression_levels[c]);
-        uint64_t index = static_cast<uint64_t>(*it);
-        prev_size = counts.size() - std::count(counts.begin(), counts.end(), expression_levels[c]) + index - prev_size;
-        sizes.push_back(prev_size);
+        fin.read((char*)&minimiser_count, sizeof(minimiser_count));
+        if (all | genome.contains(minimiser))
+        {
+            auto p = std::upper_bound(expression_levels.begin(), expression_levels.end(), minimiser_count);
+            if(p == expression_levels.end())
+                sizes[number_expression_levels-1]++;
+            else if(p != expression_levels.begin())
+                sizes[(p-expression_levels.begin())-1]++;
+        }
     }
+
+    fin.close();
 }
 
 template<bool samplewise, bool minimiser_files_given = true>
@@ -430,6 +449,12 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
     size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / ibf_args.threads), 8u, 64u);
 
+    // If expression_levels should only be depending on minimsers in a certain genome file, genome is created.
+    robin_hood::unordered_set<uint64_t> genome{};
+    if (expression_by_genome_file != "")
+        get_include_set_table(ibf_args, expression_by_genome_file, genome);
+    bool const expression_by_genome = (expression_by_genome_file == "");
+
     // Get expression levels and sizes
     #pragma omp parallel for schedule(dynamic, chunk_size)
     for (unsigned i = 0; i < num_files; i++)
@@ -471,6 +496,11 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             }
             sizes[i].push_back(filesize/diff);
         }
+        else if constexpr (minimiser_files_given)
+        {
+            get_filsize_per_expression_level(minimiser_files[i], ibf_args.number_expression_levels, ibf_args.expression_levels, sizes[i],
+                                             genome, expression_by_genome);
+        }
         else
         {
             float diff{1};
@@ -496,13 +526,6 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                      seqan3::bin_count{num_files}, seqan3::bin_size{size},
                      seqan3::hash_function_count{num_hash}));
     }
-
-    // If expression_levels should only be depending on minimsers in a certain genome file, genome is created.
-    robin_hood::unordered_set<uint64_t> genome{};
-    if (expression_by_genome_file != "")
-        get_include_set_table(ibf_args, expression_by_genome_file, genome);
-    bool const expression_by_genome = (expression_by_genome_file == "");
-
 
     // Add minimisers to ibf
     #pragma omp parallel for schedule(dynamic, chunk_size)
