@@ -64,6 +64,7 @@ TEST(ibfmin, given_expression_levels_multiple_threads)
     ibf_args.expression_levels = {1, 2};
     ibf_args.fpr = {0.05, 0.05};
     ibf_args.threads = 2;
+    ibf_args.path_out = tmp_dir/"Test_Multiple_";
     std::vector<std::filesystem::path> minimiser_file{};
     minimiser_file.assign(16, std::string(DATA_INPUT_DIR) + "mini_example.minimiser");
 
@@ -74,7 +75,7 @@ TEST(ibfmin, given_expression_levels_multiple_threads)
     EXPECT_EQ(expected, medians);
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    load_ibf(ibf, tmp_dir/"Test_IBF_1");
+    load_ibf(ibf, tmp_dir/"Test_Multiple_IBF_1");
     auto agent = ibf.membership_agent();
 
     std::vector<bool> expected_result(16, 0);
@@ -83,8 +84,8 @@ TEST(ibfmin, given_expression_levels_multiple_threads)
     std::vector<bool> expected_result2(16, 1);
     auto & res2 = agent.bulk_contains(24);
     EXPECT_RANGE_EQ(expected_result2,  res2);
-    std::filesystem::remove(tmp_dir/"Test_IBF_1");
-    std::filesystem::remove(tmp_dir/"Test_IBF_2");
+    std::filesystem::remove(tmp_dir/"Test_Multiple_IBF_1");
+    std::filesystem::remove(tmp_dir/"Test_Multiple_IBF_2");
 }
 #endif
 
@@ -161,6 +162,7 @@ TEST(ibfmin, no_given_expression_levels_multiple_threads)
     ibf_args.number_expression_levels = 2;
     ibf_args.fpr = {0.0025, 0.0025};
     ibf_args.threads = 2;
+    ibf_args.path_out = tmp_dir/"Test_Multiple_";
     std::vector<std::filesystem::path> minimiser_file{};
     minimiser_file.assign(128, std::string(DATA_INPUT_DIR) + "mini_example.minimiser");
 
@@ -171,7 +173,7 @@ TEST(ibfmin, no_given_expression_levels_multiple_threads)
     EXPECT_EQ(expected, medians);
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    load_ibf(ibf, tmp_dir/"Test_IBF_Level_0");
+    load_ibf(ibf, tmp_dir/"Test_Multiple_IBF_Level_0");
     auto agent = ibf.membership_agent();
 
     std::vector<bool> expected_result(128, 0);
@@ -180,8 +182,8 @@ TEST(ibfmin, no_given_expression_levels_multiple_threads)
     std::vector<bool> expected_result2(128, 1);
     auto & res2 = agent.bulk_contains(97);
     EXPECT_RANGE_EQ(expected_result2,  res2);
-    std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
-    std::filesystem::remove(tmp_dir/"Test_IBF_Level_1");
-    std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
+    std::filesystem::remove(tmp_dir/"Test_Multiple_IBF_Level_0");
+    std::filesystem::remove(tmp_dir/"Test_Multiple_IBF_Level_1");
+    std::filesystem::remove(tmp_dir/"Test_Multiple_IBF_Levels.levels");
 }
 #endif
