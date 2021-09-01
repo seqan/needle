@@ -44,10 +44,9 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
     for(int j = 0; j < counter.size(); j++)
     {
         // Correction by substracting the expected number of false positives
-        float seen = std::max((float) 0.0, (float) ((prev_counts[j]-(minimiser_length*fpr))/(1.0-fpr)));
-        float seen2 = std::max((float) 0.0, (float) ((counter[j]-(minimiser_length*fpr))/(1.0-fpr)));
-
-        if ((seen + seen2) >= minimiser_pos)
+        float corrected_prev_counts = std::max((float) 0.0, (float) ((prev_counts[j]-(minimiser_length*fpr))/(1.0-fpr)));
+        float corrected_counter = std::max((float) 0.0, (float) ((counter[j]-(minimiser_length*fpr))/(1.0-fpr)));
+        if ((corrected_prev_counts + corrected_counter) >= minimiser_pos)
         {
             // If there was nothing previous
             if constexpr(last_exp)
@@ -59,14 +58,14 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
             }
             else
             {
-                if (seen2  == 0)
-                    seen2++;
+                if (corrected_counter  == 0)
+                    corrected_counter++;
 
                // Actually calculate estimation, in the else case k stands for the prev_expression
                if constexpr (multiple_expressions)
-                   estimations_i[j] = std::max(expressions[k][j] * 1.0, expressions[k+1][j] - ((abs(minimiser_pos - seen)/(seen2 * 1.0)) * (expressions[k+1][j]-expressions[k][j])));
+                   estimations_i[j] = std::max(expressions[k][j] * 1.0, expressions[k+1][j] - ((abs(minimiser_pos - corrected_prev_counts)/(corrected_counter * 1.0)) * (expressions[k+1][j]-expressions[k][j])));
                else
-                   estimations_i[j] = std::max(expressions * 1.0, k - ((abs(minimiser_pos - seen)/(seen2 * 1.0)) * (k-expressions)));
+                   estimations_i[j] = std::max(expressions * 1.0, k - ((abs(minimiser_pos - corrected_prev_counts)/(corrected_counter * 1.0)) * (k-expressions)));
                // Make sure, every transcript is only estimated once
                prev_counts[j] = 0;
             }
