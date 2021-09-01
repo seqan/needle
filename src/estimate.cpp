@@ -46,6 +46,7 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
         // Correction by substracting the expected number of false positives
         float seen = std::max((float) 0.0, (float) ((prev_counts[j]-(minimiser_length*fpr))/(1.0-fpr)));
         float seen2 = std::max((float) 0.0, (float) ((counter[j]-(minimiser_length*fpr))/(1.0-fpr)));
+
         if ((seen + seen2) >= minimiser_pos)
         {
             // If there was nothing previous
@@ -63,9 +64,9 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
 
                // Actually calculate estimation, in the else case k stands for the prev_expression
                if constexpr (multiple_expressions)
-                   estimations_i[j] = expressions[k+1][j] - ((abs(minimiser_pos - seen2)/(seen2 * 1.0)) * (expressions[k+1][j]-expressions[k][j]));
+                   estimations_i[j] = std::max(expressions[k][j] * 1.0, expressions[k+1][j] - ((abs(minimiser_pos - seen)/(seen2 * 1.0)) * (expressions[k+1][j]-expressions[k][j])));
                else
-                   estimations_i[j] = k - ((abs(minimiser_pos - seen2)/(seen2 * 1.0)) * (k-expressions));
+                   estimations_i[j] = std::max(expressions * 1.0, k - ((abs(minimiser_pos - seen)/(seen2 * 1.0)) * (k-expressions)));
                // Make sure, every transcript is only estimated once
                prev_counts[j] = 0;
             }
