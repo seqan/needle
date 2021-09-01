@@ -29,7 +29,7 @@ TEST(ibf, given_expression_levels)
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     initialization_args(ibf_args);
-    ibf_args.path_out = tmp_dir/"Test_";
+    ibf_args.path_out = tmp_dir/"Test_Exp_";
     ibf_args.expression_levels = {1, 2};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
@@ -40,9 +40,9 @@ TEST(ibf, given_expression_levels)
     EXPECT_EQ(expected, medians);
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    if (std::filesystem::exists(tmp_dir/"Test_IBF_1"))
+    if (std::filesystem::exists(tmp_dir/"Test_Exp_IBF_1"))
     {
-        load_ibf(ibf, tmp_dir/"Test_IBF_1");
+        load_ibf(ibf, tmp_dir/"Test_Exp_IBF_1");
         auto agent = ibf.membership_agent();
 
         std::vector<bool> expected_result(1, 0);
@@ -52,13 +52,13 @@ TEST(ibf, given_expression_levels)
         auto & res2 = agent.bulk_contains(24);
         EXPECT_RANGE_EQ(expected_result,  res2);
     }
-    std::filesystem::remove(tmp_dir/"Test_IBF_1");
-    std::filesystem::remove(tmp_dir/"Test_IBF_2");
+    std::filesystem::remove(tmp_dir/"Test_Exp_IBF_1");
+    std::filesystem::remove(tmp_dir/"Test_Exp_IBF_2");
 
     estimate_ibf_arguments args{};
-    if (std::filesystem::exists(tmp_dir/"Test_IBF_Data"))
+    if (std::filesystem::exists(tmp_dir/"Test_Exp_IBF_Data"))
     {
-        load_args(args, tmp_dir/"Test_IBF_Data");
+        load_args(args, tmp_dir/"Test_Exp_IBF_Data");
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
@@ -69,7 +69,7 @@ TEST(ibf, given_expression_levels)
         EXPECT_RANGE_EQ(ibf_args.expression_levels, args.expression_levels);
         EXPECT_EQ(ibf_args.samplewise, args.samplewise);
     }
-    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
+    std::filesystem::remove(tmp_dir/"Test_Exp_IBF_Data");
 }
 
 TEST(ibf, given_expression_levels_include_file)
