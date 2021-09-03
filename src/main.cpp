@@ -21,10 +21,11 @@ void initialise_min_arguments(seqan3::argument_parser & parser, min_arguments & 
     parser.add_option(args.threads, 't', "threads", "Number of threads to use. Default: 1.");
 }
 
-void initialise_arguments_ibf(seqan3::argument_parser & parser, estimate_ibf_arguments & ibf_args, size_t & num_hash)
+void initialise_arguments_ibf(seqan3::argument_parser & parser, estimate_ibf_arguments & ibf_args, size_t & num_hash,
+                              std::vector<double> & fpr)
 {
     parser.add_flag(ibf_args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
-    parser.add_option(ibf_args.fpr, 'f', "fpr", "List of bin false positive rate per expression level. If only one is given"
+    parser.add_option(fpr, 'f', "fpr", "List of bin false positive rate per expression level. If only one is given"
                                                           ", then that fpr is used for all expression levels.");
     parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
                                                                             " constructing the IBFs.");
@@ -152,9 +153,10 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     std::vector<std::filesystem::path> sequence_files{};
     size_t num_hash{1}; // Number of hash functions to use, default 1
     std::filesystem::path expression_by_genome_file = "";
+    std::vector<double> fpr{}; // The fpr of one IBF, can be different for different expression levels
 
     initialise_min_arguments(parser, ibf_args);
-    initialise_arguments_ibf(parser, ibf_args, num_hash);
+    initialise_arguments_ibf(parser, ibf_args, num_hash, fpr);
     initialise_arguments_minimiser(parser, minimiser_args);
 
     parser.info.short_description = "Constructs an IBF.";
@@ -178,7 +180,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
 
     try
     {
-        ibf(sequence_files, ibf_args, minimiser_args, expression_by_genome_file, num_hash);
+        ibf(sequence_files, ibf_args, minimiser_args, fpr, expression_by_genome_file, num_hash);
     }
     catch (const std::invalid_argument & e)
     {
@@ -195,6 +197,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     std::vector<std::filesystem::path> minimiser_files{};
     size_t num_hash{1}; // Number of hash functions to use, default 1
     std::filesystem::path expression_by_genome_file = "";
+    std::vector<double> fpr{}; // The fpr of one IBF, can be different for different expression levels
 
     parser.info.short_description = "Constructs an IBF from the minimiser and header files created by needle minimiser.";
 
@@ -207,7 +210,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
                                                                             "those minimizers will be considered for "
                                                                             "determining the expression levels.");
 
-    initialise_arguments_ibf(parser, ibf_args, num_hash);
+    initialise_arguments_ibf(parser, ibf_args, num_hash, fpr);
 
     try
     {
@@ -221,7 +224,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
 
     try
     {
-        ibf(minimiser_files, ibf_args, expression_by_genome_file, num_hash);
+        ibf(minimiser_files, ibf_args, fpr, expression_by_genome_file, num_hash);
     }
     catch (const std::invalid_argument & e)
     {

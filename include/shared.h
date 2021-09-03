@@ -34,7 +34,6 @@ struct min_arguments : all_arguments
 struct estimate_ibf_arguments : min_arguments
 {
     bool compressed = false;
-    std::vector<float> fpr{}; // The fpr of one IBF, can be different for different expression levels
     std::vector<uint16_t> expression_levels{}; // Expression levels which should be created
     uint8_t number_expression_levels{}; // If set, the expression levels are determined by the program.
     bool samplewise{false};
@@ -47,7 +46,6 @@ struct estimate_ibf_arguments : min_arguments
         archive(s.get());
         archive(shape);
         archive(compressed);
-        archive(fpr);
         archive(number_expression_levels);
         archive(expression_levels);
         archive(samplewise);
@@ -61,7 +59,6 @@ struct estimate_ibf_arguments : min_arguments
         archive(s.get());
         archive(shape);
         archive(compressed);
-        archive(fpr);
         archive(number_expression_levels);
         archive(expression_levels);
         archive(samplewise);

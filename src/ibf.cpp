@@ -299,7 +299,7 @@ void check_cutoffs_samples(std::vector<std::filesystem::path> const & sequence_f
         throw std::invalid_argument{"Error. Incorrect command line input for multiple-samples."};
 }
 
-void check_fpr(uint8_t const number_expression_levels, std::vector<float> & fprs)
+void check_fpr(uint8_t const number_expression_levels, std::vector<double> & fprs)
 {
     // If no bin size is given or not the right amount, throw error.
     if (fprs.empty())
@@ -411,6 +411,7 @@ void get_filsize_per_expression_level(std::filesystem::path filename, uint8_t co
 
 template<bool samplewise, bool minimiser_files_given = true>
 void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
+                std::vector<double> const & fprs,
                 estimate_ibf_arguments & ibf_args, size_t num_hash = 1, std::filesystem::path expression_by_genome_file = "",
                 minimiser_arguments const & minimiser_args = {})
 {
@@ -523,7 +524,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         for (unsigned i = 0; i < num_files; i++)
             size = size + sizes[i][j];
         // m = -hn/ln(1-p^(1/h))
-        size = static_cast<uint64_t>((-1.0*num_hash*((1.0*size)/num_files))/(std::log(1.0-std::pow(ibf_args.fpr[j], 1.0/num_hash))));
+        size = static_cast<uint64_t>((-1.0*num_hash*((1.0*size)/num_files))/(std::log(1.0-std::pow(fprs[j], 1.0/num_hash))));
         ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
                      seqan3::bin_count{num_files}, seqan3::bin_size{size},
                      seqan3::hash_function_count{num_hash}));
@@ -645,6 +646,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files,
                           estimate_ibf_arguments & ibf_args, minimiser_arguments & minimiser_args,
+                          std::vector<double> & fpr,
                           std::filesystem::path const expression_by_genome_file, size_t num_hash)
 {
     // Declarations
@@ -655,7 +657,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
 
 
     check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels, expression_by_genome_file);
-    check_fpr(ibf_args.number_expression_levels, ibf_args.fpr);
+    check_fpr(ibf_args.number_expression_levels, fpr);
 
     ibf_args.samplewise = (ibf_args.expression_levels.size() == 0);
 
@@ -673,9 +675,9 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     }
 
     if (ibf_args.samplewise)
-        ibf_helper<true, false>(sequence_files, ibf_args, num_hash, expression_by_genome_file, minimiser_args);
+        ibf_helper<true, false>(sequence_files, fpr, ibf_args, num_hash, expression_by_genome_file, minimiser_args);
     else
-        ibf_helper<false, false>(sequence_files, ibf_args, num_hash, expression_by_genome_file, minimiser_args);
+        ibf_helper<false, false>(sequence_files, fpr, ibf_args, num_hash, expression_by_genome_file, minimiser_args);
 
     store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
 
@@ -684,18 +686,19 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
 
 // Create ibf based on the minimiser file
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files,
-                          estimate_ibf_arguments & ibf_args, std::filesystem::path const expression_by_genome_file,
+                          estimate_ibf_arguments & ibf_args, std::vector<double> & fpr,
+                          std::filesystem::path const expression_by_genome_file,
                           size_t num_hash)
 {
     check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels, expression_by_genome_file);
-    check_fpr(ibf_args.number_expression_levels, ibf_args.fpr);
+    check_fpr(ibf_args.number_expression_levels, fpr);
 
     ibf_args.samplewise = (ibf_args.expression_levels.size() == 0);
 
     if (ibf_args.samplewise)
-        ibf_helper<true>(minimiser_files, ibf_args, num_hash, expression_by_genome_file);
+        ibf_helper<true>(minimiser_files, fpr, ibf_args, num_hash, expression_by_genome_file);
     else
-        ibf_helper<false>(minimiser_files, ibf_args, num_hash, expression_by_genome_file);
+        ibf_helper<false>(minimiser_files, fpr, ibf_args, num_hash, expression_by_genome_file);
 
     store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
 

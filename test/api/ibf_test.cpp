@@ -20,7 +20,6 @@ void initialization_args(estimate_ibf_arguments & args)
     args.shape = seqan3::ungapped{args.k};
     args.w_size = seqan3::window_size{4};
     args.s = seqan3::seed{0};
-    args.fpr = {0.05};
 }
 
 TEST(ibf, given_expression_levels)
@@ -32,10 +31,11 @@ TEST(ibf, given_expression_levels)
     ibf_args.path_out = tmp_dir/"Test_Exp_";
     ibf_args.expression_levels = {1, 2};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    std::vector<double> fpr = {0.05};
 
     std::vector<uint16_t> expected{1, 2};
 
-    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args);
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr);
 
     EXPECT_EQ(expected, medians);
 
@@ -64,7 +64,6 @@ TEST(ibf, given_expression_levels)
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
         EXPECT_EQ(true, args.compressed);
-        EXPECT_RANGE_EQ(ibf_args.fpr, args.fpr);
         EXPECT_EQ(ibf_args.number_expression_levels, args.number_expression_levels);
         EXPECT_RANGE_EQ(ibf_args.expression_levels, args.expression_levels);
         EXPECT_EQ(ibf_args.samplewise, args.samplewise);
@@ -82,10 +81,11 @@ TEST(ibf, given_expression_levels_include_file)
     ibf_args.expression_levels = {1, 2};
     minimiser_args.include_file = std::string(DATA_INPUT_DIR) + "mini_example.fasta";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    std::vector<double> fpr = {0.05};
 
     std::vector<uint16_t> expected{1, 2};
 
-    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args);
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr);
 
     EXPECT_EQ(expected, medians);
 
@@ -117,10 +117,11 @@ TEST(ibf, given_expression_levels_exclude_file)
     ibf_args.expression_levels = {1, 2};
     minimiser_args.exclude_file = std::string(DATA_INPUT_DIR) + "mini_gen.fasta";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    std::vector<double> fpr = {0.05};
 
     std::vector<uint16_t> expected{1, 2};
 
-    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args);
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr);
 
     EXPECT_EQ(expected, medians);
 
@@ -151,10 +152,11 @@ TEST(ibf, no_given_expression_levels)
     ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.number_expression_levels = 2;
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    std::vector<double> fpr = {0.05};
 
     std::vector<uint16_t> expected{};
 
-    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args);
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr);
 
     EXPECT_EQ(expected, medians);
 
@@ -187,10 +189,11 @@ TEST(ibf, expression_levels_by_genome)
     ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.number_expression_levels = 1;
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    std::vector<double> fpr = {0.05};
 
     std::vector<uint16_t> expected{};
 
-    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args,
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr,
                                         std::string(DATA_INPUT_DIR) + "mini_gen.fasta");
 
     EXPECT_EQ(expected, medians);
@@ -222,13 +225,14 @@ TEST(ibf, throws)
     initialization_args(ibf_args);
     ibf_args.path_out = tmp_dir/"Test_";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    std::vector<double> fpr = {0.05};
 
-    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args), std::invalid_argument);
+    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr), std::invalid_argument);
 
     ibf_args.number_expression_levels = 0;
-    ibf_args.fpr = {};
-    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args), std::invalid_argument);
+    fpr = {};
+    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr), std::invalid_argument);
 
-    ibf_args.fpr = {0.05};
-    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args), std::invalid_argument);
+    fpr = {0.05};
+    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr), std::invalid_argument);
 }

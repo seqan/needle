@@ -43,15 +43,8 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
 
     for(int j = 0; j < counter.size(); j++)
     {
-        //fprs[j] == 0.3;
         // Correction by substracting the expected number of false positives
-<<<<<<< Updated upstream
-        counter[j] = std::max((float) 0.0, (float) ((counter[j]-(minimiser_length*fpr))/(1.0-fpr)));
-=======
-        //if (j >= 126)
-        //    seqan3::debug_stream << j << " " << counter[j] << " " << prev_counts[j] << " " << minimiser_length << " " << std::max((double) 0.0, (double) ((counter[j]-(minimiser_length*fprs[j]))/(1.0-fprs[j]))) << " " << fprs[j] << "\n";
         counter[j] = std::max((double) 0.0, (double) ((counter[j]-(minimiser_length*fprs[j]))/(1.0-fprs[j])));
->>>>>>> Stashed changes
         if (((prev_counts[j] + counter[j]) >= minimiser_pos) & (estimations_i[j] == 0))
         {
             // If there was nothing previous
@@ -245,11 +238,6 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
 void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_args)
 {
     load_args(args, std::string{estimate_args.path_in} + "IBF_Data");
-
-    if (args.fpr.size() == 1)
-    {
-        args.fpr.assign(args.expression_levels.size(), args.fpr[0]);
-    }
 
     if (args.compressed)
     {
