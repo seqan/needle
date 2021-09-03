@@ -513,6 +513,8 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         }
     }
 
+    std::ofstream outfile_fpr;
+    outfile_fpr.open(std::string{ibf_args.path_out} +  "IBF_FPRs.fprs");
     // Create IBFs
     std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
     for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
@@ -525,7 +527,16 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
                      seqan3::bin_count{num_files}, seqan3::bin_size{size},
                      seqan3::hash_function_count{num_hash}));
+
+        for (unsigned i = 0; i < num_files; i++)
+        {
+            double fpr = std::pow(1.0- std::pow(1.0-(1.0/size), num_hash*sizes[i][j]), num_hash);//std::pow((1.0-(std::exp((-1.0*num_hash*sizes[i][j])/size))), num_hash);
+            outfile_fpr << fpr << " ";
+        }
+        outfile_fpr << "\n";
     }
+    outfile_fpr << "/\n";
+    outfile_fpr.close();
 
     // Add minimisers to ibf
     #pragma omp parallel for schedule(dynamic, chunk_size)
