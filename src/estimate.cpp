@@ -45,7 +45,7 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
     {
         // Correction by substracting the expected number of false positives
         counter[j] = std::max((float) 0.0, (float) ((counter[j]-(minimiser_length*fpr))/(1.0-fpr)));
-        if ((prev_counts[j] + counter[j]) >= minimiser_pos)
+        if (((prev_counts[j] + counter[j]) >= minimiser_pos) & (estimations_i[j] == 0))
         {
             // If there was nothing previous
             if constexpr(last_exp)
