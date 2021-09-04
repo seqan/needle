@@ -337,31 +337,18 @@ void get_expression_levels(uint8_t const number_expression_levels,
     auto prev_exp{0};
     auto exp{0};
 
-    for (std::size_t c = 0; c < number_expression_levels; c++)
-   {
-       std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
-       prev_pos = prev_pos + counts.size()/dev;
-       dev = dev *2;
-       expression_levels.push_back(counts[prev_pos]);
-       sizes.push_back(prev_pos);
-   }
-
     while(expression_levels.size() < number_expression_levels)
     {
-
         std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
         exp = counts[prev_pos + counts.size()/dev];
         prev_pos = prev_pos + counts.size()/dev;
+        dev = dev*2;
 
-        if (exp - prev_exp > 1)
+        if (((exp - prev_exp) > 1) | (prev_exp != 0))
         {
             expression_levels.push_back(exp);
             sizes.push_back(prev_pos);
-            dev = dev*2;
-        }
-        else
-        {
-            dev = dev*1.5;
+
         }
 
         prev_exp = exp;
