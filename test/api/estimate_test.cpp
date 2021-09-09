@@ -137,7 +137,7 @@ TEST(estimate, small_example_different_expressions_per_level_normalization_1)
     estimate_args.normalization_method = 1;
     initialization_args(ibf_args);
     ibf_args.path_out = tmp_dir/"Test_";
-    ibf_args.number_expression_levels = 3;
+    ibf_args.number_expression_levels = 2;
     std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
 
@@ -165,7 +165,6 @@ TEST(estimate, small_example_different_expressions_per_level_normalization_1)
     }
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"Test_IBF_Level_1");
-    std::filesystem::remove(tmp_dir/"Test_IBF_Level_2");
     std::filesystem::remove(tmp_dir/"Test_IBF_Levels.levels");
     std::filesystem::remove(tmp_dir/"Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"expression.out");

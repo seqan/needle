@@ -336,6 +336,13 @@ void get_expression_levels(uint8_t const number_expression_levels,
     std::size_t prev_pos{0};
     auto prev_exp{0};
     auto exp{0};
+    // First Level
+    std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
+    exp = counts[prev_pos + counts.size()/dev];
+    prev_pos = prev_pos + counts.size()/dev;
+    dev = dev*2;
+    expression_levels.push_back(exp);
+    sizes.push_back(prev_pos);
 
     while(expression_levels.size() < number_expression_levels)
     {
@@ -344,7 +351,7 @@ void get_expression_levels(uint8_t const number_expression_levels,
         prev_pos = prev_pos + counts.size()/dev;
         dev = dev*2;
 
-        if (((exp - prev_exp) > 1) | (prev_exp != 0))
+        if ((exp - prev_exp) > 1)
         {
             expression_levels.push_back(exp);
             sizes.push_back(prev_pos);
@@ -386,10 +393,10 @@ void get_filsize_per_expression_level(std::filesystem::path filename, uint8_t co
         if (all | genome.contains(minimiser))
         {
             auto p = std::upper_bound(expression_levels.begin(), expression_levels.end(), minimiser_count);
-            if(p == expression_levels.end())
-                sizes[number_expression_levels-1]++;
-            else if(p != expression_levels.begin())
+            if(p != expression_levels.begin())
                 sizes[(p-expression_levels.begin())-1]++;
+            else if (minimiser_count>=expression_levels[number_expression_levels-1])
+                sizes[number_expression_levels-1]++;
         }
     }
 
@@ -510,6 +517,14 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         uint64_t size{0};
         for (unsigned i = 0; i < num_files; i++)
             size = size + sizes[i][j];
+
+        if (size < 1)
+        {
+            seqan3::debug_stream << "[Error]. The choosen expression threshold is not well picked. If you use the automatic "
+                              << "expression threshold determination, please decrease the number of levels. If you use "
+                              << "your own expression levels, decrease the levels from " << ibf_args.expression_levels[j]
+                              << " on.\n";
+        }
         // m = -hn/ln(1-p^(1/h))
         size = static_cast<uint64_t>((-1.0*num_hash*((1.0*size)/num_files))/(std::log(1.0-std::pow(fprs[j], 1.0/num_hash))));
         ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
