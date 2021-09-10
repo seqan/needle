@@ -220,19 +220,17 @@ TEST(estimate, example_multiple_threads)
     minimiser_args.samples = {2,2};
     ibf_args.expression_levels = {4, 32};
     std::vector<double> fpr = {0.05};
-    ibf_args.path_out = tmp_dir/"Test_";
+    ibf_args.path_out = tmp_dir/"Test_Multiple_";
     ibf_args.compressed = false;
     ibf(sequence_files, ibf_args, minimiser_args, fpr);
     ibf_args.threads = 2;
 
-    #pragma omp barrier
-
     estimate_args.search_file = std::string(DATA_INPUT_DIR) + "gene4.fasta";
     estimate_args.path_in = ibf_args.path_out;
-    ibf_args.path_out = tmp_dir/"expression.out";
+    ibf_args.path_out = tmp_dir/"Multiple_expression.out";
     call_estimate(ibf_args, estimate_args);
 
-    std::ifstream output_file(tmp_dir/"expression.out");
+    std::ifstream output_file(tmp_dir/"Multiple_expression.out");
     std::string line;
     std::string expected{"GeneA\t9\t32\t"};
     if (output_file.is_open())
@@ -243,10 +241,10 @@ TEST(estimate, example_multiple_threads)
         }
         output_file.close();
     }
-    std::filesystem::remove(tmp_dir/"Test_IBF_32");
-    std::filesystem::remove(tmp_dir/"Test_IBF_4");
-    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
-    std::filesystem::remove(tmp_dir/"expression.out");
+    std::filesystem::remove(tmp_dir/"Test_Multiple_IBF_32");
+    std::filesystem::remove(tmp_dir/"Test_Multiple_IBF_4");
+    std::filesystem::remove(tmp_dir/"Test_Multiple_IBF_Data");
+    std::filesystem::remove(tmp_dir/"Multiple_expression.out");
 }
 
 TEST(estimate, example_different_expressions_per_level)
