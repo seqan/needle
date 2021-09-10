@@ -522,8 +522,8 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         {
             seqan3::debug_stream << "[Error]. The choosen expression threshold is not well picked. If you use the automatic "
                               << "expression threshold determination, please decrease the number of levels. If you use "
-                              << "your own expression levels, decrease the levels from " << ibf_args.expression_levels[j]
-                              << " on.\n";
+                              << "your own expression thresholds, decrease the thresholds from level "
+                              << ibf_args.expression_levels[j] << " on.\n";
         }
         // m = -hn/ln(1-p^(1/h))
         size = static_cast<uint64_t>((-1.0*num_hash*((1.0*size)/num_files))/(std::log(1.0-std::pow(fprs[j], 1.0/num_hash))));

@@ -204,7 +204,7 @@ TEST(estimate, example)
     }
     std::filesystem::remove(tmp_dir/"Test_Single_IBF_4");
     std::filesystem::remove(tmp_dir/"Test_Single__IBF_32");
-    std::filesystem::remove(tmp_dir/"Test__Single_IBF_Data");
+    std::filesystem::remove(tmp_dir/"Test_Single_IBF_Data");
     std::filesystem::remove(tmp_dir/"Single_expression.out");
 }
 

@@ -27,7 +27,7 @@ void initialise_arguments_ibf(seqan3::argument_parser & parser, estimate_ibf_arg
     parser.add_flag(ibf_args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
     parser.add_option(fpr, 'f', "fpr", "List of bin false positive rate per expression level. If only one is given"
                                                           ", then that fpr is used for all expression levels.");
-    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression levels should be used for"
+    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression thresholds should be used for"
                                                                             " constructing the IBFs.");
     parser.add_option(ibf_args.number_expression_levels, 'l', "number_expression_levels", "Number of expression levels.");
     parser.add_option(num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
@@ -118,7 +118,7 @@ int run_needle_estimate(seqan3::argument_parser & parser)
     parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_flag(estimate_args.normalization_method, 'm', "normalization-mode",
                                                             "Set, if normalization is wanted. Normalization is achieved by"
-                                                            "dividing the expression value with the expression value of the first ibf."
+                                                            "dividing the expression value with the expression threshold of the first ibf."
                                                             "Only make sense if every bin has its own expression values."
                                                             "Default: False.");
 
@@ -166,7 +166,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
                                                                           " in a txt file.");
     parser.add_option(expression_by_genome_file, '\0', "levels-by-genome", "Sequence file containing minimizers, only "
                                                                             "those minimizers will be considered for "
-                                                                            "determining the expression levels.");
+                                                                            "determining the expression thresholds.");
 
     try
     {
