@@ -225,6 +225,8 @@ TEST(estimate, example_multiple_threads)
     ibf(sequence_files, ibf_args, minimiser_args, fpr);
     ibf_args.threads = 2;
 
+    #pragma omp barrier
+
     estimate_args.search_file = std::string(DATA_INPUT_DIR) + "gene4.fasta";
     estimate_args.path_in = ibf_args.path_out;
     ibf_args.path_out = tmp_dir/"expression.out";
