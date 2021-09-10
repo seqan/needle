@@ -182,16 +182,16 @@ TEST(estimate, example)
                                                          std::string(DATA_INPUT_DIR) + "exp_11.fasta", std::string(DATA_INPUT_DIR) + "exp_12.fasta"};
     minimiser_args.samples = {2, 2};
     ibf_args.expression_levels = {4, 32};
-    ibf_args.path_out = tmp_dir/"Test_";
+    ibf_args.path_out = tmp_dir/"Test_Single_";
     ibf_args.compressed = false;
     ibf(sequence_files, ibf_args, minimiser_args, fpr);
 
     estimate_args.search_file = std::string(DATA_INPUT_DIR) + "gene.fasta";
     estimate_args.path_in = ibf_args.path_out;
-    ibf_args.path_out = tmp_dir/"expression.out";
+    ibf_args.path_out = tmp_dir/"Single_expression.out";
     call_estimate(ibf_args, estimate_args);
 
-    std::ifstream output_file(tmp_dir/"expression.out");
+    std::ifstream output_file(tmp_dir/"Single_expression.out");
     std::string line;
     std::string expected{"GeneA\t9\t32\t"};
     if (output_file.is_open())
@@ -202,10 +202,10 @@ TEST(estimate, example)
         }
         output_file.close();
     }
-    std::filesystem::remove(tmp_dir/"Test_IBF_4");
-    std::filesystem::remove(tmp_dir/"Test_IBF_32");
-    std::filesystem::remove(tmp_dir/"Test_IBF_Data");
-    std::filesystem::remove(tmp_dir/"expression.out");
+    std::filesystem::remove(tmp_dir/"Test_Single_IBF_4");
+    std::filesystem::remove(tmp_dir/"Test_Single__IBF_32");
+    std::filesystem::remove(tmp_dir/"Test__Single_IBF_Data");
+    std::filesystem::remove(tmp_dir/"Single_expression.out");
 }
 
 TEST(estimate, example_multiple_threads)
