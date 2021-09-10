@@ -24,7 +24,7 @@
 template <class IBFType, bool last_exp, bool normalization, typename exp_t>
 void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint16_t> & estimations_i,
                seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
-               exp_t const & expressions, uint16_t const k, float const fpr)
+               exp_t const & expressions, uint16_t const k, std::vector<double> const fprs)
 {
     static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
 
@@ -44,7 +44,7 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
     for(int j = 0; j < counter.size(); j++)
     {
         // Correction by substracting the expected number of false positives
-        counter[j] = std::max((float) 0.0, (float) ((counter[j]-(minimiser_length*fpr))/(1.0-fpr)));
+        counter[j] = std::max((double) 0.0, (double) ((counter[j]-(minimiser_length*fprs[j]))/(1.0-fprs[j])));
         if (((prev_counts[j] + counter[j]) >= minimiser_pos) & (estimations_i[j] == 0))
         {
             // If there was nothing previous
@@ -78,19 +78,18 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
             prev_counts[j] = prev_counts[j] + counter[j];
         }
     }
-
-
 }
 
 // Reads the level file ibf creates
-void read_levels(std::vector<std::vector<uint16_t>> & expressions, std::filesystem::path filename)
+template<typename float_or_int>
+void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::filesystem::path filename)
 {
     std::ifstream fin;
     fin.open(filename);
     auto stream_view = seqan3::views::istreambuf(fin);
     auto stream_it = std::ranges::begin(stream_view);
     int j{0};
-    std::vector<uint16_t> empty_vector{};
+    std::vector<float_or_int> empty_vector{};
 
     std::string buffer{};
 
@@ -101,7 +100,10 @@ void read_levels(std::vector<std::vector<uint16_t>> & expressions, std::filesyst
             expressions.push_back(empty_vector);
         std::ranges::copy(stream_view | seqan3::views::take_until_or_throw(seqan3::is_char<' '>),
                                         std::cpp20::back_inserter(buffer));
-        expressions[j].push_back((uint16_t)  std::stoi(buffer));
+        if constexpr(std::same_as<uint16_t, float_or_int>)
+            expressions[j].push_back((uint16_t)  std::stoi(buffer));
+        else
+            expressions[j].push_back((double)  std::stod(buffer));
         buffer.clear();
         if(*stream_it != '/')
             ++stream_it;
@@ -135,6 +137,7 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     uint64_t prev_expression;
     std::vector<std::vector<uint16_t>> estimations;
     std::vector<std::vector<uint16_t>> expressions;
+    std::vector<std::vector<double>> fprs;
 
     omp_set_num_threads(args.threads);
 
@@ -146,9 +149,11 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     }
 
     if constexpr (samplewise)
-        read_levels(expressions, estimate_args.path_in.string() + "IBF_Levels.levels");
+        read_levels<uint16_t>(expressions, estimate_args.path_in.string() + "IBF_Levels.levels");
     else
         prev_expression = 0;
+
+    read_levels<double>(fprs, estimate_args.path_in.string() + "IBF_FPRs.fprs");
 
     // Make sure expression levels are sorted.
     sort(args.expression_levels.begin(), args.expression_levels.end());
@@ -176,15 +181,15 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
         if constexpr (samplewise & normalization_method)
             check_ibf<IBFType, true, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
                                            expressions,args.number_expression_levels - 1,
-                                           args.fpr[args.number_expression_levels - 1]);
+                                           fprs[args.number_expression_levels - 1]);
         else if constexpr (samplewise)
             check_ibf<IBFType, true, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
                                             expressions, args.number_expression_levels - 1,
-                                            args.fpr[args.number_expression_levels - 1]);
+                                            fprs[args.number_expression_levels - 1]);
         else
             check_ibf<IBFType, true, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
                                             args.expression_levels[args.expression_levels.size() - 1], prev_expression,
-                                            args.fpr[args.expression_levels.size() - 1]);
+                                            fprs[args.expression_levels.size() - 1]);
     }
 
     if constexpr (!samplewise)
@@ -203,13 +208,13 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
         {
             if constexpr (samplewise & normalization_method)
                 check_ibf<IBFType, false, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                      expressions, j, args.fpr[j]);
+                                      expressions, j, fprs[j]);
             else if constexpr (samplewise)
                 check_ibf<IBFType, false, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                          expressions, j, args.fpr[j]);
+                                          expressions, j, fprs[j]);
             else
                 check_ibf<IBFType, false, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                          args.expression_levels[j], prev_expression, args.fpr[j]);
+                                          args.expression_levels[j], prev_expression, fprs[j]);
         }
 
         if (!samplewise)
@@ -233,11 +238,6 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
 void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_args)
 {
     load_args(args, std::string{estimate_args.path_in} + "IBF_Data");
-
-    if (args.fpr.size() == 1)
-    {
-        args.fpr.assign(args.expression_levels.size(), args.fpr[0]);
-    }
 
     if (args.compressed)
     {

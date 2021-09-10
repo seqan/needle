@@ -299,7 +299,7 @@ void check_cutoffs_samples(std::vector<std::filesystem::path> const & sequence_f
         throw std::invalid_argument{"Error. Incorrect command line input for multiple-samples."};
 }
 
-void check_fpr(uint8_t const number_expression_levels, std::vector<float> & fprs)
+void check_fpr(uint8_t const number_expression_levels, std::vector<double> & fprs)
 {
     // If no bin size is given or not the right amount, throw error.
     if (fprs.empty())
@@ -336,32 +336,26 @@ void get_expression_levels(uint8_t const number_expression_levels,
     std::size_t prev_pos{0};
     auto prev_exp{0};
     auto exp{0};
-
-    for (std::size_t c = 0; c < number_expression_levels; c++)
-   {
-       std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
-       prev_pos = prev_pos + counts.size()/dev;
-       dev = dev *2;
-       expression_levels.push_back(counts[prev_pos]);
-       sizes.push_back(prev_pos);
-   }
+    // First Level
+    std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
+    exp = counts[prev_pos + counts.size()/dev];
+    prev_pos = prev_pos + counts.size()/dev;
+    dev = dev*2;
+    expression_levels.push_back(exp);
+    sizes.push_back(prev_pos);
 
     while(expression_levels.size() < number_expression_levels)
     {
-
         std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
         exp = counts[prev_pos + counts.size()/dev];
         prev_pos = prev_pos + counts.size()/dev;
+        dev = dev*2;
 
-        if (exp - prev_exp > 1)
+        if ((exp - prev_exp) > 1)
         {
             expression_levels.push_back(exp);
             sizes.push_back(prev_pos);
-            dev = dev*2;
-        }
-        else
-        {
-            dev = dev*1.5;
+
         }
 
         prev_exp = exp;
@@ -399,10 +393,10 @@ void get_filsize_per_expression_level(std::filesystem::path filename, uint8_t co
         if (all | genome.contains(minimiser))
         {
             auto p = std::upper_bound(expression_levels.begin(), expression_levels.end(), minimiser_count);
-            if(p == expression_levels.end())
-                sizes[number_expression_levels-1]++;
-            else if(p != expression_levels.begin())
+            if(p != expression_levels.begin())
                 sizes[(p-expression_levels.begin())-1]++;
+            else if (minimiser_count>=expression_levels[number_expression_levels-1])
+                sizes[number_expression_levels-1]++;
         }
     }
 
@@ -411,6 +405,7 @@ void get_filsize_per_expression_level(std::filesystem::path filename, uint8_t co
 
 template<bool samplewise, bool minimiser_files_given = true>
 void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
+                std::vector<double> const & fprs,
                 estimate_ibf_arguments & ibf_args, size_t num_hash = 1, std::filesystem::path expression_by_genome_file = "",
                 minimiser_arguments const & minimiser_args = {})
 {
@@ -513,6 +508,8 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         }
     }
 
+    std::ofstream outfile_fpr;
+    outfile_fpr.open(std::string{ibf_args.path_out} +  "IBF_FPRs.fprs");
     // Create IBFs
     std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
     for (unsigned j = 0; j < ibf_args.number_expression_levels; j++)
@@ -520,12 +517,29 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         uint64_t size{0};
         for (unsigned i = 0; i < num_files; i++)
             size = size + sizes[i][j];
+
+        if (size < 1)
+        {
+            seqan3::debug_stream << "[Error]. The choosen expression threshold is not well picked. If you use the automatic "
+                              << "expression threshold determination, please decrease the number of levels. If you use "
+                              << "your own expression thresholds, decrease the thresholds from level "
+                              << ibf_args.expression_levels[j] << " on.\n";
+        }
         // m = -hn/ln(1-p^(1/h))
-        size = static_cast<uint64_t>((-1.0*num_hash*((1.0*size)/num_files))/(std::log(1.0-std::pow(ibf_args.fpr[j], 1.0/num_hash))));
+        size = static_cast<uint64_t>((-1.0*num_hash*((1.0*size)/num_files))/(std::log(1.0-std::pow(fprs[j], 1.0/num_hash))));
         ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
                      seqan3::bin_count{num_files}, seqan3::bin_size{size},
                      seqan3::hash_function_count{num_hash}));
+
+        for (unsigned i = 0; i < num_files; i++)
+        {
+            double fpr = std::pow(1.0- std::pow(1.0-(1.0/size), num_hash*sizes[i][j]), num_hash);//std::pow((1.0-(std::exp((-1.0*num_hash*sizes[i][j])/size))), num_hash);
+            outfile_fpr << fpr << " ";
+        }
+        outfile_fpr << "\n";
     }
+    outfile_fpr << "/\n";
+    outfile_fpr.close();
 
     // Add minimisers to ibf
     #pragma omp parallel for schedule(dynamic, chunk_size)
@@ -634,6 +648,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files,
                           estimate_ibf_arguments & ibf_args, minimiser_arguments & minimiser_args,
+                          std::vector<double> & fpr,
                           std::filesystem::path const expression_by_genome_file, size_t num_hash)
 {
     // Declarations
@@ -644,7 +659,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
 
 
     check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels, expression_by_genome_file);
-    check_fpr(ibf_args.number_expression_levels, ibf_args.fpr);
+    check_fpr(ibf_args.number_expression_levels, fpr);
 
     ibf_args.samplewise = (ibf_args.expression_levels.size() == 0);
 
@@ -662,9 +677,9 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     }
 
     if (ibf_args.samplewise)
-        ibf_helper<true, false>(sequence_files, ibf_args, num_hash, expression_by_genome_file, minimiser_args);
+        ibf_helper<true, false>(sequence_files, fpr, ibf_args, num_hash, expression_by_genome_file, minimiser_args);
     else
-        ibf_helper<false, false>(sequence_files, ibf_args, num_hash, expression_by_genome_file, minimiser_args);
+        ibf_helper<false, false>(sequence_files, fpr, ibf_args, num_hash, expression_by_genome_file, minimiser_args);
 
     store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
 
@@ -673,18 +688,19 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
 
 // Create ibf based on the minimiser file
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files,
-                          estimate_ibf_arguments & ibf_args, std::filesystem::path const expression_by_genome_file,
+                          estimate_ibf_arguments & ibf_args, std::vector<double> & fpr,
+                          std::filesystem::path const expression_by_genome_file,
                           size_t num_hash)
 {
     check_expression(ibf_args.expression_levels, ibf_args.number_expression_levels, expression_by_genome_file);
-    check_fpr(ibf_args.number_expression_levels, ibf_args.fpr);
+    check_fpr(ibf_args.number_expression_levels, fpr);
 
     ibf_args.samplewise = (ibf_args.expression_levels.size() == 0);
 
     if (ibf_args.samplewise)
-        ibf_helper<true>(minimiser_files, ibf_args, num_hash, expression_by_genome_file);
+        ibf_helper<true>(minimiser_files, fpr, ibf_args, num_hash, expression_by_genome_file);
     else
-        ibf_helper<false>(minimiser_files, ibf_args, num_hash, expression_by_genome_file);
+        ibf_helper<false>(minimiser_files, fpr, ibf_args, num_hash, expression_by_genome_file);
 
     store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
 

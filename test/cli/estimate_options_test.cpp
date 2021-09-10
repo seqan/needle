@@ -39,10 +39,10 @@ TEST_F(cli_test, with_argument)
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     ibf_args.expression_levels = {1, 2};
-    ibf_args.fpr = {0.05};
+    std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta"};
     ibf_args.path_out = tmp_dir/"Test_";
-    ibf(sequence_files, ibf_args, minimiser_args);
+    ibf(sequence_files, ibf_args, minimiser_args, fpr);
 
     cli_test_result result = execute_app("needle estimate -i ", tmp_dir/"Test_", data("mini_gen.fasta"));
     EXPECT_EQ(result.exit_code, 0);
@@ -60,10 +60,10 @@ TEST_F(cli_test, with_argument_normalization_method)
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     ibf_args.expression_levels = {1, 2};
-    ibf_args.fpr = {0.05};
+    std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta"};
     ibf_args.path_out = tmp_dir/"Test_";
-    ibf(sequence_files, ibf_args, minimiser_args);
+    ibf(sequence_files, ibf_args, minimiser_args, fpr);
 
     cli_test_result result = execute_app("needle estimate -m -i ", tmp_dir/"Test_", data("mini_gen.fasta"));
     EXPECT_EQ(result.exit_code, 0);
@@ -79,10 +79,10 @@ TEST_F(cli_test, with_argument_out)
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     ibf_args.expression_levels = {1, 2};
-    ibf_args.fpr = {0.05};
+    std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "exp_01.fasta"};
     ibf_args.path_out = tmp_dir/"Test_";
-    ibf(sequence_files, ibf_args, minimiser_args);
+    ibf(sequence_files, ibf_args, minimiser_args, fpr);
 
     cli_test_result result = execute_app("needle estimate -o ", tmp_dir/"expressions.out","-i ", tmp_dir/"Test_", data("mini_gen.fasta"));
     EXPECT_EQ(result.exit_code, 0);

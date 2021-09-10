@@ -100,26 +100,30 @@ void read_binary_start(min_arguments & args, std::filesystem::path filename, uin
  * \param ibf_args        The IBF specific arguments to use (bin size, number of hash functions, ...). See
  *                        struct ibf_arguments.
  * \param minimiser_args  The minimiser specific arguments to use.
+ * \param fpr             The average false positive rate that should be used.
  * \param expression_by_genome_file File that contains the only minimisers that should be comnsidered for the
  *                                  determination of the expression_levels.
  * \param num_hash        The number of hash functions to use.
  *  \returns The normalized expression values per experiment.
  */
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files, estimate_ibf_arguments & ibf_args,
-                          minimiser_arguments & minimiser_args, std::filesystem::path const expression_by_genome_file = "",
+                          minimiser_arguments & minimiser_args, std::vector<double> & fpr,
+                          std::filesystem::path const expression_by_genome_file = "",
                           size_t num_hash = 1);
 
 /*! \brief Create IBF based on the minimiser and header files
  * \param minimiser_files  A vector of minimiser file paths.
  * \param ibf_args         The IBF specific arguments to use (bin size, number of hash functions, ...). See
  *                         struct ibf_arguments.
+ * \param fpr             The average false positive rate that should be used.
  * \param expression_by_genome_file File that contains the only minimisers that should be comnsidered for the
  *                                  determination of the expression_levels.
  * \param num_hash        The number of hash functions to use.
  *  \returns The normalized expression values per experiment.
  */
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files,
-                          estimate_ibf_arguments & ibf_args, std::filesystem::path const expression_by_genome_file = "",
+                          estimate_ibf_arguments & ibf_args, std::vector<double> & fpr,
+                          std::filesystem::path const expression_by_genome_file = "",
                           size_t num_hash = 1);
 
 /*! \brief Create minimiser and header files.
