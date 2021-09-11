@@ -2,7 +2,9 @@
 
 #include "cli_test.hpp"
 
-TEST_F(cli_test, no_options)
+struct needle_options_test : public cli_test {};
+
+TEST_F(needle_options_test, no_options)
 {
     cli_test_result result = execute_app("needle");
     std::string expected
@@ -16,7 +18,7 @@ TEST_F(cli_test, no_options)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(cli_test, fail_no_argument)
+TEST_F(needle_options_test, fail_no_argument)
 {
     cli_test_result result = execute_app("needle", "-v");
     std::string expected

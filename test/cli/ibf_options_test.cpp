@@ -2,7 +2,9 @@
 
 #include "cli_test.hpp"
 
-TEST_F(cli_test, ibf_no_options)
+struct ibf_options_test : public cli_test {};
+
+TEST_F(ibf_options_test, ibf_no_options)
 {
     cli_test_result result = execute_app("needle ibf");
     std::string expected
@@ -16,7 +18,7 @@ TEST_F(cli_test, ibf_no_options)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(cli_test, ibf_fail_no_argument)
+TEST_F(ibf_options_test, ibf_fail_no_argument)
 {
     cli_test_result result = execute_app("needle ibf", "-c");
     std::string expected
@@ -29,7 +31,7 @@ TEST_F(cli_test, ibf_fail_no_argument)
     EXPECT_EQ(result.err, expected);
 }
 
-TEST_F(cli_test, ibf_fail_contradiction)
+TEST_F(ibf_options_test, ibf_fail_contradiction)
 {
     cli_test_result result = execute_app("needle ibf -f 0.05 -e 1 -e 2 -l 1", data("exp_01.fasta"));
     std::string expected
@@ -41,7 +43,7 @@ TEST_F(cli_test, ibf_fail_contradiction)
     EXPECT_EQ(result.err, expected);
 }
 
-TEST_F(cli_test, ibf_fail_contradiction2)
+TEST_F(ibf_options_test, ibf_fail_contradiction2)
 {
     cli_test_result result = execute_app("needle ibf -f 0.05 -e 1 -e 2 --levels-by-genome ", data("exp_01.fasta"),
                                          data("exp_01.fasta"));
@@ -56,7 +58,7 @@ TEST_F(cli_test, ibf_fail_contradiction2)
     EXPECT_EQ(result.err, expected);
 }
 
-TEST_F(cli_test, ibf_with_argument)
+TEST_F(ibf_options_test, ibf_with_argument)
 {
     cli_test_result result = execute_app("needle ibf -f 0.05 -l 1", data("exp_01.fasta"));
     EXPECT_EQ(result.exit_code, 0);
@@ -64,7 +66,7 @@ TEST_F(cli_test, ibf_with_argument)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(cli_test, ibf_with_argument_with_options)
+TEST_F(ibf_options_test, ibf_with_argument_with_options)
 {
     cli_test_result result = execute_app("needle ibf -f 0.05 -k 4 -w 8 -l 1", data("exp_01.fasta"));
     EXPECT_EQ(result.exit_code, 0);
@@ -72,7 +74,7 @@ TEST_F(cli_test, ibf_with_argument_with_options)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(cli_test, ibfmin_no_options)
+TEST_F(ibf_options_test, ibfmin_no_options)
 {
     cli_test_result result = execute_app("needle ibfmin");
     std::string expected
@@ -86,7 +88,7 @@ TEST_F(cli_test, ibfmin_no_options)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(cli_test, ibfmin_fail_no_argument)
+TEST_F(ibf_options_test, ibfmin_fail_no_argument)
 {
     cli_test_result result = execute_app("needle ibfmin -c");
     std::string expected
@@ -99,7 +101,7 @@ TEST_F(cli_test, ibfmin_fail_no_argument)
     EXPECT_EQ(result.err, expected);
 }
 
-TEST_F(cli_test, ibfmin_fail_contradiction)
+TEST_F(ibf_options_test, ibfmin_fail_contradiction)
 {
     cli_test_result result = execute_app("needle ibfmin -f 0.05 -e 1 -e 2 -l 1", data("mini_example.minimiser"));
     std::string expected
@@ -111,7 +113,7 @@ TEST_F(cli_test, ibfmin_fail_contradiction)
     EXPECT_EQ(result.err, expected);
 }
 
-TEST_F(cli_test, ibfmin_fail_contradiction2)
+TEST_F(ibf_options_test, ibfmin_fail_contradiction2)
 {
     cli_test_result result = execute_app("needle ibfmin -f 0.05 -e 1 -e 2 --levels-by-genome ", data("exp_01.fasta"),
                                          data("mini_example.minimiser"));
@@ -126,7 +128,7 @@ TEST_F(cli_test, ibfmin_fail_contradiction2)
     EXPECT_EQ(result.err, expected);
 }
 
-TEST_F(cli_test, ibfmin_with_argument)
+TEST_F(ibf_options_test, ibfmin_with_argument)
 {
     cli_test_result result = execute_app("needle ibfmin -f 0.05 -l 1", data("mini_example.minimiser"));
     EXPECT_EQ(result.exit_code, 0);
@@ -134,7 +136,7 @@ TEST_F(cli_test, ibfmin_with_argument)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(cli_test, compressed)
+TEST_F(ibf_options_test, compressed)
 {
     cli_test_result result = execute_app("needle ibfmin -f 0.05 -l 1 -c ", data("mini_example.minimiser"));
     EXPECT_EQ(result.exit_code, 0);
@@ -142,7 +144,7 @@ TEST_F(cli_test, compressed)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(cli_test, more_hash_functions)
+TEST_F(ibf_options_test, more_hash_functions)
 {
     cli_test_result result = execute_app("needle ibfmin -f 0.05 -l 1 -n 4 ", data("mini_example.minimiser"));
     EXPECT_EQ(result.exit_code, 0);
@@ -150,7 +152,7 @@ TEST_F(cli_test, more_hash_functions)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(cli_test, expression_levels)
+TEST_F(ibf_options_test, expression_levels)
 {
     cli_test_result result = execute_app("needle ibfmin -f 0.05 -e 2 -e 4", data("mini_example.minimiser"));
     EXPECT_EQ(result.exit_code, 0);
