@@ -20,7 +20,7 @@ void initialization_args(estimate_ibf_arguments & args)
     args.shape = seqan3::ungapped{args.k};
     args.w_size = seqan3::window_size{4};
     args.s = seqan3::seed{0};
-    args.path_out = tmp_dir/"Test_";
+    args.path_out = tmp_dir/"Count_Test_";
 }
 
 TEST(count, small_example)
@@ -42,7 +42,7 @@ TEST(count, small_example)
         }
         output_file.close();
     }
-    std::filesystem::remove(tmp_dir/"Test_mini_example.count.out");
+    std::filesystem::remove(tmp_dir/"Count_Test_mini_example.count.out");
 }
 
 TEST(count, small_example_paired)
@@ -64,5 +64,5 @@ TEST(count, small_example_paired)
         }
         output_file.close();
     }
-    std::filesystem::remove(tmp_dir/"Test_mini_example.count.out");
+    std::filesystem::remove(tmp_dir/"Count_Test_mini_example.count.out");
 }
