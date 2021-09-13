@@ -2,7 +2,9 @@
 
 #include "cli_test.hpp"
 
-TEST_F(cli_test, no_options)
+struct minimiser_options_test : public cli_test {};
+
+TEST_F(minimiser_options_test, no_options)
 {
     cli_test_result result = execute_app("needle minimiser");
     std::string expected
@@ -16,7 +18,7 @@ TEST_F(cli_test, no_options)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(cli_test, fail_no_argument)
+TEST_F(minimiser_options_test, fail_no_argument)
 {
     cli_test_result result = execute_app("needle minimiser", "--seed 0");
     std::string expected
@@ -29,7 +31,7 @@ TEST_F(cli_test, fail_no_argument)
     EXPECT_EQ(result.err, expected);
 }
 
-TEST_F(cli_test, with_arguments)
+TEST_F(minimiser_options_test, with_arguments)
 {
     cli_test_result result = execute_app("needle minimiser -k 4 -w 4 --seed 0", data("mini_example.fasta"));
     EXPECT_EQ(result.exit_code, 0);
@@ -37,7 +39,7 @@ TEST_F(cli_test, with_arguments)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(cli_test, cutoff)
+TEST_F(minimiser_options_test, cutoff)
 {
     cli_test_result result = execute_app("needle minimiser -k 4 -w 8 --cutoff 2", data("mini_example.fasta"));
     EXPECT_EQ(result.exit_code, 0);
@@ -45,7 +47,7 @@ TEST_F(cli_test, cutoff)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(cli_test, multiple_sample)
+TEST_F(minimiser_options_test, multiple_sample)
 {
     cli_test_result result = execute_app("needle minimiser -k 4 -w 8 --samples 2 ", data("mini_example.fasta"),
                                                                                    data("mini_example.fasta"));
@@ -54,7 +56,7 @@ TEST_F(cli_test, multiple_sample)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(cli_test, multithreads)
+TEST_F(minimiser_options_test, multithreads)
 {
     cli_test_result result = execute_app("needle minimiser -k 4 -w 8 -t 2", data("mini_example.fasta"),
                                                                             data("mini_example.fasta"));
@@ -63,7 +65,7 @@ TEST_F(cli_test, multithreads)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(cli_test, paired)
+TEST_F(minimiser_options_test, paired)
 {
     cli_test_result result = execute_app("needle minimiser -k 4 -w 8 -p ", data("mini_example.fasta"),
                                                                            data("mini_example.fasta"));
