@@ -116,13 +116,13 @@ TEST(minimiser, small_example_different_shape)
     minimiser_arguments minimiser_args{};
     initialization_args(args);
     minimiser_args.cutoffs = {0, 0};
-    args.shape = seqan3::bin_literal{14};
+    args.shape = seqan3::bin_literal{0b1101};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
                                                          std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
     minimiser(sequence_files, args, minimiser_args);
 
     uint64_t num_of_minimisers{};
-    std::vector<uint64_t> expected_nums{8, 10};
+    std::vector<uint64_t> expected_nums{12, 11};
 
     for (int i = 0; i < sequence_files.size(); ++i)
     {
@@ -132,7 +132,7 @@ TEST(minimiser, small_example_different_shape)
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
-        EXPECT_EQ(14, args.shape.to_ulong());
+        EXPECT_EQ(13, args.shape.to_ulong());
         EXPECT_EQ(expected_nums[i], num_of_minimisers);
     }
 
