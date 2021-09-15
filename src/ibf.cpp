@@ -336,6 +336,7 @@ void get_expression_levels(uint8_t const number_expression_levels,
     std::size_t prev_pos{0};
     auto prev_exp{0};
     auto exp{0};
+    auto max_elem = *std::max_element(counts.begin(), counts.end());
     // First Level
     std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
     exp = counts[prev_pos + counts.size()/dev];
@@ -344,7 +345,7 @@ void get_expression_levels(uint8_t const number_expression_levels,
     expression_levels.push_back(exp);
     sizes.push_back(prev_pos);
 
-    while(expression_levels.size() < number_expression_levels)
+    while((expression_levels.size() < number_expression_levels) & (prev_exp < max_elem))
     {
         std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
         exp = counts[prev_pos + counts.size()/dev];
@@ -360,6 +361,8 @@ void get_expression_levels(uint8_t const number_expression_levels,
 
         prev_exp = exp;
     }
+    while(expression_levels.size() < number_expression_levels)
+        expression_levels.push_back(max_elem + 1);
     counts.clear();
 }
 
@@ -451,7 +454,6 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     bool const expression_by_genome = (expression_by_genome_file == "");
 
     // Get expression levels and sizes
-    #pragma omp parallel for schedule(dynamic, chunk_size)
     for (unsigned i = 0; i < num_files; i++)
     {
         uint64_t filesize{}; // Store filesize(minimiser_files_given=false) or number of minimisers(minimiser_files_given=true)
