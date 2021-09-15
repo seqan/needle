@@ -1,6 +1,6 @@
 ## Needle
 Needle provides a space-efficient data structure to index a large amount of NGS data and allows fast searches through these indices.
-Due to the space-efficiency of one index, it is affordable to create multiple indices with different expression rates. Therefore, a semi-quantitative analysis of the data becomes possible. Needle is based on Interleaved Bloom Filters, which is a compact and efficient structure to store multiple Bloom Filters. Furthermore, Needle uses a windowing scheme (also called minimisers) to reduce the amount of data to store.  
+Due to the space-efficiency of one index, it is affordable to create multiple indices with different expression rates. Therefore, a semi-quantitative analysis of the data becomes possible. Needle is based on Interleaved Bloom Filters, which is a compact and efficient structure to store multiple Bloom Filters. Furthermore, Needle uses a windowing scheme (also called minimisers) to reduce the amount of data to store.
 
 ## Build
 

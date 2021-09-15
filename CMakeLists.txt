@@ -10,7 +10,7 @@ project (needle VERSION 1.0.0)
 # Make Release default build type
 if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE Release CACHE STRING
-         "Choose the type of build, options are: Debug Release RelWithDebInfo"
+         "Choose the type of build, options are: Debug Release Coverage RelWithDebInfo MinSizeRel."
          FORCE)
 endif ()
 
@@ -27,9 +27,14 @@ set (FontReset "${Esc}[m")
 # Dependency: SeqAn3.
 find_package (SeqAn3 QUIET REQUIRED HINTS lib/seqan3/build_system)
 
+# Use ccache.
+include ("${SEQAN3_CLONE_DIR}/test/cmake/seqan3_require_ccache.cmake")
+seqan3_require_ccache ()
+
 # Dependency: robin_hood.
 add_subdirectory(lib/robin-hood-hashing)
 
+# Add the application.
 add_subdirectory (src)
 message (STATUS "${FontBold}You can run `make` to build the application.${FontReset}")
 
