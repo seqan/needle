@@ -345,7 +345,7 @@ void get_expression_levels(uint8_t const number_expression_levels,
     expression_levels.push_back(exp);
     sizes.push_back(prev_pos);
 
-    while((expression_levels.size() < number_expression_levels) & (prev_exp < max_elem))
+        while((expression_levels.size() < number_expression_levels) & (prev_exp < max_elem) & (dev < counts.size()))
     {
         std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
         exp = counts[prev_pos + counts.size()/dev];
