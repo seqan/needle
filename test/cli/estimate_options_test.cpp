@@ -12,8 +12,8 @@ TEST_F(estimate_options_test, no_options)
     cli_test_result result = execute_app("needle estimate");
     std::string expected
     {
-        "needle-estimate - Estimate expression value of transcript based on IBFs.\n"
-        "========================================================================\n"
+        "needle-estimate - Estimate expression value of transcript based on the Needle index.\n"
+        "====================================================================================\n"
         "    Try -h or --help for more information.\n"
     };
     EXPECT_EQ(result.exit_code, 0);
@@ -38,7 +38,7 @@ TEST_F(estimate_options_test, with_argument)
 {
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
-    ibf_args.expression_levels = {1, 2};
+    ibf_args.expression_thresholds = {1, 2};
     std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta")};
     ibf_args.path_out = "Test_";
@@ -54,7 +54,7 @@ TEST_F(estimate_options_test, with_argument_normalization_method)
 {
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
-    ibf_args.expression_levels = {1, 2};
+    ibf_args.expression_thresholds = {1, 2};
     std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta")};
     ibf_args.path_out = "Test_";
@@ -70,7 +70,7 @@ TEST_F(estimate_options_test, with_argument_out)
 {
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
-    ibf_args.expression_levels = {1, 2};
+    ibf_args.expression_thresholds = {1, 2};
     std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta")};
     ibf_args.path_out = "Test_";

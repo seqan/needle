@@ -34,8 +34,8 @@ struct min_arguments : all_arguments
 struct estimate_ibf_arguments : min_arguments
 {
     bool compressed = false;
-    std::vector<uint16_t> expression_levels{}; // Expression levels which should be created
-    uint8_t number_expression_levels{}; // If set, the expression levels are determined by the program.
+    std::vector<uint16_t> expression_thresholds{}; // Expression levels which should be created
+    uint8_t number_expression_thresholds{}; // If set, the expression levels are determined by the program.
     bool samplewise{false};
 
     template<class Archive>
@@ -46,8 +46,8 @@ struct estimate_ibf_arguments : min_arguments
         archive(s.get());
         archive(shape);
         archive(compressed);
-        archive(number_expression_levels);
-        archive(expression_levels);
+        archive(number_expression_thresholds);
+        archive(expression_thresholds);
         archive(samplewise);
     }
 
@@ -59,8 +59,8 @@ struct estimate_ibf_arguments : min_arguments
         archive(s.get());
         archive(shape);
         archive(compressed);
-        archive(number_expression_levels);
-        archive(expression_levels);
+        archive(number_expression_thresholds);
+        archive(expression_thresholds);
         archive(samplewise);
     }
 };

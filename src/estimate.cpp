@@ -21,6 +21,8 @@
 #include <seqan3/io/sequence_file/all.hpp>
 
 #include "estimate.h"
+
+// Actual estimation
 template <class IBFType, bool last_exp, bool normalization, typename exp_t>
 void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint16_t> & estimations_i,
                seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
@@ -156,13 +158,13 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     read_levels<double>(fprs, estimate_args.path_in.string() + "IBF_FPRs.fprs");
 
     // Make sure expression levels are sorted.
-    sort(args.expression_levels.begin(), args.expression_levels.end());
+    sort(args.expression_thresholds.begin(), args.expression_thresholds.end());
 
     // Initialse last expression
     if constexpr (samplewise)
-        load_ibf(ibf, estimate_args.path_in.string() + "IBF_Level_" + std::to_string(args.number_expression_levels-1));
+        load_ibf(ibf, estimate_args.path_in.string() + "IBF_Level_" + std::to_string(args.number_expression_thresholds-1));
     else
-        load_ibf(ibf, estimate_args.path_in.string() + "IBF_" + std::to_string(args.expression_levels[args.expression_levels.size()-1]));
+        load_ibf(ibf, estimate_args.path_in.string() + "IBF_" + std::to_string(args.expression_thresholds[args.expression_thresholds.size()-1]));
     counter.assign(ibf.bin_count(), 0);
     counter_est.assign(ibf.bin_count(), 0);
 
@@ -180,27 +182,27 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     {
         if constexpr (samplewise & normalization_method)
             check_ibf<IBFType, true, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                           expressions,args.number_expression_levels - 1,
-                                           fprs[args.number_expression_levels - 1]);
+                                           expressions,args.number_expression_thresholds - 1,
+                                           fprs[args.number_expression_thresholds - 1]);
         else if constexpr (samplewise)
             check_ibf<IBFType, true, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                            expressions, args.number_expression_levels - 1,
-                                            fprs[args.number_expression_levels - 1]);
+                                            expressions, args.number_expression_thresholds - 1,
+                                            fprs[args.number_expression_thresholds - 1]);
         else
             check_ibf<IBFType, true, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                            args.expression_levels[args.expression_levels.size() - 1], prev_expression,
-                                            fprs[args.expression_levels.size() - 1]);
+                                            args.expression_thresholds[args.expression_thresholds.size() - 1], prev_expression,
+                                            fprs[args.expression_thresholds.size() - 1]);
     }
 
     if constexpr (!samplewise)
-        prev_expression = args.expression_levels[args.expression_levels.size() - 1];
+        prev_expression = args.expression_thresholds[args.expression_thresholds.size() - 1];
 
-    for (int j = args.number_expression_levels - 2; j >= 0; j--)
+    for (int j = args.number_expression_thresholds - 2; j >= 0; j--)
     {
         if constexpr (samplewise)
             load_ibf(ibf, estimate_args.path_in.string() + "IBF_Level_" + std::to_string(j));
         else
-            load_ibf(ibf, estimate_args.path_in.string() + "IBF_" + std::to_string(args.expression_levels[j]));
+            load_ibf(ibf, estimate_args.path_in.string() + "IBF_" + std::to_string(args.expression_thresholds[j]));
 
         // Go over the sequences
         #pragma omp parallel for
@@ -214,11 +216,11 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
                                           expressions, j, fprs[j]);
             else
                 check_ibf<IBFType, false, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                          args.expression_levels[j], prev_expression, fprs[j]);
+                                          args.expression_thresholds[j], prev_expression, fprs[j]);
         }
 
         if (!samplewise)
-            prev_expression = args.expression_levels[j];
+            prev_expression = args.expression_thresholds[j];
     }
 
     std::ofstream outfile;
@@ -235,6 +237,7 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
 
 }
 
+// Calls the correct form of estimate
 void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_args)
 {
     load_args(args, std::string{estimate_args.path_in} + "IBF_Data");

@@ -9,8 +9,8 @@ TEST_F(ibf_options_test, ibf_no_options)
     cli_test_result result = execute_app("needle ibf");
     std::string expected
     {
-        "needle-ibf - Constructs an IBF.\n"
-        "===============================\n"
+        "needle-ibf - Constructs the Needle index.\n"
+        "=========================================\n"
         "    Try -h or --help for more information.\n"
     };
     EXPECT_EQ(result.exit_code, 0);
@@ -79,8 +79,8 @@ TEST_F(ibf_options_test, ibfmin_no_options)
     cli_test_result result = execute_app("needle ibfmin");
     std::string expected
     {
-        "needle-ibfmin - Constructs an IBF from the minimiser and header files created by needle minimiser.\n"
-        "==================================================================================================\n"
+        "needle-ibfmin - Constructs the Needle index from the minimiser files created by needle minimiser.\n"
+        "=================================================================================================\n"
         "    Try -h or --help for more information.\n"
     };
     EXPECT_EQ(result.exit_code, 0);
@@ -152,7 +152,7 @@ TEST_F(ibf_options_test, more_hash_functions)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(ibf_options_test, expression_levels)
+TEST_F(ibf_options_test, expression_thresholds)
 {
     cli_test_result result = execute_app("needle ibfmin -f 0.05 -e 2 -e 4", data("mini_example.minimiser"));
     EXPECT_EQ(result.exit_code, 0);

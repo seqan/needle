@@ -22,14 +22,14 @@ void initialization_args(estimate_ibf_arguments & args)
     args.s = seqan3::seed{0};
 }
 
-TEST(ibf, given_expression_levels)
+TEST(ibf, given_expression_thresholds)
 {
     std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.path_out = tmp_dir/"IBF_Test_Exp_";
-    ibf_args.expression_levels = {1, 2};
+    ibf_args.expression_thresholds = {1, 2};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     std::vector<double> fpr = {0.05};
 
@@ -64,21 +64,21 @@ TEST(ibf, given_expression_levels)
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
         EXPECT_EQ(true, args.compressed);
-        EXPECT_EQ(ibf_args.number_expression_levels, args.number_expression_levels);
-        EXPECT_RANGE_EQ(ibf_args.expression_levels, args.expression_levels);
+        EXPECT_EQ(ibf_args.number_expression_thresholds, args.number_expression_thresholds);
+        EXPECT_RANGE_EQ(ibf_args.expression_thresholds, args.expression_thresholds);
         EXPECT_EQ(ibf_args.samplewise, args.samplewise);
     }
     std::filesystem::remove(tmp_dir/"IBF_Test_Exp_IBF_Data");
 }
 
-TEST(ibf, given_expression_levels_include_file)
+TEST(ibf, given_expression_thresholds_include_file)
 {
     std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.path_out = tmp_dir/"IBF_Test_Include_";
-    ibf_args.expression_levels = {1, 2};
+    ibf_args.expression_thresholds = {1, 2};
     minimiser_args.include_file = std::string(DATA_INPUT_DIR) + "mini_example.fasta";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     std::vector<double> fpr = {0.05};
@@ -107,14 +107,14 @@ TEST(ibf, given_expression_levels_include_file)
     std::filesystem::remove(tmp_dir/"IBF_Test_Include_IBF_Data");
 }
 
-TEST(ibf, given_expression_levels_exclude_file)
+TEST(ibf, given_expression_thresholds_exclude_file)
 {
     std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.path_out = tmp_dir/"IBF_Test_Exclude_";
-    ibf_args.expression_levels = {1, 2};
+    ibf_args.expression_thresholds = {1, 2};
     minimiser_args.exclude_file = std::string(DATA_INPUT_DIR) + "mini_gen.fasta";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     std::vector<double> fpr = {0.05};
@@ -143,14 +143,14 @@ TEST(ibf, given_expression_levels_exclude_file)
     std::filesystem::remove(tmp_dir/"IBF_Test_Exclude_IBF_Data");
 }
 
-TEST(ibf, no_given_expression_levels)
+TEST(ibf, no_given_expression_thresholds)
 {
     std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.path_out = tmp_dir/"IBF_Test_";
-    ibf_args.number_expression_levels = 2;
+    ibf_args.number_expression_thresholds = 2;
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     std::vector<double> fpr = {0.05};
 
@@ -180,14 +180,14 @@ TEST(ibf, no_given_expression_levels)
     std::filesystem::remove(tmp_dir/"IBF_Test_IBF_Data");
 }
 
-TEST(ibf, expression_levels_by_genome)
+TEST(ibf, expression_thresholds_by_genome)
 {
     std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.path_out = tmp_dir/"IBF_Test_";
-    ibf_args.number_expression_levels = 1;
+    ibf_args.number_expression_thresholds = 1;
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     std::vector<double> fpr = {0.05};
 
@@ -229,7 +229,7 @@ TEST(ibf, throws)
 
     EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr), std::invalid_argument);
 
-    ibf_args.number_expression_levels = 0;
+    ibf_args.number_expression_thresholds = 0;
     fpr = {};
     EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr), std::invalid_argument);
 
