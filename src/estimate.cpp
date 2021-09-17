@@ -21,6 +21,8 @@
 #include <seqan3/io/sequence_file/all.hpp>
 
 #include "estimate.h"
+
+// Actual estimation
 template <class IBFType, bool last_exp, bool normalization, typename exp_t>
 void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint16_t> & estimations_i,
                seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
@@ -235,6 +237,7 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
 
 }
 
+// Calls the correct form of estimate
 void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_args)
 {
     load_args(args, std::string{estimate_args.path_in} + "IBF_Data");

@@ -65,6 +65,7 @@ inline bool check_for_fasta_format(std::vector<std::string> const & valid_extens
     return std::ranges::find_if(valid_extensions, case_insensitive_ends_with) != valid_extensions.end();
 }
 
+// Determine cutoff for one experiment
 uint8_t calculate_cutoff(std::filesystem::path sequence_file, int samples)
 {
     // Cutoff according to Mantis paper, divided by two because we store expression levels and
@@ -94,7 +95,7 @@ uint8_t calculate_cutoff(std::filesystem::path sequence_file, int samples)
     return cutoff;
 }
 
-// Fill hash table with minimisers with cutoff.
+// Fill hash table with minimisers greater than the cutoff.
 void fill_hash_table(min_arguments const & args,
                      seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> & fin,
                      robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
@@ -299,6 +300,7 @@ void check_cutoffs_samples(std::vector<std::filesystem::path> const & sequence_f
         throw std::invalid_argument{"Error. Incorrect command line input for multiple-samples."};
 }
 
+// Check input of fpr
 void check_fpr(uint8_t const number_expression_levels, std::vector<double> & fprs)
 {
     // If no bin size is given or not the right amount, throw error.
@@ -366,6 +368,7 @@ void get_expression_levels(uint8_t const number_expression_levels,
     counts.clear();
 }
 
+// Estimate the file size for every expression level, necessary when samplewise=false
 void get_filsize_per_expression_level(std::filesystem::path filename, uint8_t const number_expression_levels,
                                       std::vector<uint16_t> const & expression_levels, std::vector<uint64_t> & sizes,
                                       robin_hood::unordered_set<uint64_t> const & genome, bool all = true)
@@ -406,6 +409,7 @@ void get_filsize_per_expression_level(std::filesystem::path filename, uint8_t co
     fin.close();
 }
 
+// Actual ibf construction
 template<bool samplewise, bool minimiser_files_given = true>
 void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 std::vector<double> const & fprs,
@@ -648,6 +652,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     }
 }
 
+// Create ibfs
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files,
                           estimate_ibf_arguments & ibf_args, minimiser_arguments & minimiser_args,
                           std::vector<double> & fpr,
@@ -688,7 +693,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     return ibf_args.expression_levels;
 }
 
-// Create ibf based on the minimiser file
+// Create ibfs based on the minimiser file
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files,
                           estimate_ibf_arguments & ibf_args, std::vector<double> & fpr,
                           std::filesystem::path const expression_by_genome_file,
@@ -709,6 +714,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
     return ibf_args.expression_levels;
 }
 
+// Actuall minimiser calculation
 void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_files,
                          robin_hood::unordered_set<uint64_t> const & include_set_table,
                          robin_hood::unordered_set<uint64_t> const & exclude_set_table,
