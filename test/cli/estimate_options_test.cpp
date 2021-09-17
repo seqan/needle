@@ -12,8 +12,8 @@ TEST_F(estimate_options_test, no_options)
     cli_test_result result = execute_app("needle estimate");
     std::string expected
     {
-        "needle-estimate - Estimate expression value of transcript based on IBFs.\n"
-        "========================================================================\n"
+        "needle-estimate - Estimate expression value of transcript based on the Needle index.\n"
+        "====================================================================================\n"
         "    Try -h or --help for more information.\n"
     };
     EXPECT_EQ(result.exit_code, 0);

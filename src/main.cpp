@@ -12,26 +12,28 @@ uint64_t se;
 
 void initialise_min_arguments(seqan3::argument_parser & parser, min_arguments & args)
 {
-    parser.add_option(args.k, 'k', "kmer", "Define kmer size.");
-    parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
-    parser.add_option(w_size, 'w', "window", "Define window size. Default: 60.");
-    parser.add_option(shape, '\0', "shape", "Define a shape by the decimal of a bitvector, where 0 symbolizes a "
+    parser.add_option(args.k, 'k', "kmer", "Define k-mer size for the minimisers. Default: 20.");
+    parser.add_option(w_size, 'w', "window", "Define window size for the minimisers. Default: 60.");
+    parser.add_option(shape, '\0', "shape", "Define a shape for the minimisers by the decimal of a bitvector, where 0 symbolizes a "
                                            "position to be ignored, 1 a position considered. Default: ungapped.");
-    parser.add_option(se, '\0', "seed", "Define seed.");
+    parser.add_option(se, '\0', "seed", "Define seed for the minimisers.");
+    parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_option(args.threads, 't', "threads", "Number of threads to use. Default: 1.");
 }
 
 void initialise_arguments_ibf(seqan3::argument_parser & parser, estimate_ibf_arguments & ibf_args, size_t & num_hash,
                               std::vector<double> & fpr)
 {
-    parser.add_flag(ibf_args.compressed, 'c', "compressed", "If c is set, ibf is compressed. Default: Not compressed.");
+    parser.add_flag(ibf_args.compressed, 'c', "compressed", "If c is set, the IBFS are compressed. Default: Not compressed.");
     parser.add_option(fpr, 'f', "fpr", "List of bin false positive rate per expression level. If only one is given"
                                                           ", then that fpr is used for all expression levels.");
-    parser.add_option(ibf_args.expression_levels, 'e', "expression_levels", "Which expression thresholds should be used for"
-                                                                            " constructing the IBFs.");
-    parser.add_option(ibf_args.number_expression_levels, 'l', "number_expression_levels", "Number of expression levels.");
+    parser.add_option(ibf_args.expression_levels, 'e', "expression_thresholds", "Which expression thresholds should be used for"
+                                                                                " constructing the IBFs.");
+    parser.add_option(ibf_args.number_expression_levels, 'l', "number_expression_thresholds", "Number of expression thresholds. "
+                                                              "Can be set alternatively to expression_thresholds, then "
+                                                              "the expression thresholds are determined automatically.");
     parser.add_option(num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
-                                                    "one IBF.");
+                                             "one IBF.");
 }
 
 void parsing(seqan3::argument_parser & parser, min_arguments & args)
@@ -60,8 +62,9 @@ void initialise_arguments_minimiser(seqan3::argument_parser & parser, minimiser_
     parser.add_flag(minimiser_args.paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
     parser.add_option(minimiser_args.cutoffs, '\0', "cutoff", "Define for each sample, what number of found minimisers "
                                                               "should be considered the result of a sequencing error "
-                                                              "and therefore be ignored. Default: Every sample has a"
-                                                              "cutoff of zero.");
+                                                              "and therefore be ignored. Default: Every sample has an"
+                                                              "automatically genereated cutoff, which is based on the "
+                                                              "file size.");
 
 }
 
@@ -75,7 +78,10 @@ int run_needle_count(seqan3::argument_parser & parser)
     std::filesystem::path out_path = "./";
     bool paired = false;
 
-    parser.info.short_description = "Get expression value depending on minimizers.";
+    parser.info.short_description = "Get expression value depending on minimizers. This function is only used to test "
+                                    "the validity of Needle's estimation approach. It estimates the expression value "
+                                    "for all sequences in the genome file based on the exact minimiser occurrences of "
+                                    "the given sequence files.";
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
     parser.add_option(genome_file, 'g', "genome", "Please provide one sequence file with transcripts.");
     parser.add_option(exclude_file, '\0', "exclude", "Please provide one sequence file with minimizers to ignore.");
@@ -107,7 +113,7 @@ int run_needle_estimate(seqan3::argument_parser & parser)
 {
     estimate_ibf_arguments args{};
     estimate_arguments estimate_args{};
-    parser.info.short_description = "Estimate expression value of transcript based on IBFs.";
+    parser.info.short_description = "Estimate expression value of transcript based on the Needle index.";
     parser.info.version = "1.0.0";
     parser.info.author = "Mitra Darvish";
 
@@ -118,8 +124,10 @@ int run_needle_estimate(seqan3::argument_parser & parser)
     parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_flag(estimate_args.normalization_method, 'm', "normalization-mode",
                                                             "Set, if normalization is wanted. Normalization is achieved by"
-                                                            "dividing the expression value with the expression threshold of the first ibf."
-                                                            "Only make sense if every bin has its own expression values."
+                                                            "dividing the expression value with the expression threshold of the first"
+                                                            " ibf. Only make sense if every bin has its own expression "
+                                                            "thresholds (which is the case if expression thresholds "
+                                                            "were generated automatically)."
                                                             "Default: False.");
 
     try
@@ -159,11 +167,11 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     initialise_arguments_ibf(parser, ibf_args, num_hash, fpr);
     initialise_arguments_minimiser(parser, minimiser_args);
 
-    parser.info.short_description = "Constructs an IBF.";
+    parser.info.short_description = "Constructs the Needle index.";
 
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
     parser.add_option(minimiser_args.experiment_names, '\0', "experiment-names", "If set, names of the experiments are stored"
-                                                                          " in a txt file.");
+                                                                                 " in a txt file.");
     parser.add_option(expression_by_genome_file, '\0', "levels-by-genome", "Sequence file containing minimizers, only "
                                                                             "those minimizers will be considered for "
                                                                             "determining the expression thresholds.");
@@ -199,7 +207,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     std::filesystem::path expression_by_genome_file = "";
     std::vector<double> fpr{}; // The fpr of one IBF, can be different for different expression levels
 
-    parser.info.short_description = "Constructs an IBF from the minimiser and header files created by needle minimiser.";
+    parser.info.short_description = "Constructs the Needle index from the minimiser files created by needle minimiser.";
 
     parser.add_positional_option(minimiser_files, "Please provide at least one minimiser file. It is assumed that the "
                                                   "header file exits in the same directory.");
@@ -208,7 +216,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     parser.add_option(ibf_args.threads, 't', "threads", "Number of threads to use. Default: 1.");
     parser.add_option(expression_by_genome_file, '\0', "levels-by-genome", "Sequence file containing minimizers, only "
                                                                             "those minimizers will be considered for "
-                                                                            "determining the expression levels.");
+                                                                            "determining the expression thresholds.");
 
     initialise_arguments_ibf(parser, ibf_args, num_hash, fpr);
 
