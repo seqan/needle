@@ -1,8 +1,11 @@
 ## Needle
-Needle provides a space-efficient data structure to index a large amount of NGS data and allows fast searches through these indices.
-Due to the space-efficiency of one index, it is affordable to create multiple indices with different expression rates. Therefore, a semi-quantitative analysis of the data becomes possible. Needle is based on Interleaved Bloom Filters, which is a compact and efficient structure to store multiple Bloom Filters. Furthermore, Needle uses a windowing scheme (also called minimisers) to reduce the amount of data to store.
 
-## Build
+[![Build Status](https://github.com/seqan/app-template/workflows/App%20CI/badge.svg)](https://github.com/seqan/needle/actions?query=branch%3Amaster+workflow%3A%22App+CI%22)
+
+Needle is a tool for semi-quantitative analysis of very large collections of nucleotide sequences.
+Needle stores its data in multiple interleaved Bloom filter, a fast and space efficient probabilistic data structure and uses a windowing scheme (also called minimisers) to reduce the amount of data to store. How many interleaved Bloom filter are used is defined by the user. Each interleaved Bloom filter has a so called expression threshold and stores minimisers with an occurrence greater than or equal to its own expression threshold and smaller than the next biggest expression threshold (if there is no bigger expression threshold, all greater than or equal to the threshold are stored). These expression thresholds are then used during the query (called estimate) to approximate the expression values of given transcripts.
+
+## Install
 
 Needle can be built by following these commands:
 
@@ -21,26 +24,21 @@ make test
 
 If you are interested in building the documentation, just use the command: `make doc`
 
-## Create an IBF
-In order to create an IBF a number of sequence files have to be given. All sequence file formats from seqan3 are accepted as an input (fasta, fastq, embl,... and their compressed forms). With the parameter m can be defined, which of these sequence files belong together, either because they are the result of paired-end sequencing or they are multiple replicates of the same experiment. If no specification with m is given, every sequence file is seen as one experiment. For paired-end experiments one can use the flag '--paired' to indicate this, so two consecutive sequence files are seen as belonging together. (This is equivalent to using -m 2 for all experiments.)
-Besides, the false positive rate of the IBF has to be specified with parameter f.
-Use -h/--help for more information and to see further parameters.
+## Build
+In order to build a Needle index a number of sequence files have to be given. All sequence file formats supported by seqan3 are accepted as an input (fasta, fastq, embl,... and their compressed forms). The flag `--paired` in the example below indicates that the given sequence files are paired-end experiments. Furthermore, the false positive rate has to be specified with the parameter `f`.
+Use -h/--help for more information and to see further parameters. The flag `-c` can be used to build a compressed Needle index.
 
-The following example creates an IBF for two experiments for the expression levels 4 and 32. Both experiments had two replicates, therefore m is used to specify this. With c a compressed IBF is created.
+The following example creates a compressed Needle index for two paired-end experiments for the expression thresholds 4 and 32.
 
 ```
-./bin/needle ibf ../needle/test/data/exp_*.fasta --samples 2 --samples 2 -e 4 -e 32 -f 0.3 -c -o example
-
-// Or with flag paired
 ./bin/needle ibf ../needle/test/data/exp_*.fasta --paired -e 16 -e 32 -f 0.3 -c -o example
 ```
 
-## Calculate Minimisers
-In case one is only interested in the minimisers or wants to preprocess the data first before creating an IBF, the function minimiser can be used. It calculates the minimisers of given experiments and stores their hash values and their occurrences in a binary file named ".minimiser". Furthermore, a txt file is created where all used arguments are stored (like used k-mer size or window size), the used expression levels and the minimiser counts per expression level.
+Although, this works. It is recommended to calculate the minimisers beforehand by using the option `minimisers`. It calculates the minimisers of given experiments and stores their hash values and their occurrences in a binary file named ".minimiser".
 
 The following command calculates the minimisers in the two experiments.
 ```
-./bin/needle minimiser ../needle/test/data/exp_*.fasta -samples 2 -samples 2
+./bin/needle minimiser ../needle/test/data/exp_*.fasta --paired
 ```
 
 A minimiser file is a binary file containing the following data:
@@ -52,13 +50,13 @@ A minimiser file is a binary file containing the following data:
 - shape (uint64_t), if flag is false
 - all minimiser hashes (uint64_t) with their occurrences (uint16_t)
 
-Based on a minimiser file the ibfs can be computed by using the following command:
+Based on the minimiser files the Needle index can be computed by using the following command:
 ```
 ./bin/needle ibfmin exp*.minimiser -e 16 -e 32  -f 0.3 -c -o example
 ```
 
 ## Estimate
-To estimate the expression value of one transcript a sequence file has to be given. Use the parameter "-i" to define where the IBFs can be found (should be equal with "-o" in the previous commands).
+To estimate the expression value of one transcript a sequence file has to be given. Use the parameter "-i" to define where the Needle index can be found (should be equal with "-o" in the previous commands).
 Use -h/--help for more information and to see further parameters.
 The following example searches for one gene, which is expressed in the first experiment with expression 6 and in the second with expression 37. Therefore, it should be found only in the second experiment but not the first when using expression levels of 16 and 32.
 
