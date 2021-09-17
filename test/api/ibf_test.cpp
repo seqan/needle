@@ -186,13 +186,8 @@ TEST(ibf, expression_thresholds_by_genome)
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     initialization_args(ibf_args);
-<<<<<<< HEAD
     ibf_args.path_out = tmp_dir/"IBF_Test_";
-    ibf_args.number_expression_levels = 1;
-=======
-    ibf_args.path_out = tmp_dir/"Test_";
     ibf_args.number_expression_thresholds = 1;
->>>>>>> [MISC] Rename expression_levels expression_thresholds.
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     std::vector<double> fpr = {0.05};
 
