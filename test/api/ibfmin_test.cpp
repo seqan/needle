@@ -23,11 +23,11 @@ void initialization_args(estimate_ibf_arguments & args)
     args.path_out = tmp_dir/"IBFMIN_Test_";
 }
 
-TEST(ibfmin, given_expression_levels)
+TEST(ibfmin, given_expression_thresholds)
 {
     estimate_ibf_arguments ibf_args{};
     initialization_args(ibf_args);
-    ibf_args.expression_levels = {1, 2};
+    ibf_args.expression_thresholds = {1, 2};
     std::vector<double> fpr = {0.05, 0.05};
     ibf_args.path_out = tmp_dir/"IBFMIN_Test_Given_";
     std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
@@ -57,11 +57,11 @@ TEST(ibfmin, given_expression_levels)
 }
 
 #if defined(__GNUC__) && ((__GNUC___ == 10 && __cplusplus == 201703L) || (__GNUC__ <10))
-TEST(ibfmin, given_expression_levels_multiple_threads)
+TEST(ibfmin, given_expression_thresholds_multiple_threads)
 {
     estimate_ibf_arguments ibf_args{};
     initialization_args(ibf_args);
-    ibf_args.expression_levels = {1, 2};
+    ibf_args.expression_thresholds = {1, 2};
     std::vector<double> fpr = {0.05, 0.05};
     ibf_args.threads = 2;
     ibf_args.path_out = tmp_dir/"IBFMIN_Test_Multiple_";
@@ -89,11 +89,11 @@ TEST(ibfmin, given_expression_levels_multiple_threads)
 }
 #endif
 
-TEST(ibfmin, no_given_expression_levels)
+TEST(ibfmin, no_given_expression_thresholds)
 {
     estimate_ibf_arguments ibf_args{};
     initialization_args(ibf_args);
-    ibf_args.number_expression_levels = 2;
+    ibf_args.number_expression_thresholds = 2;
     std::vector<double> fpr = {0.0025, 0.0025};
     std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
 
@@ -122,11 +122,11 @@ TEST(ibfmin, no_given_expression_levels)
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_IBF_Levels.levels");
 }
 
-TEST(ibfmin, expression_levels_by_genome)
+TEST(ibfmin, expression_thresholds_by_genome)
 {
     estimate_ibf_arguments ibf_args{};
     initialization_args(ibf_args);
-    ibf_args.number_expression_levels = 1;
+    ibf_args.number_expression_thresholds = 1;
     std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
 
@@ -155,11 +155,11 @@ TEST(ibfmin, expression_levels_by_genome)
 }
 
 #if defined(__GNUC__) && ((__GNUC___ == 10 && __cplusplus == 201703L) || (__GNUC__ <10))
-TEST(ibfmin, no_given_expression_levels_multiple_threads)
+TEST(ibfmin, no_given_expression_thresholds_multiple_threads)
 {
     estimate_ibf_arguments ibf_args{};
     initialization_args(ibf_args);
-    ibf_args.number_expression_levels = 2;
+    ibf_args.number_expression_thresholds = 2;
     std::vector<double> fpr = {0.0025, 0.0025};
     ibf_args.threads = 2;
     ibf_args.path_out = tmp_dir/"IBFMIN_Test_Multiple_";

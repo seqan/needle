@@ -27,9 +27,9 @@ void initialise_arguments_ibf(seqan3::argument_parser & parser, estimate_ibf_arg
     parser.add_flag(ibf_args.compressed, 'c', "compressed", "If c is set, the IBFS are compressed. Default: Not compressed.");
     parser.add_option(fpr, 'f', "fpr", "List of bin false positive rate per expression level. If only one is given"
                                                           ", then that fpr is used for all expression levels.");
-    parser.add_option(ibf_args.expression_levels, 'e', "expression_thresholds", "Which expression thresholds should be used for"
+    parser.add_option(ibf_args.expression_thresholds, 'e', "expression_thresholds", "Which expression thresholds should be used for"
                                                                                 " constructing the IBFs.");
-    parser.add_option(ibf_args.number_expression_levels, 'l', "number_expression_thresholds", "Number of expression thresholds. "
+    parser.add_option(ibf_args.number_expression_thresholds, 'l', "number_expression_thresholds", "Number of expression thresholds. "
                                                               "Can be set alternatively to expression_thresholds, then "
                                                               "the expression thresholds are determined automatically.");
     parser.add_option(num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "

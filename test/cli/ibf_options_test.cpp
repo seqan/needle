@@ -152,7 +152,7 @@ TEST_F(ibf_options_test, more_hash_functions)
     EXPECT_EQ(result.err, std::string{});
 }
 
-TEST_F(ibf_options_test, expression_levels)
+TEST_F(ibf_options_test, expression_thresholds)
 {
     cli_test_result result = execute_app("needle ibfmin -f 0.05 -e 2 -e 4", data("mini_example.minimiser"));
     EXPECT_EQ(result.exit_code, 0);

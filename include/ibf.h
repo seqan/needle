@@ -81,7 +81,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
  *                        struct ibf_arguments.
  * \param fpr             The average false positive rate that should be used.
  * \param expression_by_genome_file File that contains the only minimisers that should be comnsidered for the
- *                                  determination of the expression_levels.
+ *                                  determination of the expression_thresholds.
  * \param num_hash        The number of hash functions to use.
  *  \returns The expression thresholds per experiment.
  */
