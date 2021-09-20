@@ -42,6 +42,7 @@ void get_include_set_table(min_arguments const & args, std::filesystem::path con
     }
 }
 
+// Chech if file has fasta format to estimate cutoffs.
 inline bool check_for_fasta_format(std::vector<std::string> const & valid_extensions, std::string const & file_path)
 {
 
@@ -68,7 +69,7 @@ inline bool check_for_fasta_format(std::vector<std::string> const & valid_extens
 // Determine cutoff for one experiment
 uint8_t calculate_cutoff(std::filesystem::path sequence_file, int samples)
 {
-    // Cutoff according to Mantis paper, divided by two because we store expression levels and
+    // Cutoff according to Mantis paper, divided by two because we store expression thresholds and
     // -1 because we use "<" and not "<="
     uint16_t const default_cutoff{24};
     uint8_t cutoff{default_cutoff};
@@ -123,7 +124,8 @@ void fill_hash_table(min_arguments const & args,
                     hash_table[minHash] = cutoff_table[minHash] + 1;
                     cutoff_table.erase(minHash);
                 }
-                // If none of the above, increase count in cutoff table.
+                // If none of the above, increase count in cutoff table. Cutoff Table increases RAM usage by storing
+                // minimisers with a low occurence in a smaller hash table.
                 else
                 {
                     cutoff_table[minHash]++;
@@ -320,13 +322,13 @@ void check_fpr(uint8_t const number_expression_thresholds, std::vector<double> &
     }
 }
 
-// Calculate expression levels and sizes
+// Calculate expression thresholds and sizes
 void get_expression_thresholds(uint8_t const number_expression_thresholds,
                            robin_hood::unordered_node_map<uint64_t, uint16_t> const & hash_table,
                            std::vector<uint16_t> & expression_thresholds, std::vector<uint64_t> & sizes,
                            robin_hood::unordered_set<uint64_t> const & genome, bool all = true)
 {
-    // Calculate expression levels by taking median recursively
+    // Calculate expression thresholds by taking median recursively
     std::vector<uint16_t> counts;
     for (auto && elem : hash_table)
     {
@@ -354,21 +356,23 @@ void get_expression_thresholds(uint8_t const number_expression_thresholds,
         prev_pos = prev_pos + counts.size()/dev;
         dev = dev*2;
 
+        // If expression does not change compared to previous one, do not store it again as an expression threshold.
         if ((exp - prev_exp) > 1)
         {
             expression_thresholds.push_back(exp);
             sizes.push_back(prev_pos);
-
         }
 
         prev_exp = exp;
     }
+    // In case not all levels have a threshold, give the last levels a maximal threshold, which can not be met by any minimiser.
     while(expression_thresholds.size() < number_expression_thresholds)
         expression_thresholds.push_back(max_elem + 1);
     counts.clear();
 }
 
-// Estimate the file size for every expression level, necessary when samplewise=false
+// Estimate the file size for every expression level, necessary when samplewise=false, because then it is completly
+// unclear how many minimisers are to store per file.
 void get_filsize_per_expression_level(std::filesystem::path filename, uint8_t const number_expression_thresholds,
                                       std::vector<uint16_t> const & expression_thresholds, std::vector<uint64_t> & sizes,
                                       robin_hood::unordered_set<uint64_t> const & genome, bool all = true)
@@ -398,6 +402,8 @@ void get_filsize_per_expression_level(std::filesystem::path filename, uint8_t co
         fin.read((char*)&minimiser_count, sizeof(minimiser_count));
         if (all | genome.contains(minimiser))
         {
+            // Find the level with the smallest greater value than the minimiser occurrence, in the level before that the
+            // minimiser is going to be stored.
             auto p = std::upper_bound(expression_thresholds.begin(), expression_thresholds.end(), minimiser_count);
             if(p != expression_thresholds.begin())
                 sizes[(p-expression_thresholds.begin())-1]++;
@@ -469,7 +475,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         else
         {
             // Estimate sizes on filesize, assuming every byte translates to one letter (which is obiously not true,
-            // because ids contain letters as well), so size might be overestimated
+            // because ids contain letters as well), so size might be overestimated. TODO: Find a better estimation!
             unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
 
             // Determine cutoffs
@@ -515,7 +521,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     }
 
     std::ofstream outfile_fpr;
-    outfile_fpr.open(std::string{ibf_args.path_out} +  "IBF_FPRs.fprs");
+    outfile_fpr.open(std::string{ibf_args.path_out} +  "IBF_FPRs.fprs"); // File to store actual false positive rates per experiment.
     // Create IBFs
     std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
     for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
@@ -539,7 +545,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
         for (unsigned i = 0; i < num_files; i++)
         {
-            double fpr = std::pow(1.0- std::pow(1.0-(1.0/size), num_hash*sizes[i][j]), num_hash);//std::pow((1.0-(std::exp((-1.0*num_hash*sizes[i][j])/size))), num_hash);
+            double fpr = std::pow(1.0- std::pow(1.0-(1.0/size), num_hash*sizes[i][j]), num_hash);
             outfile_fpr << fpr << " ";
         }
         outfile_fpr << "\n";
@@ -637,6 +643,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
     }
 
+    // Store all expression thresholds per level.
     if constexpr(samplewise)
     {
         std::ofstream outfile;
