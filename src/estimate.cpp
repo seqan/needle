@@ -28,8 +28,10 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
                seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
                exp_t const & expressions, uint16_t const k, std::vector<double> const fprs)
 {
+    // Check, if one expression threshold for all or individual thresholds
     static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
 
+    // Count minimisers in ibf of current level
     std::vector<uint32_t> counter;
     counter.assign(ibf.bin_count(), 0);
     uint64_t minimiser_length = 0;
@@ -41,15 +43,20 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
         ++minimiser_length;
     }
 
+    // Defines, where the median should be
     float minimiser_pos = minimiser_length/2.0;
 
+    // Check every experiment by going over the number of bins in the ibf.
     for(int j = 0; j < counter.size(); j++)
     {
         // Correction by substracting the expected number of false positives
         counter[j] = std::max((double) 0.0, (double) ((counter[j]-(minimiser_length*fprs[j]))/(1.0-fprs[j])));
+        // Check, if considering previously seen minimisers and minimisers found ar current level equal to or are greater
+        // than the minimiser_pow, which gives the median position.
+        // If ań estimation took already place (estimations_i[j]!=0), a second estimation is not performed.
         if (((prev_counts[j] + counter[j]) >= minimiser_pos) & (estimations_i[j] == 0))
         {
-            // If there was nothing previous
+            // If there was no previous level, because we are looking at the last level.
             if constexpr(last_exp)
             {
                 if constexpr (multiple_expressions)
@@ -68,15 +75,15 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
                    estimations_i[j] = std::max(expressions[k][j] * 1.0, expressions[k+1][j] - ((abs(minimiser_pos - prev_counts[j])/(counter[j] * 1.0)) * (expressions[k+1][j]-expressions[k][j])));
                else
                    estimations_i[j] = std::max(expressions * 1.0, k - ((abs(minimiser_pos - prev_counts[j])/(counter[j] * 1.0)) * (k-expressions)));
-               // Make sure, every transcript is only estimated once
-               prev_counts[j] = 0;
             }
 
+            // Perform normalization by dividing through the threshold of the first level. Only works, if multiple expressions were used.
             if constexpr (normalization & multiple_expressions)
                 estimations_i[j] = estimations_i[j]/expressions[0][j];
         }
         else
         {
+            // If not found at this level, add to previous count.
             prev_counts[j] = prev_counts[j] + counter[j];
         }
     }
@@ -160,7 +167,7 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     // Make sure expression levels are sorted.
     sort(args.expression_thresholds.begin(), args.expression_thresholds.end());
 
-    // Initialse last expression
+    // Initialse last expression.
     if constexpr (samplewise)
         load_ibf(ibf, estimate_args.path_in.string() + "IBF_Level_" + std::to_string(args.number_expression_thresholds-1));
     else
@@ -199,6 +206,7 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
 
     for (int j = args.number_expression_thresholds - 2; j >= 0; j--)
     {
+        // Loadthe next ibf that should be considered.
         if constexpr (samplewise)
             load_ibf(ibf, estimate_args.path_in.string() + "IBF_Level_" + std::to_string(j));
         else
@@ -223,6 +231,7 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
             prev_expression = args.expression_thresholds[j];
     }
 
+    // Write output file.
     std::ofstream outfile;
     outfile.open(std::string{file_out});
     for (int i = 0; i <  seqs.size(); ++i)
