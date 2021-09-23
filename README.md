@@ -7,7 +7,17 @@
 Needle is a tool for semi-quantitative analysis of very large collections of nucleotide sequences.
 Needle stores its data in multiple interleaved Bloom filter, a fast and space efficient probabilistic data structure and uses a windowing scheme (also called minimisers) to reduce the amount of data to store. How many interleaved Bloom filter are used is defined by the user. Each interleaved Bloom filter has a so called expression threshold and stores minimisers with an occurrence greater than or equal to its own expression threshold and smaller than the next biggest expression threshold (if there is no bigger expression threshold, all greater than or equal to the threshold are stored). These expression thresholds are then used during the query (called estimate) to approximate the expression values of given transcripts.
 
-## Download & Install
+## Download, Install & Build
+
+<details><summary>Prerequisites (click to expand)</summary>
+
+* CMake >= 3.8
+* GCC 7, 8, 9, 10 or 11 (most recent minor version)
+* git
+
+Refer to the [Seqan3 Setup Tutorial](https://docs.seqan.de/seqan/3-master-user/setup.html) for more in depth
+information.
+</details>
 
 ### Install with [bioconda](https://bioconda.github.io/recipes/needle/README.html) (Linux)
 
@@ -34,7 +44,7 @@ make test
 
 If you are interested in building the documentation, just use the command: `make doc`
 
-## Build
+## Build an Needle index
 In order to build a Needle index a number of sequence files have to be given. All sequence file formats supported by seqan3 are accepted as an input (fasta, fastq, embl,... and their compressed forms). The flag `--paired` in the example below indicates that the given sequence files are paired-end experiments. Furthermore, the false positive rate has to be specified with the parameter `f`.
 Use -h/--help for more information and to see further parameters. The flag `-c` can be used to build a compressed Needle index.
 
