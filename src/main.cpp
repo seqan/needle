@@ -100,7 +100,7 @@ int run_needle_count(seqan3::argument_parser & parser)
     }
     catch (seqan3::argument_parser_error const & ext)
     {
-        seqan3::debug_stream << "Error. Incorrect command line input for ibf. " << ext.what() << "\n";
+        seqan3::debug_stream << "Error. Incorrect command line input for count. " << ext.what() << "\n";
         return -1;
     }
     try
