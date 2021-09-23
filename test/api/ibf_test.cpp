@@ -30,7 +30,7 @@ TEST(ibf, given_expression_thresholds)
     initialization_args(ibf_args);
     ibf_args.path_out = tmp_dir/"IBF_Test_Exp_";
     ibf_args.expression_thresholds = {1, 2};
-    ibf_args.experiment_names = true;
+    minimiser_args.experiment_names = true;
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     std::vector<double> fpr = {0.05};
 
@@ -238,6 +238,6 @@ TEST(ibf, throws)
     fpr = {0.05};
     EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr), std::invalid_argument);
 
-    ibf_args.expression_thresholds = {1000};
+    ibf_args.expression_thresholds = {10, 1000};
     EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr), std::invalid_argument);
 }
