@@ -1,6 +1,6 @@
 ## Needle
 
-# A fast and space-efficient pre-filter for estimating the quantification of very large collections of nucleotide sequences
+### A fast and space-efficient pre-filter for estimating the quantification of very large collections of nucleotide sequences
 
 [![Build Status](https://github.com/seqan/app-template/workflows/App%20CI/badge.svg)](https://github.com/seqan/needle/actions?query=branch%3Amaster+workflow%3A%22App+CI%22) [![codecov](https://codecov.io/gh/seqan/needle/branch/master/graph/badge.svg?token=SJVMYRUKW2)](https://codecov.io/gh/seqan/needle)  [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](#install-with-bioconda-linux)
 
