@@ -1,11 +1,21 @@
 ## Needle
 
-[![Build Status](https://github.com/seqan/app-template/workflows/App%20CI/badge.svg)](https://github.com/seqan/needle/actions?query=branch%3Amaster+workflow%3A%22App+CI%22)
+# A fast and space-efficient pre-filter for estimating the quantification of very large collections of nucleotide sequences
+
+[![Build Status](https://github.com/seqan/app-template/workflows/App%20CI/badge.svg)](https://github.com/seqan/needle/actions?query=branch%3Amaster+workflow%3A%22App+CI%22) [![codecov](https://codecov.io/gh/seqan/needle/branch/master/graph/badge.svg?token=SJVMYRUKW2)](https://codecov.io/gh/seqan/needle)  [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](#install-with-bioconda-linux)
 
 Needle is a tool for semi-quantitative analysis of very large collections of nucleotide sequences.
 Needle stores its data in multiple interleaved Bloom filter, a fast and space efficient probabilistic data structure and uses a windowing scheme (also called minimisers) to reduce the amount of data to store. How many interleaved Bloom filter are used is defined by the user. Each interleaved Bloom filter has a so called expression threshold and stores minimisers with an occurrence greater than or equal to its own expression threshold and smaller than the next biggest expression threshold (if there is no bigger expression threshold, all greater than or equal to the threshold are stored). These expression thresholds are then used during the query (called estimate) to approximate the expression values of given transcripts.
 
-## Install
+## Download & Install
+
+### Install with [bioconda](https://bioconda.github.io/recipes/needle/README.html) (Linux)
+
+```bash
+conda install -c bioconda -c conda-forge needle
+```
+
+### Install via github
 
 Needle can be built by following these commands:
 
