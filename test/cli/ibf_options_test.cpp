@@ -58,6 +58,30 @@ TEST_F(ibf_options_test, ibf_fail_contradiction2)
     EXPECT_EQ(result.err, expected);
 }
 
+TEST_F(ibf_options_test, ibf_fail_no_fpr)
+{
+    cli_test_result result = execute_app("needle ibf -l 2", data("exp_01.fasta"));
+    std::string expected
+    {
+        "Error. Please give a false positive rate for the IBFs.\n"
+    };
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, std::string{""});
+    EXPECT_EQ(result.err, expected);
+}
+
+TEST_F(ibf_options_test, ibf_fail_incorrect_number_of_fprs)
+{
+    cli_test_result result = execute_app("needle ibf -f 0.05 -f 0.01 -f 0.03 -l 2", data("exp_01.fasta"));
+    std::string expected
+    {
+        "Error. Length of false positive rates for IBFs is not equal to length of expression thresholds.\n"
+    };
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, std::string{""});
+    EXPECT_EQ(result.err, expected);
+}
+
 TEST_F(ibf_options_test, ibf_with_argument)
 {
     cli_test_result result = execute_app("needle ibf -f 0.05 -l 1", data("exp_01.fasta"));
@@ -130,6 +154,30 @@ TEST_F(ibf_options_test, ibfmin_fail_contradiction2)
         "Error. The determination of expression levels can not be used with individual levels already given. Please set "
         "the expression levels without the option --level-by-genome OR use the number of expression levels with that option."
         "\n"
+    };
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, std::string{""});
+    EXPECT_EQ(result.err, expected);
+}
+
+TEST_F(ibf_options_test, ibfmin_fail_no_fpr)
+{
+    cli_test_result result = execute_app("needle ibfmin -l 2", data("mini_example.minimiser"));
+    std::string expected
+    {
+        "Error. Please give a false positive rate for the IBFs.\n"
+    };
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, std::string{""});
+    EXPECT_EQ(result.err, expected);
+}
+
+TEST_F(ibf_options_test, ibfmin_fail_incorrect_number_of_fprs)
+{
+    cli_test_result result = execute_app("needle ibfmin -f 0.05 -f 0.01 -f 0.03 -l 2", data("mini_example.minimiser"));
+    std::string expected
+    {
+        "Error. Length of false positive rates for IBFs is not equal to length of expression thresholds.\n"
     };
     EXPECT_EQ(result.exit_code, 0);
     EXPECT_EQ(result.out, std::string{""});

@@ -66,3 +66,25 @@ TEST(count, small_example_paired)
     }
     std::filesystem::remove(tmp_dir/"Count_Test_mini_example.count.out");
 }
+
+TEST(count, small_example_exclude)
+{
+    estimate_ibf_arguments args{};
+    initialization_args(args);
+
+    count(args, {std::string(DATA_INPUT_DIR) + "mini_example.fasta"}, std::string(DATA_INPUT_DIR) + "mini_gen.fasta",
+                 std::string(DATA_INPUT_DIR) + "mini_gen2.fasta", false);
+
+    std::ifstream output_file(tmp_dir/"mini_example.count.out");
+    std::string line;
+    std::string expected{"gen1\t3"};
+    if (output_file.is_open())
+    {
+        while ( std::getline (output_file,line) )
+        {
+            EXPECT_EQ(expected,line);
+        }
+        output_file.close();
+    }
+    std::filesystem::remove(tmp_dir/"Count_Test_mini_example.count.out");
+}

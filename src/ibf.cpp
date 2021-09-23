@@ -317,7 +317,7 @@ void check_fpr(uint8_t const number_expression_thresholds, std::vector<double> &
     {
         throw std::invalid_argument{"Error. Please give a false positive rate for the IBFs."};
     }
-    // If only one ibf size is given, set it for all levels.
+    // If only one ibf size is given, set it for all thresholds.
     if (fprs.size() == 1)
     {
         fprs.assign(number_expression_thresholds, fprs[0]);
@@ -325,7 +325,7 @@ void check_fpr(uint8_t const number_expression_thresholds, std::vector<double> &
     else if (fprs.size() != number_expression_thresholds)
     {
         throw std::invalid_argument{"Error. Length of false positive rates for IBFs is not equal to length of expression "
-                                    "levels."};
+                                    "thresholds."};
     }
 }
 
@@ -539,10 +539,11 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
         if (size < 1)
         {
-            seqan3::debug_stream << "[Error]. The choosen expression threshold is not well picked. If you use the automatic "
-                              << "expression threshold determination, please decrease the number of levels. If you use "
-                              << "your own expression thresholds, decrease the thresholds from level "
-                              << ibf_args.expression_thresholds[j] << " on.\n";
+            throw std::invalid_argument{std::string("[Error]. The choosen expression threshold is not well picked. If you use the automatic ") +
+            std::string("expression threshold determination, please decrease the number of levels. If you use ") +
+            std::string("your own expression thresholds, decrease the thresholds from level ") +
+            std::to_string(ibf_args.expression_thresholds[j]) +
+            std::string(" on.\n")};
         }
         // m = -hn/ln(1-p^(1/h))
         size = static_cast<uint64_t>((-1.0*num_hash*((1.0*size)/num_files))/(std::log(1.0-std::pow(fprs[j], 1.0/num_hash))));
@@ -801,9 +802,7 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_ar
 
     omp_set_num_threads(args.threads);
 
-    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(minimiser_args.samples.size() / args.threads),
-                                                 1u,
-                                                 64u);
+    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(minimiser_args.samples.size() / args.threads), 1u, 64u);
 
     // Add minimisers to ibf
     #pragma omp parallel for schedule(dynamic, chunk_size)
