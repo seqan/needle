@@ -1,3 +1,10 @@
+// -----------------------------------------------------------------------------------------------------
+// Copyright (c) 2006-2021, Knut Reinert & Freie Universität Berlin
+// Copyright (c) 2016-2021, Knut Reinert & MPI für molekulare Genetik
+// This file may be used, modified and/or redistributed under the terms of the 3-clause BSD-License
+// shipped with this file and also available at: https://github.com/seqan/needle/blob/master/LICENSE.md
+// -----------------------------------------------------------------------------------------------------
+
 #include <seqan3/argument_parser/all.hpp>
 #include <seqan3/std/filesystem>
 #include <seqan3/core/debug_stream.hpp>
@@ -93,7 +100,7 @@ int run_needle_count(seqan3::argument_parser & parser)
     }
     catch (seqan3::argument_parser_error const & ext)
     {
-        seqan3::debug_stream << "Error. Incorrect command line input for ibf. " << ext.what() << "\n";
+        seqan3::debug_stream << "Error. Incorrect command line input for count. " << ext.what() << "\n";
         return -1;
     }
     try
