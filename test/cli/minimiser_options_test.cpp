@@ -73,3 +73,16 @@ TEST_F(minimiser_options_test, paired)
     EXPECT_EQ(result.out, "");
     EXPECT_EQ(result.err, std::string{});
 }
+
+TEST_F(minimiser_options_test, invalid_argument)
+{
+    cli_test_result result = execute_app("needle minimiser -k 4 -w 8 --samples 3 ", data("mini_example.fasta"),
+                                                                                    data("mini_example.fasta"));
+    std::string expected
+    {
+        "Error. Incorrect command line input for multiple-samples.\n"
+    };
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, "");
+    EXPECT_EQ(result.err, expected);
+}

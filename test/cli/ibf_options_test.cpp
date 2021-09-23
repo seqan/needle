@@ -74,6 +74,14 @@ TEST_F(ibf_options_test, ibf_with_argument_with_options)
     EXPECT_EQ(result.err, std::string{});
 }
 
+TEST_F(ibf_options_test, ibf_with_argument_with_userdefined_shape)
+{
+    cli_test_result result = execute_app("needle ibf -f 0.05 -k 4 -w 8 --shape 2 -l 1", data("exp_01.fasta"));
+    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_EQ(result.out, "");
+    EXPECT_EQ(result.err, std::string{});
+}
+
 TEST_F(ibf_options_test, ibfmin_no_options)
 {
     cli_test_result result = execute_app("needle ibfmin");
