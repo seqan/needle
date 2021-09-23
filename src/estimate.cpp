@@ -73,10 +73,6 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
             }
             else
             {
-                // Prevent division by 0
-                if (counter[j]  == 0)
-                    counter[j]++;
-
                // Actually calculate estimation, in the else case k stands for the prev_expression
                if constexpr (multiple_expressions)
                    estimations_i[j] = std::max(expressions[k][j] * 1.0, expressions[k+1][j] - ((abs(minimiser_pos - prev_counts[j])/(counter[j] * 1.0)) * (expressions[k+1][j]-expressions[k][j])));
