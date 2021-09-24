@@ -10,6 +10,12 @@
 #  define DATA_INPUT_DIR @DATA_INPUT_DIR@
 #endif
 
+#include <seqan3/alphabet/nucleotide/dna4.hpp>
+#include <seqan3/core/debug_stream.hpp>
+#include <seqan3/search/views/minimiser_hash.hpp>
+
+using namespace seqan3::literals;
+
 using seqan3::operator""_shape;
 std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
 
@@ -431,4 +437,87 @@ TEST(minimiser, small_example_exclude)
     std::filesystem::remove(tmp_dir/"Minimiser_Test_Ex_IBF_0");
     std::filesystem::remove(tmp_dir/("Minimiser_Test_Ex_mini_example.minimiser"));
     std::filesystem::remove(tmp_dir/("Minimiser_Test_Ex_mini_example2.minimiser"));
+}
+
+TEST(minimiser, small_example_shape)
+{
+    std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> expected_hash_tables_shape{   // minimisers:
+                                                                                 {
+                                                                                  {0,3},  // AA
+                                                                                  {1,4},  // AC
+                                                                                  {2,4},  // AG
+                                                                                  {3,5},  // AT
+                                                                                  {4,5},  // CA
+                                                                                  {5,6},  // CC
+                                                                                  {9,1},  // GC
+                                                                                  {12,4}, // TA
+                                                                                         },
+                                                                                 {{2,1},  // AT
+                                                                                  {3,1},  // AG
+                                                                                  {4,1},  // CA
+                                                                                  {5,20}, // CC
+                                                                                  {6,3},  // CG
+                                                                                  {8,1},  // GA
+                                                                                  {9,4},  // GC
+                                                                                         },};
+
+    estimate_ibf_arguments args{};
+    minimiser_arguments minimiser_args{};
+    initialization_args(args);
+    args.shape = seqan3::bin_literal{9};
+    args.path_out = tmp_dir/"Minimiser_Test_Shape_";
+    minimiser_args.cutoffs = {0, 0};
+    args.expression_thresholds = {0};
+    std::vector<double> fpr = {0.05};
+    std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
+                                                         std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    minimiser(sequence_files, args, minimiser_args);
+    uint32_t normalized_exp_value{};
+    robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
+    std::vector<std::filesystem::path> minimiser_files{};
+    uint64_t num_of_minimisers{};
+    std::vector<uint64_t> expected_nums{8, 7};
+
+    for (int i = 0; i < sequence_files.size(); ++i)
+    {
+        // Test Header file
+        read_binary_start(args, tmp_dir/("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers);
+
+        EXPECT_EQ(4, args.k);
+        EXPECT_EQ(4, args.w_size.get());
+        EXPECT_EQ(0, args.s.get());
+        EXPECT_EQ(9, args.shape.to_ulong());
+        EXPECT_EQ(expected_nums[i], num_of_minimisers);
+
+        // Test binary file
+        read_binary(tmp_dir/("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
+        minimiser_files.push_back(tmp_dir/("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"));
+        for (auto & hash : expected_hash_tables_shape[i])
+        {
+            if (expected_hash_tables_shape[i][hash.first] != result_hash_table[hash.first])
+                seqan3::debug_stream << i << " " << hash.first << " " << result_hash_table[hash.first] << "\n";
+            EXPECT_EQ(expected_hash_tables_shape[i][hash.first], result_hash_table[hash.first]);
+        }
+
+        result_hash_table.clear();
+    }
+
+    EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    load_ibf(ibf, tmp_dir/"Minimiser_Test_Shape_IBF_0");
+    auto agent = ibf.membership_agent();
+
+    std::vector<bool> expected_result(2, 0);
+    auto & res = agent.bulk_contains(7);
+    EXPECT_RANGE_EQ(expected_result,  res);
+    expected_result[0] = 1;
+    auto & res2 = agent.bulk_contains(12);
+    EXPECT_RANGE_EQ(expected_result,  res2);
+    expected_result[1] = 1;
+    auto & res3 = agent.bulk_contains(2);
+    EXPECT_RANGE_EQ(expected_result,  res3);
+
+    std::filesystem::remove(tmp_dir/"Minimiser_Test_Shape_IBF_0");
+    std::filesystem::remove(tmp_dir/("Minimiser_Test_Shape_mini_example.minimiser"));
+    std::filesystem::remove(tmp_dir/("Minimiser_Test_Shape_mini_example2.minimiser"));
 }
