@@ -414,8 +414,6 @@ void get_filsize_per_expression_level(std::filesystem::path filename, uint8_t co
             auto p = std::upper_bound(expression_thresholds.begin(), expression_thresholds.end(), minimiser_count);
             if(p != expression_thresholds.begin())
                 sizes[(p-expression_thresholds.begin())-1]++;
-            else if (minimiser_count>=expression_thresholds[number_expression_thresholds-1])
-                sizes[number_expression_thresholds-1]++;
         }
     }
 
