@@ -54,6 +54,8 @@ TEST(ibfmin, given_expression_thresholds)
 
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_1");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_2");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_Data");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_FPRs.fprs");
 }
 
 #if defined(__GNUC__) && ((__GNUC___ == 10 && __cplusplus == 201703L) || (__GNUC__ <10))
@@ -86,6 +88,8 @@ TEST(ibfmin, given_expression_thresholds_multiple_threads)
     EXPECT_RANGE_EQ(expected_result2,  res2);
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Multiple_IBF_1");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Multiple_IBF_2");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Multiple_IBF_Data");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Multiple_IBF_FPRs.fprs");
 }
 #endif
 
@@ -119,7 +123,9 @@ TEST(ibfmin, no_given_expression_thresholds)
 
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_IBF_Level_1");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_IBF_Levels.levels");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_IBF_FPRs.fprs");
 }
 
 TEST(ibfmin, expression_thresholds_by_genome)
@@ -151,7 +157,9 @@ TEST(ibfmin, expression_thresholds_by_genome)
     }
 
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_IBF_Level_0");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_IBF_Data");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_IBF_Levels.levels");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_IBF_FPRs.fprs");
 }
 
 #if defined(__GNUC__) && ((__GNUC___ == 10 && __cplusplus == 201703L) || (__GNUC__ <10))
@@ -184,7 +192,9 @@ TEST(ibfmin, no_given_expression_thresholds_multiple_threads)
     EXPECT_RANGE_EQ(expected_result2,  res2);
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Multiple_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Multiple_IBF_Level_1");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Multiple_IBF_Data");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Multiple_IBF_Levels.levels");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Multiple_IBF_FPRs.fprs");
 }
 #endif
 
@@ -197,10 +207,10 @@ TEST(ibfmin, different_shape)
     ibf_args.shape = seqan3::bin_literal{11};
     ibf_args.expression_thresholds = {1, 2};
     std::vector<double> fpr = {0.05, 0.05};
-    ibf_args.path_out = tmp_dir/"IBFMIN_Test_Shapen_";
+    ibf_args.path_out = tmp_dir/"IBFMIN_Test_Shape_";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     minimiser(sequence_files, ibf_args, minimiser_args);
-    std::vector<std::filesystem::path> minimiser_file = {tmp_dir/"IBFMIN_Test_Shapen_mini_example.minimiser"};
+    std::vector<std::filesystem::path> minimiser_file = {tmp_dir/"IBFMIN_Test_Shape_mini_example.minimiser"};
 
     std::vector<uint16_t> expected{1, 2};
 
@@ -218,10 +228,13 @@ TEST(ibfmin, different_shape)
         auto & res = agent.bulk_contains(97);
         EXPECT_RANGE_EQ(expected_result,  res);
         expected_result[0] = 1;
-        auto & res2 = agent.bulk_contains(24);
+        auto & res2 = agent.bulk_contains(4);
         EXPECT_RANGE_EQ(expected_result,  res2);
     }
 
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Shape_IBF_1");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Shape_IBF_2");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Shape_IBF_Data");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Shape_IBF_FPRs.fprs");
+    std::filesystem::remove(tmp_dir/("IBFMIN_Test_Shape_mini_example.minimiser"));
 }

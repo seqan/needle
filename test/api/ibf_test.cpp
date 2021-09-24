@@ -70,7 +70,8 @@ TEST(ibf, given_expression_thresholds)
         EXPECT_EQ(ibf_args.samplewise, args.samplewise);
     }
     std::filesystem::remove(tmp_dir/"IBF_Test_Exp_IBF_Data");
-    std::filesystem::remove(tmp_dir/"IBF_Test_Exp_Test_Stored_Files.txt");
+    std::filesystem::remove(tmp_dir/"IBF_Test_Exp_Stored_Files.txt");
+    std::filesystem::remove(tmp_dir/"IBF_Test_Exp_IBF_FPRs.fprs");
 }
 
 TEST(ibf, given_expression_thresholds_include_file)
@@ -107,6 +108,7 @@ TEST(ibf, given_expression_thresholds_include_file)
     std::filesystem::remove(tmp_dir/"IBF_Test_Include_IBF_1");
     std::filesystem::remove(tmp_dir/"IBF_Test_Include_IBF_2");
     std::filesystem::remove(tmp_dir/"IBF_Test_Include_IBF_Data");
+    std::filesystem::remove(tmp_dir/"IBF_Test_Include_IBF_FPRs.fprs");
 }
 
 TEST(ibf, given_expression_thresholds_exclude_file)
@@ -143,6 +145,7 @@ TEST(ibf, given_expression_thresholds_exclude_file)
     std::filesystem::remove(tmp_dir/"IBF_Test_Exclude_IBF_1");
     std::filesystem::remove(tmp_dir/"IBF_Test_Exclude_IBF_2");
     std::filesystem::remove(tmp_dir/"IBF_Test_Exclude_IBF_Data");
+    std::filesystem::remove(tmp_dir/"IBF_Test_Exclude_IBF_FPRs.fprs");
 }
 
 TEST(ibf, no_given_expression_thresholds)
@@ -180,6 +183,7 @@ TEST(ibf, no_given_expression_thresholds)
     std::filesystem::remove(tmp_dir/"IBF_Test_IBF_Level_1");
     std::filesystem::remove(tmp_dir/"IBF_Test_IBF_Levels.levels");
     std::filesystem::remove(tmp_dir/"IBF_Test_IBF_Data");
+    std::filesystem::remove(tmp_dir/"IBF_Test_IBF_FPRs.fprs");
 }
 
 TEST(ibf, expression_thresholds_by_genome)
@@ -217,6 +221,7 @@ TEST(ibf, expression_thresholds_by_genome)
     std::filesystem::remove(tmp_dir/"IBF_Test_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"IBF_Test_IBF_Levels.levels");
     std::filesystem::remove(tmp_dir/"IBF_Test_IBF_Data");
+    std::filesystem::remove(tmp_dir/"IBF_Test_IBF_FPRs.fprs");
 }
 
 TEST(ibf, throws)
@@ -290,4 +295,45 @@ TEST(ibf, given_cutoffs)
         EXPECT_EQ(ibf_args.samplewise, args.samplewise);
     }
     std::filesystem::remove(tmp_dir/"IBF_Test_Cut_IBF_Data");
+    std::filesystem::remove(tmp_dir/"IBF_Test_Cut_IBF_FPRs.fprs");
+}
+
+TEST(ibf, different_file_sizes)
+{
+    std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
+    estimate_ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
+    initialization_args(ibf_args);
+    ibf_args.path_out = tmp_dir/"IBF_Test_Diff_";
+    ibf_args.number_expression_thresholds = 4;
+    std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta", std::string(DATA_INPUT_DIR) + "exp_01.fasta"};
+    std::vector<double> fpr = {0.05};
+
+    std::vector<uint16_t> expected{};
+
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr);
+
+    EXPECT_EQ(expected, medians);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+
+    if (std::filesystem::exists(tmp_dir/"IBF_Test_Diff_IBF_Level_0"))
+    {
+        load_ibf(ibf, tmp_dir/"IBF_Test_Diff_IBF_Level_0");
+        auto agent = ibf.membership_agent();
+
+        std::vector<bool> expected_result(2, 0);
+        auto & res = agent.bulk_contains(2);
+        EXPECT_RANGE_EQ(expected_result,  res);
+        expected_result[0] = 1;
+        auto & res2 = agent.bulk_contains(97);
+        EXPECT_RANGE_EQ(expected_result,  res2);
+    }
+    std::filesystem::remove(tmp_dir/"IBF_Test_Diff_IBF_Level_0");
+    std::filesystem::remove(tmp_dir/"IBF_Test_Diff_IBF_Level_1");
+    std::filesystem::remove(tmp_dir/"IBF_Test_Diff_IBF_Level_2");
+    std::filesystem::remove(tmp_dir/"IBF_Test_Diff_IBF_Level_3");
+    std::filesystem::remove(tmp_dir/"IBF_Test_Diff_IBF_Levels.levels");
+    std::filesystem::remove(tmp_dir/"IBF_Test_Diff_IBF_FPRs.fprs");
+    std::filesystem::remove(tmp_dir/"IBF_Test_Diff_IBF_Data");
 }

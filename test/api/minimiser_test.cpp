@@ -112,6 +112,8 @@ TEST(minimiser, small_example)
     EXPECT_RANGE_EQ(expected_result,  res3);
 
     std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_0");
+    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_Data");
+    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_FPRs.fprs");
     std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example.minimiser"));
     std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example2.minimiser"));
 }
@@ -206,6 +208,8 @@ TEST(minimiser, small_example_samplewise)
     EXPECT_RANGE_EQ(expected_result,  res3);
     std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_Levels.levels");
+    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_FPRs.fprs");
+    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_Data");
     std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example.minimiser"));
     std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example2.minimiser"));
 }
@@ -257,6 +261,8 @@ TEST(minimiser, cutoff_by_filesize)
     EXPECT_RANGE_EQ(expected_result, res3);
 
     std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_0");
+    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_Data");
+    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_FPRs.fprs");
     std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example.minimiser"));
     std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example2.minimiser"));
 }
@@ -319,6 +325,8 @@ TEST(minimiser, small_example_two_threads)
     EXPECT_RANGE_EQ(expected_result, res3);
 
     std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_0");
+    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_Data");
+    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_FPRs.fprs");
     std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example.minimiser"));
     std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example2.minimiser"));
 }
@@ -435,6 +443,8 @@ TEST(minimiser, small_example_exclude)
     EXPECT_RANGE_EQ(expected_result,  res3);
 
     std::filesystem::remove(tmp_dir/"Minimiser_Test_Ex_IBF_0");
+    std::filesystem::remove(tmp_dir/"Minimiser_Test_Ex_IBF_Data");
+    std::filesystem::remove(tmp_dir/"Minimiser_Test_Ex_IBF_FPRs.fprs");
     std::filesystem::remove(tmp_dir/("Minimiser_Test_Ex_mini_example.minimiser"));
     std::filesystem::remove(tmp_dir/("Minimiser_Test_Ex_mini_example2.minimiser"));
 }
@@ -518,6 +528,8 @@ TEST(minimiser, small_example_shape)
     EXPECT_RANGE_EQ(expected_result,  res3);
 
     std::filesystem::remove(tmp_dir/"Minimiser_Test_Shape_IBF_0");
+    std::filesystem::remove(tmp_dir/"Minimiser_Test_Shape_IBF_Data");
+    std::filesystem::remove(tmp_dir/"Minimiser_Test_Shape_IBF_FPRs.fprs");
     std::filesystem::remove(tmp_dir/("Minimiser_Test_Shape_mini_example.minimiser"));
     std::filesystem::remove(tmp_dir/("Minimiser_Test_Shape_mini_example2.minimiser"));
 }
