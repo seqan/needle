@@ -103,15 +103,8 @@ int run_needle_count(seqan3::argument_parser & parser)
         seqan3::debug_stream << "Error. Incorrect command line input for count. " << ext.what() << "\n";
         return -1;
     }
-    try
-    {
-        count(args, sequence_files, genome_file, exclude_file, paired);
-    }
-    catch (const std::invalid_argument & e)
-    {
-        std::cerr << e.what() << std::endl;
-        return -1;
-    }
+
+    count(args, sequence_files, genome_file, exclude_file, paired);
 
     return 0;
 }
@@ -147,15 +140,7 @@ int run_needle_estimate(seqan3::argument_parser & parser)
         return -1;
     }
 
-    try
-    {
-        call_estimate(args, estimate_args);
-    }
-    catch (const std::invalid_argument & e)
-    {
-        std::cerr << e.what() << std::endl;
-        return -1;
-    }
+    call_estimate(args, estimate_args);
 
     return 0;
 }
@@ -313,6 +298,4 @@ int main(int argc, char const ** argv)
         run_needle_ibf_min(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-minimiser"})
         run_needle_minimiser(sub_parser);
-    else
-        throw std::logic_error{"The used sub parser is not known: " + sub_parser.info.app_name};
 }
