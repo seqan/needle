@@ -497,12 +497,8 @@ TEST(minimiser, small_example_shape)
         read_binary(tmp_dir/("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
         minimiser_files.push_back(tmp_dir/("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"));
         for (auto & hash : expected_hash_tables_shape[i])
-        {
-            if (expected_hash_tables_shape[i][hash.first] != result_hash_table[hash.first])
-                seqan3::debug_stream << i << " " << hash.first << " " << result_hash_table[hash.first] << "\n";
             EXPECT_EQ(expected_hash_tables_shape[i][hash.first], result_hash_table[hash.first]);
-        }
-
+        
         result_hash_table.clear();
     }
 
