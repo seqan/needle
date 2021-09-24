@@ -10,12 +10,6 @@
 #  define DATA_INPUT_DIR @DATA_INPUT_DIR@
 #endif
 
-#include <seqan3/alphabet/nucleotide/dna4.hpp>
-#include <seqan3/core/debug_stream.hpp>
-#include <seqan3/search/views/minimiser_hash.hpp>
-
-using namespace seqan3::literals;
-
 using seqan3::operator""_shape;
 std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
 
