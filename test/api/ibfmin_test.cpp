@@ -187,3 +187,41 @@ TEST(ibfmin, no_given_expression_thresholds_multiple_threads)
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Multiple_IBF_Levels.levels");
 }
 #endif
+
+TEST(ibfmin, different_shape)
+{
+    estimate_ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
+    initialization_args(ibf_args);
+    minimiser_args.cutoffs = {0};
+    ibf_args.shape = seqan3::bin_literal{11};
+    ibf_args.expression_thresholds = {1, 2};
+    std::vector<double> fpr = {0.05, 0.05};
+    ibf_args.path_out = tmp_dir/"IBFMIN_Test_Shapen_";
+    std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
+    minimiser(sequence_files, ibf_args, minimiser_args);
+    std::vector<std::filesystem::path> minimiser_file = {tmp_dir/"IBFMIN_Test_Shapen_mini_example.minimiser"};
+
+    std::vector<uint16_t> expected{1, 2};
+
+    std::vector<uint16_t> medians = ibf(minimiser_file, ibf_args, fpr);
+
+    EXPECT_EQ(expected, medians);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    if (std::filesystem::exists(tmp_dir/"IBFMIN_Test_Shape_IBF_1"))
+    {
+        load_ibf(ibf, tmp_dir/"IBFMIN_Test_Shape_IBF_1");
+        auto agent = ibf.membership_agent();
+
+        std::vector<bool> expected_result(1, 0);
+        auto & res = agent.bulk_contains(97);
+        EXPECT_RANGE_EQ(expected_result,  res);
+        expected_result[0] = 1;
+        auto & res2 = agent.bulk_contains(24);
+        EXPECT_RANGE_EQ(expected_result,  res2);
+    }
+
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Shape_IBF_1");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Shape_IBF_2");
+}
