@@ -203,13 +203,13 @@ TEST(ibfmin, different_shape)
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     initialization_args(ibf_args);
-    minimiser_args.cutoffs = {0};
+    std::vector<uint8_t> cutoffs = {0};
     ibf_args.shape = seqan3::bin_literal{11};
     ibf_args.expression_thresholds = {1, 2};
     std::vector<double> fpr = {0.05, 0.05};
     ibf_args.path_out = tmp_dir/"IBFMIN_Test_Shape_";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
-    minimiser(sequence_files, ibf_args, minimiser_args);
+    minimiser(sequence_files, ibf_args, minimiser_args, cutoffs);
     std::vector<std::filesystem::path> minimiser_file = {tmp_dir/"IBFMIN_Test_Shape_mini_example.minimiser"};
 
     std::vector<uint16_t> expected{1, 2};

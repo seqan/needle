@@ -57,7 +57,7 @@ void parsing(seqan3::argument_parser & parser, min_arguments & args)
 }
 
 // Initialize arguments for ibf and minimiser
-void initialise_arguments_minimiser(seqan3::argument_parser & parser, minimiser_arguments & minimiser_args)
+void initialise_arguments_minimiser(seqan3::argument_parser & parser, minimiser_arguments & minimiser_args, std::vector<uint8_t> & cutoffs)
 {
     parser.add_option(minimiser_args.include_file, '\0', "include", "Sequence file containing minimizers, only those "
                                                                     "minimizers will be considered.");
@@ -67,7 +67,7 @@ void initialise_arguments_minimiser(seqan3::argument_parser & parser, minimiser_
                                                                "equal to number of sequence files. Default: Every"
                                                                " sequence file is one sample from one experiment.");
     parser.add_flag(minimiser_args.paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
-    parser.add_option(minimiser_args.cutoffs, '\0', "cutoff", "Define for each sample, what number of found minimisers "
+    parser.add_option(cutoffs, '\0', "cutoff", "Define for each sample, what number of found minimisers "
                                                               "should be considered the result of a sequencing error "
                                                               "and therefore be ignored. Default: Every sample has an"
                                                               "automatically genereated cutoff, which is based on the "
@@ -154,10 +154,11 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     size_t num_hash{1}; // Number of hash functions to use, default 1
     std::filesystem::path expression_by_genome_file = "";
     std::vector<double> fpr{}; // The fpr of one IBF, can be different for different expression levels
+    std::vector<uint8_t> cutoffs{};
 
     initialise_min_arguments(parser, ibf_args);
     initialise_arguments_ibf(parser, ibf_args, num_hash, fpr);
-    initialise_arguments_minimiser(parser, minimiser_args);
+    initialise_arguments_minimiser(parser, minimiser_args, cutoffs);
 
     parser.info.short_description = "Constructs the Needle index.";
 
@@ -180,7 +181,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
 
     try
     {
-        ibf(sequence_files, ibf_args, minimiser_args, fpr, expression_by_genome_file, num_hash);
+        ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs, expression_by_genome_file, num_hash);
     }
     catch (const std::invalid_argument & e)
     {
@@ -240,8 +241,9 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
     min_arguments args{};
     minimiser_arguments minimiser_args{};
     std::vector<std::filesystem::path> sequence_files{};
+    std::vector<uint8_t> cutoffs{};
     initialise_min_arguments(parser, args);
-    initialise_arguments_minimiser(parser, minimiser_args);
+    initialise_arguments_minimiser(parser, minimiser_args, cutoffs);
 
     parser.info.short_description = "Calculates minimiser for given experiments.";
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
@@ -257,7 +259,7 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
     }
     try
     {
-        minimiser(sequence_files, args, minimiser_args);
+        minimiser(sequence_files, args, minimiser_args, cutoffs);
     }
     catch (const std::invalid_argument & e)
     {

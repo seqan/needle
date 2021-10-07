@@ -42,7 +42,8 @@ TEST_F(estimate_options_test, with_argument)
     std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta")};
     ibf_args.path_out = "Test_";
-    ibf(sequence_files, ibf_args, minimiser_args, fpr);
+    std::vector<uint8_t> cutoffs{};
+    ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs);
 
     cli_test_result result = execute_app("needle estimate -i ", "Test_", data("mini_gen.fasta"));
     EXPECT_EQ(result.exit_code, 0);
@@ -58,7 +59,8 @@ TEST_F(estimate_options_test, with_argument_normalization_method)
     std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta")};
     ibf_args.path_out = "Test_";
-    ibf(sequence_files, ibf_args, minimiser_args, fpr);
+    std::vector<uint8_t> cutoffs{};
+    ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs);
 
     cli_test_result result = execute_app("needle estimate -m -i ", "Test_", data("mini_gen.fasta"));
     EXPECT_EQ(result.exit_code, 0);
@@ -74,7 +76,8 @@ TEST_F(estimate_options_test, with_argument_out)
     std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta")};
     ibf_args.path_out = "Test_";
-    ibf(sequence_files, ibf_args, minimiser_args, fpr);
+    std::vector<uint8_t> cutoffs{};
+    ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs);
 
     cli_test_result result = execute_app("needle estimate -o ", "expressions.out","-i ", "Test_", data("mini_gen.fasta"));
     EXPECT_EQ(result.exit_code, 0);

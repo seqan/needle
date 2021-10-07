@@ -208,6 +208,7 @@ void read_binary(std::filesystem::path filename, robin_hood::unordered_node_map<
     fin.open(filename, std::ios::binary);
     fin.read((char*)&buffer, sizeof(buffer));
     fin.read((char*)&small_buffer, sizeof(small_buffer));
+    fin.read((char*)&small_buffer, sizeof(small_buffer));
     fin.read((char*)&window, sizeof(window));
     fin.read((char*)&buffer, sizeof(buffer));
     bool ungapped;
@@ -231,16 +232,19 @@ void read_binary(std::filesystem::path filename, robin_hood::unordered_node_map<
 
 void read_binary_start(min_arguments & args,
                  std::filesystem::path filename,
-                 uint64_t & num_of_minimisers)
+                 uint64_t & num_of_minimisers, uint8_t & cutoff)
 {
     std::ifstream fin;
 
     uint32_t window;
     uint64_t buffer;
+    uint8_t small_buffer;
     fin.open(filename, std::ios::binary);
     fin.read((char*)&buffer, sizeof(buffer));
     num_of_minimisers = buffer;
 
+    fin.read((char*)&small_buffer, sizeof(small_buffer));
+    cutoff = small_buffer;
     fin.read((char*)&args.k, sizeof(args.k));
     fin.read((char*)&window, sizeof(window));
     args.w_size = seqan3::window_size{window};
@@ -390,6 +394,7 @@ void get_filsize_per_expression_level(std::filesystem::path filename, uint8_t co
     fin.open(filename, std::ios::binary);
     fin.read((char*)&buffer, sizeof(buffer));
     fin.read((char*)&small_buffer, sizeof(small_buffer));
+    fin.read((char*)&small_buffer, sizeof(small_buffer));
     fin.read((char*)&window, sizeof(window));
     fin.read((char*)&buffer, sizeof(buffer));
     bool ungapped;
@@ -423,7 +428,8 @@ void get_filsize_per_expression_level(std::filesystem::path filename, uint8_t co
 template<bool samplewise, bool minimiser_files_given = true>
 void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 std::vector<double> const & fprs,
-                estimate_ibf_arguments & ibf_args, size_t num_hash = 1, std::filesystem::path expression_by_genome_file = "",
+                estimate_ibf_arguments & ibf_args, std::vector<uint8_t> & cutoffs = {},
+                size_t num_hash = 1, std::filesystem::path expression_by_genome_file = "",
                 minimiser_arguments const & minimiser_args = {})
 {
 
@@ -437,8 +443,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     std::vector<std::vector<uint64_t>> sizes{};
     sizes.assign(num_files, {});
 
-    bool const calculate_cutoffs = minimiser_args.cutoffs.empty();
-    std::vector<uint8_t> file_cutoffs{};
+    bool const calculate_cutoffs = cutoffs.empty();
 
     robin_hood::unordered_set<uint64_t> include_set_table; // Storage for minimisers in include file
     robin_hood::unordered_set<uint64_t> exclude_set_table; // Storage for minimisers in exclude file
@@ -474,7 +479,9 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
         if constexpr(minimiser_files_given)
         {
-            read_binary_start(ibf_args, minimiser_files[i], filesize);
+            uint8_t cutoff;
+            read_binary_start(ibf_args, minimiser_files[i], filesize, cutoff);
+            cutoffs.push_back(cutoff);
         }
         else
         {
@@ -484,16 +491,13 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
             // Determine cutoffs
             if (calculate_cutoffs)
-                file_cutoffs.push_back(calculate_cutoff(minimiser_files[file_iterator], minimiser_args.samples[i]));
+                cutoffs.push_back(calculate_cutoff(minimiser_files[file_iterator], minimiser_args.samples[i]));
 
             bool const is_compressed = minimiser_files[file_iterator].extension() == ".gz" || minimiser_files[file_iterator].extension() == ".bgzf" || minimiser_files[file_iterator].extension() == ".bz2";
             bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions,minimiser_files[file_iterator].stem())
                                                  : check_for_fasta_format(seqan3::format_fasta::file_extensions, minimiser_files[file_iterator].extension());
             filesize = std::filesystem::file_size(minimiser_files[file_iterator]) * minimiser_args.samples[i] * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
-            if (calculate_cutoffs)
-                filesize = filesize/((file_cutoffs[i] + 1) * (is_fasta ? 1 : 2));
-            else
-                filesize = filesize/((minimiser_args.cutoffs[i] + 1) * (is_fasta ? 1 : 2));
+            filesize = filesize/((cutoffs[i] + 1) * (is_fasta ? 1 : 2));
         }
         // If set_expression_thresholds_samplewise is not set the expressions as determined by the first file are used for
         // all files.
@@ -579,12 +583,8 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
             {
                seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_files[file_iterator+f]};
-               if (calculate_cutoffs)
-                    fill_hash_table(ibf_args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table,
-                                    (minimiser_args.include_file != ""), file_cutoffs[i]);
-               else
-                    fill_hash_table(ibf_args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table,
-                                    (minimiser_args.include_file != ""), minimiser_args.cutoffs[i]);
+               fill_hash_table(ibf_args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table,
+                               (minimiser_args.include_file != ""), cutoffs[i]);
             }
             cutoff_table.clear();
         }
@@ -667,14 +667,14 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 // Create ibfs
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files,
                           estimate_ibf_arguments & ibf_args, minimiser_arguments & minimiser_args,
-                          std::vector<double> & fpr,
+                          std::vector<double> & fpr,  std::vector<uint8_t> & cutoffs,
                           std::filesystem::path const expression_by_genome_file, size_t num_hash)
 {
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     seqan3::concatenated_sequences<seqan3::dna4_vector> sequences; // Storage for sequences in experiment files
 
-    check_cutoffs_samples(sequence_files, minimiser_args.paired, minimiser_args.samples, minimiser_args.cutoffs);
+    check_cutoffs_samples(sequence_files, minimiser_args.paired, minimiser_args.samples, cutoffs);
 
 
     check_expression(ibf_args.expression_thresholds, ibf_args.number_expression_thresholds, expression_by_genome_file);
@@ -696,9 +696,9 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     }
 
     if (ibf_args.samplewise)
-        ibf_helper<true, false>(sequence_files, fpr, ibf_args, num_hash, expression_by_genome_file, minimiser_args);
+        ibf_helper<true, false>(sequence_files, fpr, ibf_args, cutoffs, num_hash, expression_by_genome_file, minimiser_args);
     else
-        ibf_helper<false, false>(sequence_files, fpr, ibf_args, num_hash, expression_by_genome_file, minimiser_args);
+        ibf_helper<false, false>(sequence_files, fpr, ibf_args, cutoffs, num_hash, expression_by_genome_file, minimiser_args);
 
     store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
 
@@ -716,10 +716,11 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
 
     ibf_args.samplewise = (ibf_args.expression_thresholds.size() == 0);
 
+    std::vector<uint8_t> cutoffs{};
     if (ibf_args.samplewise)
-        ibf_helper<true>(minimiser_files, fpr, ibf_args, num_hash, expression_by_genome_file);
+        ibf_helper<true>(minimiser_files, fpr, ibf_args, cutoffs, num_hash, expression_by_genome_file);
     else
-        ibf_helper<false>(minimiser_files, fpr, ibf_args, num_hash, expression_by_genome_file);
+        ibf_helper<false>(minimiser_files, fpr, ibf_args, cutoffs, num_hash, expression_by_genome_file);
 
     store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
 
@@ -732,7 +733,8 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
                          robin_hood::unordered_set<uint64_t> const & exclude_set_table,
                          min_arguments const & args,
                          minimiser_arguments const & minimiser_args,
-                         unsigned const i)
+                         unsigned const i,
+                         std::vector<uint8_t> & cutoffs)
 {
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     uint16_t count{0};
@@ -744,12 +746,12 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
     std::ofstream outfile;
     unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
 
-    bool const calculate_cutoffs = minimiser_args.cutoffs.empty();
+    bool const calculate_cutoffs = cutoffs.empty();
 
     if (calculate_cutoffs)
         cutoff = calculate_cutoff(sequence_files[file_iterator], minimiser_args.samples[i]);
     else
-        cutoff = minimiser_args.cutoffs[i];
+        cutoff = cutoffs[i];
 
     // Fill hash_table with minimisers.
     for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
@@ -764,6 +766,7 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
                  + ".minimiser", std::ios::binary);
     auto hash_size = hash_table.size();
     outfile.write(reinterpret_cast<const char*>(&hash_size), sizeof(hash_size));
+    outfile.write(reinterpret_cast<const char*>(&cutoff), sizeof(cutoff));
     outfile.write(reinterpret_cast<const char*>(&args.k), sizeof(args.k));
     outfile.write(reinterpret_cast<const char*>(&args.w_size.get()), sizeof(args.w_size.get()));
     outfile.write(reinterpret_cast<const char*>(&args.s.get()), sizeof(args.s.get()));
@@ -784,13 +787,14 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
     outfile.close();
 }
 
-void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_arguments const & args, minimiser_arguments & minimiser_args)
+void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_arguments const & args,
+               minimiser_arguments & minimiser_args, std::vector<uint8_t> & cutoffs)
 {
     // Declarations
     robin_hood::unordered_set<uint64_t> include_set_table{}; // Storage for minimisers in include file
     robin_hood::unordered_set<uint64_t> exclude_set_table{}; // Storage for minimisers in exclude file
 
-    check_cutoffs_samples(sequence_files, minimiser_args.paired, minimiser_args.samples, minimiser_args.cutoffs);
+    check_cutoffs_samples(sequence_files, minimiser_args.paired, minimiser_args.samples, cutoffs);
 
     if (minimiser_args.include_file != "")
         get_include_set_table(args, minimiser_args.include_file, include_set_table);
@@ -805,6 +809,6 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_ar
     #pragma omp parallel for schedule(dynamic, chunk_size)
     for(unsigned i = 0; i < minimiser_args.samples.size(); i++)
     {
-        calculate_minimiser(sequence_files, include_set_table, exclude_set_table, args, minimiser_args, i);
+        calculate_minimiser(sequence_files, include_set_table, exclude_set_table, args, minimiser_args, i, cutoffs);
     }
 }
