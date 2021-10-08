@@ -378,7 +378,7 @@ TEST(estimate, example_different_expressions_per_level)
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
     // Count would expect 6 and 34
-    std::string expected{"GeneA\t7\t32\t"};
+    std::string expected{"GeneA\t8\t26\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file, line) )
@@ -426,7 +426,7 @@ TEST(estimate, example_different_expressions_per_level_multiple_threads)
     std::ifstream output_file(tmp_dir/"expression.out");
     std::string line;
     // Count would expect 6 and 34
-    std::string expected{"GeneA\t7\t32\t"};
+    std::string expected{"GeneA\t8\t26\t"};
     if (output_file.is_open())
     {
         while ( std::getline (output_file,line) )

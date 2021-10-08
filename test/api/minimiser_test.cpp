@@ -201,8 +201,8 @@ TEST(minimiser, small_example_samplewise)
     auto & res = agent.bulk_contains(2);
     EXPECT_RANGE_EQ(expected_result,  res);
     auto & res2 = agent.bulk_contains(0);
-    EXPECT_RANGE_EQ(expected_result,  res2);
     expected_result[0] = 1;
+    EXPECT_RANGE_EQ(expected_result,  res2);
     expected_result[1] = 1;
     auto & res3 = agent.bulk_contains(27);
     EXPECT_RANGE_EQ(expected_result,  res3);

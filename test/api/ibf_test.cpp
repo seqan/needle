@@ -180,7 +180,7 @@ TEST(ibf, no_given_expression_thresholds)
         auto & res = agent.bulk_contains(2);
         EXPECT_RANGE_EQ(expected_result,  res);
         expected_result[0] = 1;
-        auto & res2 = agent.bulk_contains(97);
+        auto & res2 = agent.bulk_contains(24);
         EXPECT_RANGE_EQ(expected_result,  res2);
     }
     std::filesystem::remove(tmp_dir/"IBF_Test_IBF_Level_0");
@@ -217,10 +217,10 @@ TEST(ibf, expression_thresholds_by_genome)
         auto agent = ibf.membership_agent();
 
         std::vector<bool> expected_result(1, 0);
-        auto & res = agent.bulk_contains(0);
+        auto & res = agent.bulk_contains(2);
         EXPECT_RANGE_EQ(expected_result,  res);
         expected_result[0] = 1;
-        auto & res2 = agent.bulk_contains(97);
+        auto & res2 = agent.bulk_contains(192);
         EXPECT_RANGE_EQ(expected_result,  res2);
     }
     std::filesystem::remove(tmp_dir/"IBF_Test_IBF_Level_0");
@@ -333,7 +333,8 @@ TEST(ibf, different_file_sizes)
         auto & res = agent.bulk_contains(2);
         EXPECT_RANGE_EQ(expected_result,  res);
         expected_result[0] = 1;
-        auto & res2 = agent.bulk_contains(97);
+        expected_result[1] = 1;
+        auto & res2 = agent.bulk_contains(24);
         EXPECT_RANGE_EQ(expected_result,  res2);
     }
     std::filesystem::remove(tmp_dir/"IBF_Test_Diff_IBF_Level_0");

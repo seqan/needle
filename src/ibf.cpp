@@ -75,11 +75,10 @@ inline bool check_for_fasta_format(std::vector<std::string> const & valid_extens
 // Determine cutoff for one experiment
 uint8_t calculate_cutoff(std::filesystem::path sequence_file, int samples)
 {
-    // Cutoff according to Mantis paper, divided by two because we store expression thresholds and
-    // -1 because we use "<" and not "<="
-    uint16_t const default_cutoff{24};
+    // Cutoff according to Mantis paper -1 because we use "<" and not "<="
+    uint16_t const default_cutoff{49};
     uint8_t cutoff{default_cutoff};
-    std::array<uint16_t, 4> const cutoffs{0, 1, 4, 9};
+    std::array<uint16_t, 4> const cutoffs{0, 2, 9, 19};
     std::array<uint64_t, 4> const cutoff_bounds{314'572'800, 524'288'000, 1'073'741'824, 3'221'225'472};
     cutoff = default_cutoff;
 
@@ -336,7 +335,7 @@ void check_fpr(uint8_t const number_expression_thresholds, std::vector<double> &
 void get_expression_thresholds(uint8_t const number_expression_thresholds,
                            robin_hood::unordered_node_map<uint64_t, uint16_t> const & hash_table,
                            std::vector<uint16_t> & expression_thresholds, std::vector<uint64_t> & sizes,
-                           robin_hood::unordered_set<uint64_t> const & genome, bool all = true)
+                           robin_hood::unordered_set<uint64_t> const & genome, uint8_t cutoff, bool all = true)
 {
     // Calculate expression thresholds by taking median recursively
     std::vector<uint16_t> counts;
@@ -351,6 +350,8 @@ void get_expression_thresholds(uint8_t const number_expression_thresholds,
     auto prev_exp{0};
     auto exp{0};
     auto max_elem = *std::max_element(counts.begin(), counts.end());
+    // Zero Level = cutoff + 1 
+    expression_thresholds.push_back(cutoff + 1);
     // First Level
     std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());
     exp = counts[prev_pos + counts.size()/dev];
@@ -375,6 +376,7 @@ void get_expression_thresholds(uint8_t const number_expression_thresholds,
 
         prev_exp = exp;
     }
+    sizes.push_back(prev_pos);
     // In case not all levels have a threshold, give the last levels a maximal threshold, which can not be met by any minimiser.
     while(expression_thresholds.size() < number_expression_thresholds)
         expression_thresholds.push_back(max_elem + 1);
@@ -503,7 +505,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         // all files.
         if constexpr (samplewise)
         {
-            uint64_t diff{2};
+            uint64_t diff{1};
             for (std::size_t c = 0; c < ibf_args.number_expression_thresholds - 1; c++)
             {
                 diff = diff * 2;
@@ -598,6 +600,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                                  expression_thresholds,
                                  sizes[i],
                                  genome,
+                                 cutoffs[i],
                                  expression_by_genome);
            expressions[i] = expression_thresholds;
         }
