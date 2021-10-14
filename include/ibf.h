@@ -24,7 +24,6 @@ struct minimiser_arguments
     std::filesystem::path exclude_file; // Needs to be defined when minimisers appearing in this file should NOT be stored
     std::vector<int> samples{}; // Can be used to indicate that sequence files belong to the same experiment
     bool paired = false; // If true, than experiments are seen as paired-end experiments
-    std::vector<uint8_t> cutoffs{};
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
 };
 
@@ -62,9 +61,9 @@ void read_binary(std::filesystem::path filename, robin_hood::unordered_node_map<
 * \param args               Min arguments.
 * \param filename           The filename of the binary file.
 * \param num_of_minimisers  Variable, where to number of minimisers should be stored.
-
+* \param cutoff             cutoff value.
 */
-void read_binary_start(min_arguments & args, std::filesystem::path filename, uint64_t & num_of_minimisers);
+void read_binary_start(min_arguments & args, std::filesystem::path filename, uint64_t & num_of_minimisers, uint8_t & cutoff);
 
 /*! \brief Creates IBFs.
  * \param sequence_files  A vector of sequence file paths.
@@ -72,13 +71,14 @@ void read_binary_start(min_arguments & args, std::filesystem::path filename, uin
  *                        struct ibf_arguments.
  * \param minimiser_args  The minimiser specific arguments to use.
  * \param fpr             The average false positive rate that should be used.
+ * \param cutoffs         List of cutoffs.
  * \param expression_by_genome_file File that contains the only minimisers that should be considered for the
  *                                  determination of the expression thresholds.
  * \param num_hash        The number of hash functions to use.
  *  \returns The expression thresholds per experiment.
  */
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files, estimate_ibf_arguments & ibf_args,
-                          minimiser_arguments & minimiser_args, std::vector<double> & fpr,
+                          minimiser_arguments & minimiser_args, std::vector<double> & fpr, std::vector<uint8_t> & cutoffs,
                           std::filesystem::path const expression_by_genome_file = "",
                           size_t num_hash = 1);
 
@@ -101,6 +101,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
 * \param sequence_files  A vector of sequence file paths.
 * \param args            The minimiser arguments to use (seed, shape, window size).
 * \param minimiser_args  The minimiser specific arguments to use.
+ * \param cutoffs         List of cutoffs.
 */
 void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_arguments const & args,
-               minimiser_arguments & minimiser_args);
+               minimiser_arguments & minimiser_args, std::vector<uint8_t> & cutoffs);

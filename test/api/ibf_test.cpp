@@ -35,8 +35,9 @@ TEST(ibf, given_expression_thresholds)
     std::vector<double> fpr = {0.05};
 
     std::vector<uint16_t> expected{1, 2};
+    std::vector<uint8_t> cutoffs{0};
 
-    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr);
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs);
 
     EXPECT_EQ(expected, medians);
 
@@ -87,8 +88,9 @@ TEST(ibf, given_expression_thresholds_include_file)
     std::vector<double> fpr = {0.05};
 
     std::vector<uint16_t> expected{1, 2};
+    std::vector<uint8_t> cutoffs{0};
 
-    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr);
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs);
 
     EXPECT_EQ(expected, medians);
 
@@ -124,8 +126,9 @@ TEST(ibf, given_expression_thresholds_exclude_file)
     std::vector<double> fpr = {0.05};
 
     std::vector<uint16_t> expected{1, 2};
+    std::vector<uint8_t> cutoffs{0};
 
-    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr);
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs);
 
     EXPECT_EQ(expected, medians);
 
@@ -160,8 +163,9 @@ TEST(ibf, no_given_expression_thresholds)
     std::vector<double> fpr = {0.05};
 
     std::vector<uint16_t> expected{};
+    std::vector<uint8_t> cutoffs{0};
 
-    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr);
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs);
 
     EXPECT_EQ(expected, medians);
 
@@ -176,7 +180,7 @@ TEST(ibf, no_given_expression_thresholds)
         auto & res = agent.bulk_contains(2);
         EXPECT_RANGE_EQ(expected_result,  res);
         expected_result[0] = 1;
-        auto & res2 = agent.bulk_contains(97);
+        auto & res2 = agent.bulk_contains(24);
         EXPECT_RANGE_EQ(expected_result,  res2);
     }
     std::filesystem::remove(tmp_dir/"IBF_Test_IBF_Level_0");
@@ -198,8 +202,9 @@ TEST(ibf, expression_thresholds_by_genome)
     std::vector<double> fpr = {0.05};
 
     std::vector<uint16_t> expected{};
+    std::vector<uint8_t> cutoffs{};
 
-    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr,
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs,
                                         std::string(DATA_INPUT_DIR) + "mini_gen.fasta");
 
     EXPECT_EQ(expected, medians);
@@ -212,10 +217,10 @@ TEST(ibf, expression_thresholds_by_genome)
         auto agent = ibf.membership_agent();
 
         std::vector<bool> expected_result(1, 0);
-        auto & res = agent.bulk_contains(0);
+        auto & res = agent.bulk_contains(2);
         EXPECT_RANGE_EQ(expected_result,  res);
         expected_result[0] = 1;
-        auto & res2 = agent.bulk_contains(97);
+        auto & res2 = agent.bulk_contains(192);
         EXPECT_RANGE_EQ(expected_result,  res2);
     }
     std::filesystem::remove(tmp_dir/"IBF_Test_IBF_Level_0");
@@ -229,22 +234,23 @@ TEST(ibf, throws)
     std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
+    std::vector<uint8_t> cutoffs{};
     initialization_args(ibf_args);
     ibf_args.path_out = tmp_dir/"IBF_Test_";
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     std::vector<double> fpr = {0.05};
 
-    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr), std::invalid_argument);
+    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs), std::invalid_argument);
 
     ibf_args.number_expression_thresholds = 0;
     fpr = {};
-    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr), std::invalid_argument);
+    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs), std::invalid_argument);
 
     fpr = {0.05};
-    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr), std::invalid_argument);
+    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs), std::invalid_argument);
 
     ibf_args.expression_thresholds = {10, 1000};
-    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr), std::invalid_argument);
+    EXPECT_THROW(ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs), std::invalid_argument);
 }
 
 TEST(ibf, given_cutoffs)
@@ -255,13 +261,13 @@ TEST(ibf, given_cutoffs)
     initialization_args(ibf_args);
     ibf_args.path_out = tmp_dir/"IBF_Test_Cut_";
     ibf_args.expression_thresholds = {1, 2};
-    minimiser_args.cutoffs = {0};
+    std::vector<uint8_t> cutoffs = {0};
     std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta"};
     std::vector<double> fpr = {0.05};
 
     std::vector<uint16_t> expected{1, 2};
 
-    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr);
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs);
 
     EXPECT_EQ(expected, medians);
 
@@ -310,8 +316,9 @@ TEST(ibf, different_file_sizes)
     std::vector<double> fpr = {0.05};
 
     std::vector<uint16_t> expected{};
+    std::vector<uint8_t> cutoffs{};
 
-    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr);
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs);
 
     EXPECT_EQ(expected, medians);
 
@@ -326,7 +333,8 @@ TEST(ibf, different_file_sizes)
         auto & res = agent.bulk_contains(2);
         EXPECT_RANGE_EQ(expected_result,  res);
         expected_result[0] = 1;
-        auto & res2 = agent.bulk_contains(97);
+        expected_result[1] = 1;
+        auto & res2 = agent.bulk_contains(24);
         EXPECT_RANGE_EQ(expected_result,  res2);
     }
     std::filesystem::remove(tmp_dir/"IBF_Test_Diff_IBF_Level_0");

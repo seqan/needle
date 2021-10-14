@@ -81,7 +81,7 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
 
             // Perform normalization by dividing through the threshold of the first level. Only works, if multiple expressions were used.
             if constexpr (normalization & multiple_expressions)
-                estimations_i[j] = estimations_i[j]/expressions[0][j];
+                estimations_i[j] = estimations_i[j]/expressions[1][j];
         }
         else
         {
