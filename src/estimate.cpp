@@ -151,6 +151,7 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     std::vector<std::vector<double>> fprs;
 
     omp_set_num_threads(args.threads);
+    seqan3::contrib::bgzf_thread_count = args.threads;
 
     seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin{estimate_args.search_file};
     for (auto & [id, seq] : fin)

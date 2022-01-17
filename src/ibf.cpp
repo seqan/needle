@@ -458,6 +458,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     }
 
     omp_set_num_threads(ibf_args.threads);
+    seqan3::contrib::bgzf_thread_count = ibf_args.threads;
 
     size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / ibf_args.threads), 8u, 64u);
 
@@ -798,6 +799,7 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_ar
         get_include_set_table(args, minimiser_args.exclude_file, exclude_set_table);
 
     omp_set_num_threads(args.threads);
+    seqan3::contrib::bgzf_thread_count = args.threads;
 
     size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(minimiser_args.samples.size() / args.threads), 1u, 64u);
 
