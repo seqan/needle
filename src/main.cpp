@@ -75,6 +75,20 @@ void initialise_arguments_minimiser(seqan3::argument_parser & parser, minimiser_
 
 }
 
+void read_input_file_list(std::vector<std::filesystem::path> & sequence_files, std::filesystem::path input_file)
+{
+    std::ifstream fin{input_file};
+
+    if (!fin.good() || !fin.is_open())
+        throw std::runtime_error{"Could not open file " + input_file.string() + " for reading."};
+
+    std::string line;
+    while (std::getline(fin, line))
+    {
+        sequence_files.push_back(line);
+    }
+}
+
 int run_needle_count(seqan3::argument_parser & parser)
 {
     min_arguments args;
@@ -150,6 +164,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
 {
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
+    std::filesystem::path input_file{};
     std::vector<std::filesystem::path> sequence_files{};
     size_t num_hash{1}; // Number of hash functions to use, default 1
     std::filesystem::path expression_by_genome_file = "";
@@ -162,7 +177,9 @@ int run_needle_ibf(seqan3::argument_parser & parser)
 
     parser.info.short_description = "Constructs the Needle index.";
 
-    parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
+    parser.add_option(input_file, 'i', "in", "Please provide one file containing a list of sequence files.");
+    parser.add_positional_option(sequence_files, "Please provide at least one sequence file OR provide one file "
+                                                 "containing all sequence files with -i.");
     parser.add_option(minimiser_args.experiment_names, '\0', "experiment-names", "If set, names of the experiments are stored"
                                                                                  " in a txt file.");
     parser.add_option(expression_by_genome_file, '\0', "levels-by-genome", "Sequence file containing minimizers, only "
@@ -172,6 +189,8 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     try
     {
         parsing(parser, ibf_args);
+        if (input_file != "")
+            read_input_file_list(sequence_files, input_file);
     }
     catch (seqan3::argument_parser_error const & ext)
     {
@@ -199,11 +218,13 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     size_t num_hash{1}; // Number of hash functions to use, default 1
     std::filesystem::path expression_by_genome_file = "";
     std::vector<double> fpr{}; // The fpr of one IBF, can be different for different expression levels
+    std::filesystem::path input_file{};
 
     parser.info.short_description = "Constructs the Needle index from the minimiser files created by needle minimiser.";
 
-    parser.add_positional_option(minimiser_files, "Please provide at least one minimiser file. It is assumed that the "
-                                                  "header file exits in the same directory.");
+    parser.add_option(input_file, 'i', "in", "Please provide one file containing a list of sequence files.");
+    parser.add_positional_option(minimiser_files, "Please provide at least one minimiser file OR provide one file "
+                                                 "containing all minimiser files with -i.");
 
     parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_option(ibf_args.threads, 't', "threads", "Number of threads to use. Default: 1.");
@@ -216,6 +237,8 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     try
     {
         parsing(parser, ibf_args);
+        if (input_file != "")
+            read_input_file_list(minimiser_files, input_file);
     }
     catch (seqan3::argument_parser_error const & ext)
     {
@@ -244,13 +267,18 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
     std::vector<uint8_t> cutoffs{};
     initialise_min_arguments(parser, args);
     initialise_arguments_minimiser(parser, minimiser_args, cutoffs);
+    std::filesystem::path input_file{};
 
     parser.info.short_description = "Calculates minimiser for given experiments.";
-    parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
+    parser.add_option(input_file, 'i', "in", "Please provide one file containing a list of sequence files.");
+    parser.add_positional_option(sequence_files, "Please provide at least one sequence file OR provide one file "
+                                                 "containing all sequence files with -i.");
 
     try
     {
         parsing(parser, args);
+        if (input_file != "")
+            read_input_file_list(sequence_files, input_file);
     }
     catch (seqan3::argument_parser_error const & ext)
     {
