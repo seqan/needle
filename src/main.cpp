@@ -178,9 +178,8 @@ int run_needle_ibf(seqan3::argument_parser & parser)
 
     parser.info.short_description = "Constructs the Needle index.";
 
-    parser.add_option(input_file, 'i', "in", "Please provide one file containing a list of sequence files.");
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file OR provide one file "
-                                                 "containing all sequence files with -i.");
+                                                 "containing all sequence files with the extension '.lst'.");
     parser.add_option(minimiser_args.experiment_names, '\0', "experiment-names", "If set, names of the experiments are stored"
                                                                                  " in a txt file.");
     parser.add_option(expression_by_genome_file, '\0', "levels-by-genome", "Sequence file containing minimizers, only "
@@ -190,8 +189,13 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     try
     {
         parsing(parser, ibf_args);
-        if (input_file != "")
+        if (sequence_files[0].extension() == ".lst")
+        {
+            input_file = sequence_files[0];
+            sequence_files = {};
             read_input_file_list(sequence_files, input_file);
+        }
+
     }
     catch (seqan3::argument_parser_error const & ext)
     {
@@ -223,9 +227,8 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
 
     parser.info.short_description = "Constructs the Needle index from the minimiser files created by needle minimiser.";
 
-    parser.add_option(input_file, 'i', "in", "Please provide one file containing a list of sequence files.");
     parser.add_positional_option(minimiser_files, "Please provide at least one minimiser file OR provide one file "
-                                                 "containing all minimiser files with -i.");
+                                                 "containing all minimiser files with the extension '.lst'.");
 
     parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
     parser.add_option(ibf_args.threads, 't', "threads", "Number of threads to use. Default: 1.");
@@ -238,8 +241,12 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     try
     {
         parsing(parser, ibf_args);
-        if (input_file != "")
+        if (minimiser_files[0].extension() == ".lst")
+        {
+            input_file = minimiser_files[0];
+            minimiser_files = {};
             read_input_file_list(minimiser_files, input_file);
+        }
     }
     catch (seqan3::argument_parser_error const & ext)
     {
@@ -271,15 +278,18 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
     std::filesystem::path input_file{};
 
     parser.info.short_description = "Calculates minimiser for given experiments.";
-    parser.add_option(input_file, 'i', "in", "Please provide one file containing a list of sequence files.");
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file OR provide one file "
-                                                 "containing all sequence files with -i.");
+                                                 "containing all sequence files with the extension '.lst'.");
 
     try
     {
         parsing(parser, args);
-        if (input_file != "")
+        if (sequence_files[0].extension() == ".lst")
+        {
+            input_file = sequence_files[0];
+            sequence_files = {};
             read_input_file_list(sequence_files, input_file);
+        }
     }
     catch (seqan3::argument_parser_error const & ext)
     {
