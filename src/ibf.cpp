@@ -12,10 +12,10 @@
 #include <numeric>
 #include <omp.h>
 #include <string>
-#include <algorithm> //reorded because of this error:https://github.com/Homebrew/homebrew-core/issues/44579
+#include <algorithm>
 
-#include <seqan3/std/filesystem>
-#include <seqan3/std/ranges>
+#include <filesystem>
+#include <ranges>
 
 #if SEQAN3_WITH_CEREAL
 #include <cereal/archives/binary.hpp>
@@ -350,7 +350,7 @@ void get_expression_thresholds(uint8_t const number_expression_thresholds,
     auto prev_exp{0};
     auto exp{0};
     auto max_elem = *std::max_element(counts.begin(), counts.end());
-    // Zero Level = cutoff + 1 
+    // Zero Level = cutoff + 1
     expression_thresholds.push_back(cutoff + 1);
     // First Level
     std::nth_element(counts.begin() + prev_pos, counts.begin() +  prev_pos + counts.size()/dev, counts.end());

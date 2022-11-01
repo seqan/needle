@@ -13,9 +13,9 @@
 #include <stdlib.h>
 #include <string>
 #include <vector>
-#include <algorithm> //reorded because of this error:https://github.com/Homebrew/homebrew-core/issues/44579
+#include <algorithm>
 
-#include <seqan3/std/ranges>
+#include <ranges>
 
 #if SEQAN3_WITH_CEREAL
 #include <cereal/archives/binary.hpp>
@@ -97,7 +97,7 @@ void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::file
 {
     std::ifstream fin;
     fin.open(filename);
-    auto stream_view = seqan3::views::istreambuf(fin);
+    auto stream_view = seqan3::detail::istreambuf(fin);
     auto stream_it = std::ranges::begin(stream_view);
     int j{0};
     std::vector<float_or_int> empty_vector{};
@@ -109,8 +109,8 @@ void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::file
     {
         if (j == expressions.size())
             expressions.push_back(empty_vector);
-        std::ranges::copy(stream_view | seqan3::views::take_until_or_throw(seqan3::is_char<' '>),
-                                        std::cpp20::back_inserter(buffer));
+        std::ranges::copy(stream_view | seqan3::detail::take_until_or_throw(seqan3::is_char<' '>),
+                                        std::back_inserter(buffer));
         if constexpr(std::same_as<uint16_t, float_or_int>)
             expressions[j].push_back((uint16_t)  std::stoi(buffer));
         else

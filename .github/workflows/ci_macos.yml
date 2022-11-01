@@ -1,13 +1,18 @@
 name: CI on macOS
+
 on:
   push:
     branches:
-      # Push events to branches matching refs/heads/master
       - 'master'
+      - 'main'
   pull_request:
 
+concurrency:
+  group: macos-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
-  CMAKE_VERSION: 3.9.6
+  CMAKE_VERSION: 3.10.3
   SEQAN3_NO_VERSION_CHECK: 1
   TZ: Europe/Berlin
 
@@ -18,12 +23,17 @@ defaults:
 jobs:
   build:
     name: ${{ matrix.name }}
-    runs-on: macos-10.15
+    runs-on: macos-12
     timeout-minutes: 120
     strategy:
       fail-fast: true
       matrix:
         include:
+          - name: "gcc12"
+            cxx: "g++-12"
+            cc: "gcc-12"
+            build_type: Release
+
           - name: "gcc11"
             cxx: "g++-11"
             cc: "gcc-11"
@@ -34,25 +44,9 @@ jobs:
             cc: "gcc-10"
             build_type: Release
 
-          - name: "gcc9 (c++2a)"
-            cxx: "g++-9"
-            cc: "gcc-9"
-            build_type: Release
-            cxx_flags: "-std=c++2a"
-
-          - name: "gcc8"
-            cxx: "g++-8"
-            cc: "gcc-8"
-            build_type: Release
-
-          - name: "gcc7"
-            cxx: "g++-7"
-            cc: "gcc-7"
-            build_type: Release
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: needle
           fetch-depth: 2
@@ -71,7 +65,7 @@ jobs:
         run: bash ./needle/lib/seqan3/.github/workflows/scripts/install_via_brew.sh gcc $(echo "${{ matrix.cxx }}" | sed "s/g++-//g")
 
       - name: Load ccache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: .ccache
           key: ${{ runner.os }}-${{ matrix.name }}-ccache-${{ github.ref }}-${{ github.run_number }}
@@ -85,6 +79,7 @@ jobs:
         run: |
           env cmake --version
           env ${{ matrix.cxx }} --version
+          sudo xcode-select -s '/Applications/Xcode_13.4.1.app/Contents/Developer' # https://github.com/actions/runner-images/issues/6350
 
       - name: Configure tests
         env:
@@ -93,7 +88,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake ../needle -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }}"
+          cmake ../needle -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }} -Wno-interference-size"
 
       - name: Build application
         env:
