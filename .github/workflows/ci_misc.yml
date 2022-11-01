@@ -3,9 +3,13 @@ name: CI misc
 on:
   push:
     branches:
-      # Push events to branches matching refs/heads/master
       - 'master'
+      - 'main'
   pull_request:
+
+concurrency:
+  group: misc-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   SEQAN3_NO_VERSION_CHECK: 1
@@ -18,7 +22,7 @@ defaults:
 jobs:
   build:
     name: ${{ matrix.name }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -28,8 +32,8 @@ jobs:
             build: documentation
             build_threads: 2
             test_threads: 2
-            cmake: 3.9.6
-            doxygen: 1.9.2
+            cmake: 3.10.3
+            doxygen: 1.9.4
             requires_toolchain: false
             requires_ccache: false
             skip_build_tests: true
@@ -37,7 +41,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: needle
           fetch-depth: 2
@@ -68,7 +72,7 @@ jobs:
 
       - name: Load ccache
         if: matrix.requires_ccache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: .ccache
           key: ${{ matrix.name }}-ccache-${{ github.ref }}-${{ github.run_number }}
@@ -91,7 +95,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake ../needle -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }}"
+          cmake ../needle -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }} -Wno-interference-size"
 
       - name: Build tests
         if: ${{!matrix.skip_build_tests}}
@@ -127,7 +131,7 @@ jobs:
       - name: Upload documentation
         if: matrix.build == 'documentation'
         continue-on-error: true
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: documentation
           path: documentation.tar.gz
