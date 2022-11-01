@@ -14,7 +14,7 @@
 
 #include <seqan3/alphabet/container/concatenated_sequences.hpp>
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
-#include <seqan3/std/filesystem>
+#include <filesystem>
 
 #include "shared.h"
 

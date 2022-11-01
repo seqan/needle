@@ -6,7 +6,6 @@
 // -----------------------------------------------------------------------------------------------------
 
 #pragma once
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 #include <robin_hood.h>
 
