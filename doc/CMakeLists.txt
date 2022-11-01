@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.9)
 
 # Find doxygen.
-find_package (Doxygen QUIET)
+find_package (Doxygen 1.9.4 QUIET)
 
 if (${DOXYGEN_FOUND})
     message (STATUS "Found Doxygen: ${DOXYGEN_EXECUTABLE}")
