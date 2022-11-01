@@ -543,7 +543,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
         if (size < 1)
         {
-            throw std::invalid_argument{std::string("[Error]. The choosen expression threshold is not well picked. If you use the automatic ") +
+            throw std::invalid_argument{std::string("[Error]. The chosen expression threshold is not well picked. If you use the automatic ") +
             std::string("expression threshold determination, please decrease the number of levels. If you use ") +
             std::string("your own expression thresholds, decrease the thresholds from level ") +
             std::to_string(ibf_args.expression_thresholds[j]) +

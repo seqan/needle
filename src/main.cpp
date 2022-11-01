@@ -70,7 +70,7 @@ void initialise_arguments_minimiser(seqan3::argument_parser & parser, minimiser_
     parser.add_option(cutoffs, '\0', "cutoff", "Define for each sample, what number of found minimisers "
                                                               "should be considered the result of a sequencing error "
                                                               "and therefore be ignored. Default: Every sample has an"
-                                                              "automatically genereated cutoff, which is based on the "
+                                                              "automatically generated cutoff, which is based on the "
                                                               "file size.");
 
 }
