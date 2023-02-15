@@ -28,8 +28,8 @@ TEST(count, small_example)
     estimate_ibf_arguments args{};
     initialization_args(args);
 
-    count(args, {std::string(DATA_INPUT_DIR) + "mini_example.fasta"}, std::string(DATA_INPUT_DIR) + "mini_gen.fasta", "",
-          false);
+    count(args, {std::string(DATA_INPUT_DIR) + "mini_example.fasta"}, std::string(DATA_INPUT_DIR) + "mini_gen.fasta",
+          std::string(DATA_INPUT_DIR) + "mini_gen.genome", false);
 
     std::ifstream output_file(tmp_dir/"mini_example.count.out");
     std::string line;
@@ -51,7 +51,7 @@ TEST(count, small_example_paired)
     initialization_args(args);
 
     count(args, {std::string(DATA_INPUT_DIR) + "mini_example.fasta", std::string(DATA_INPUT_DIR) + "mini_example.fasta"},
-          std::string(DATA_INPUT_DIR) + "mini_gen.fasta", "", true);
+          std::string(DATA_INPUT_DIR) + "mini_gen.fasta", std::string(DATA_INPUT_DIR) + "mini_gen.genome", true);
 
     std::ifstream output_file(tmp_dir/"mini_example.count.out");
     std::string line;
@@ -73,7 +73,7 @@ TEST(count, small_example_exclude)
     initialization_args(args);
 
     count(args, {std::string(DATA_INPUT_DIR) + "mini_example.fasta"}, std::string(DATA_INPUT_DIR) + "mini_gen.fasta",
-                 std::string(DATA_INPUT_DIR) + "mini_gen2.fasta", false);
+                 std::string(DATA_INPUT_DIR) + "mini_gen2.genome", false);
 
     std::ifstream output_file(tmp_dir/"mini_example.count.out");
     std::string line;
@@ -87,4 +87,22 @@ TEST(count, small_example_exclude)
         output_file.close();
     }
     std::filesystem::remove(tmp_dir/"Count_Test_mini_example.count.out");
+}
+
+TEST(genome, small_example)
+{
+    estimate_ibf_arguments args{};
+    initialization_args(args);
+
+    count_genome(args, std::string(DATA_INPUT_DIR) + "mini_gen.fasta", std::string(DATA_INPUT_DIR) + "mini_gen2.fasta");
+
+    std::ifstream output_file;
+    uint64_t expected{192};
+    output_file.open(tmp_dir/"mini_gen.genome", std::ios::binary);
+    uint64_t minimiser;
+    while(output_file.read((char*)&minimiser, sizeof(minimiser)))
+    {
+        EXPECT_EQ(expected, minimiser);
+    }
+    output_file.close();
 }
