@@ -44,7 +44,7 @@ struct RandomGenerator {
 * \param args               The minimiser arguments to use (seed, shape, window size).
 * \param sequence_files     The sequence files, which contains the reads.
 * \param include_file       A file containing the transcripts which expression values should be determined.
-* \param genome_file        A "*.genome" file constructed with the command genome. 
+* \param genome_file        A "*.genome" file constructed with the command genome.
 * \param paired             Flag to indicate if input data is paired or not.
 */
 void count(min_arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path include_file,
@@ -52,7 +52,7 @@ void count(min_arguments const & args, std::vector<std::filesystem::path> sequen
 
 /*!\brief Creates a set of minimizers to ignore, which should be used as an input to count.
 * \param args               The minimiser arguments to use (seed, shape, window size).
-* \param genome_file        A file containing the transcripts which expression values should be determined.
+* \param include_file        A file containing the transcripts which expression values should be determined.
 * \param exclude_file       A file containing minimizers which should be ignored.
 */
 void count_genome(min_arguments const & args, std::filesystem::path include_file, std::filesystem::path exclude_file);
