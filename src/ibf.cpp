@@ -140,8 +140,52 @@ void fill_hash_table(min_arguments const & args,
     }
 }
 
+void count_genome(min_arguments const & args, std::filesystem::path include_file,
+                  std::filesystem::path exclude_file)
+{
+    robin_hood::unordered_set<uint64_t> include_set_table{};
+    robin_hood::unordered_set<uint64_t> exclude_set_table{};
+    std::ofstream outfile;
+
+    if (exclude_file != "")
+    {
+        seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> fin{exclude_file};
+        for (auto & [seq] : fin)
+        {
+            if (seq.size() >= args.w_size.get())
+            {
+                for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
+                    exclude_set_table.insert(minHash);
+            }
+        }
+    }
+
+    seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> fin2{include_file};
+    for (auto & [seq] : fin2)
+    {
+        if (seq.size() >= args.w_size.get())
+        {
+            for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
+            {
+                if ( !(exclude_set_table.contains(minHash)))
+                    include_set_table.insert(minHash);
+            }
+        }
+    }
+
+    // Write minimiser to binary
+    outfile.open(std::string{args.path_out} + std::string{include_file.stem()}
+                 + ".genome", std::ios::binary);
+
+    for (auto && hash : include_set_table)
+    {
+        outfile.write(reinterpret_cast<const char*>(&hash), sizeof(hash));
+    }
+    outfile.close();
+}
+
 void count(min_arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path include_file,
-           std::filesystem::path exclude_file, bool paired)
+           std::filesystem::path genome_file, bool paired)
 {
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{};
     // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
@@ -151,12 +195,16 @@ void count(min_arguments const & args, std::vector<std::filesystem::path> sequen
     robin_hood::unordered_set<uint64_t> exclude_set_table{};
     std::vector<uint64_t> counter{};
     uint64_t exp{};
+    std::ifstream infile;
     std::ofstream outfile;
     int j;
 
-    get_include_set_table(args, include_file, include_set_table);
-    if (exclude_file != "")
-        get_include_set_table(args, exclude_file, exclude_set_table);
+    // Read minimiser from binary
+    infile.open(genome_file, std::ios::binary);
+    uint64_t minimiser;
+    while(infile.read((char*)&minimiser, sizeof(minimiser)))
+    {}
+    infile.close();
 
     for (unsigned i = 0; i < sequence_files.size(); i++)
     {

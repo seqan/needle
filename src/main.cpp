@@ -95,17 +95,17 @@ int run_needle_count(seqan3::argument_parser & parser)
     initialise_min_arguments(parser, args);
     std::vector<std::filesystem::path> sequence_files{};
     std::filesystem::path genome_file;
-    std::filesystem::path exclude_file{""};
+    std::filesystem::path include_file;
     std::filesystem::path out_path = "./";
     bool paired = false;
 
-    parser.info.short_description = "Get expression value depending on minimizers. This function is only used to test "
-                                    "the validity of Needle's estimation approach. It estimates the expression value "
+    parser.info.short_description = "Get expression value depending on minimizers. This function is an alternative to "
+                                    "pseudoaligners like kallisto. It estimates the expression value "
                                     "for all sequences in the genome file based on the exact minimiser occurrences of "
-                                    "the given sequence files.";
+                                    "the given sequence files. Please run genome beforehand to create the genome file.";
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
-    parser.add_option(genome_file, 'g', "genome", "Please provide one sequence file with transcripts.");
-    parser.add_option(exclude_file, '\0', "exclude", "Please provide one sequence file with minimizers to ignore.");
+    parser.add_option(include_file, '\0', "include", "Please provide one sequence file with transcripts.");
+    parser.add_option(genome_file, '\0', "genome", "Please provide one *.genome file created with the genome command.");
     parser.add_flag(paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
 
     try
@@ -118,7 +118,35 @@ int run_needle_count(seqan3::argument_parser & parser)
         return -1;
     }
 
-    count(args, sequence_files, genome_file, exclude_file, paired);
+    count(args, sequence_files, include_file, genome_file, paired);
+
+    return 0;
+}
+
+int run_needle_count_genome(seqan3::argument_parser & parser)
+{
+    min_arguments args;
+    initialise_min_arguments(parser, args);
+    std::filesystem::path genome_file;
+    std::filesystem::path exclude_file{""};
+    std::filesystem::path out_path = "./";
+    bool paired = false;
+
+    parser.info.short_description = "Creates the genome file necessary as an input to count.";
+    parser.add_positional_option(genome_file, "Please provide one sequence file with transcripts.");
+    parser.add_option(exclude_file, '\0', "exclude", "Please provide one sequence file with minimizers to ignore.");
+
+    try
+    {
+        parsing(parser, args);
+    }
+    catch (seqan3::argument_parser_error const & ext)
+    {
+        seqan3::debug_stream << "Error. Incorrect command line input for count. " << ext.what() << "\n";
+        return -1;
+    }
+
+    count_genome(args, genome_file, exclude_file);
 
     return 0;
 }
@@ -312,7 +340,7 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
 int main(int argc, char const ** argv)
 {
     seqan3::argument_parser needle_parser{"needle", argc, argv, seqan3::update_notifications::on,
-    {"count", "estimate", "ibf", "ibfmin", "minimiser"}};
+    {"count", "estimate", "genome", "ibf", "ibfmin", "minimiser"}};
     needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
                                              "command ibf or estimate the expression of transcripts with the command "
                                              "estimate.");
@@ -331,6 +359,8 @@ int main(int argc, char const ** argv)
     seqan3::argument_parser & sub_parser = needle_parser.get_sub_parser(); // hold a reference to the sub_parser
     if (sub_parser.info.app_name == std::string_view{"needle-count"})
         run_needle_count(sub_parser);
+    if (sub_parser.info.app_name == std::string_view{"needle-genome"})
+        run_needle_count_genome(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-estimate"})
         run_needle_estimate(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-ibf"})

@@ -21,3 +21,9 @@ declare_datasource (FILE mini_gen.fasta
 declare_datasource (FILE mini_gen2.fasta
                     URL ${CMAKE_SOURCE_DIR}/test/data/mini_gen2.fasta
                     URL_HASH SHA256=7e21b3eff20f950e6a0fa2369a0bbbed4cc967a24083876350f839f4a232771b)
+declare_datasource (FILE mini_gen.genome
+                    URL ${CMAKE_SOURCE_DIR}/test/data/mini_gen.genome
+                    URL_HASH SHA256=6a1426381b3966930dc36f30d85a95ccf6855add27b7cf49775b5d65b2902ac4)
+declare_datasource (FILE mini_gen2.genome
+                    URL ${CMAKE_SOURCE_DIR}/test/data/mini_gen2.genome
+                    URL_HASH SHA256=6a1426381b3966930dc36f30d85a95ccf6855add27b7cf49775b5d65b2902ac4)
