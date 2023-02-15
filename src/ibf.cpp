@@ -16,9 +16,8 @@
 #include <thread>
 #include <algorithm> //reorded because of this error:https://github.com/Homebrew/homebrew-core/issues/44579
 
-#include <seqan3/std/filesystem>
-#include <seqan3/std/ranges>
-#include <seqan3/contrib/parallel/buffer_queue.hpp>
+#include <filesystem>
+#include <ranges>
 
 #if SEQAN3_WITH_CEREAL
 #include <cereal/archives/binary.hpp>
@@ -28,7 +27,9 @@
 
 #include <seqan3/alphabet/container/concatenated_sequences.hpp>
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
+#include <seqan3/contrib/parallel/buffer_queue.hpp>
 #include <seqan3/core/concept/cereal.hpp>
+#include <seqan3/core/debug_stream.hpp>
 #include <seqan3/io/sequence_file/all.hpp>
 #include <seqan3/io/stream/detail/fast_istreambuf_iterator.hpp>
 #include <seqan3/utility/container/dynamic_bitset.hpp>
@@ -148,61 +149,17 @@ void fill_hash_table(min_arguments const & args,
     }
 }
 
-void count_genome(min_arguments const & args, std::filesystem::path include_file,
-                  std::filesystem::path exclude_file)
-{
-    robin_hood::unordered_set<uint64_t> include_set_table{};
-    robin_hood::unordered_set<uint64_t> exclude_set_table{};
-    std::ofstream outfile;
-
-    if (exclude_file != "")
-    {
-        seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> fin{exclude_file};
-        for (auto & [seq] : fin)
-        {
-            if (seq.size() >= args.w_size.get())
-            {
-                for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-                    exclude_set_table.insert(minHash);
-            }
-        }
-    }
-
-    seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> fin2{include_file};
-    for (auto & [seq] : fin2)
-    {
-        if (seq.size() >= args.w_size.get())
-        {
-            for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-            {
-                if ( !(exclude_set_table.contains(minHash)))
-                    include_set_table.insert(minHash);
-            }
-        }
-    }
-
-    // Write minimiser to binary
-    outfile.open(std::string{args.path_out} + std::string{include_file.stem()}
-                 + ".genome", std::ios::binary);
-
-    for (auto && hash : include_set_table)
-    {
-        outfile.write(reinterpret_cast<const char*>(&hash), sizeof(hash));
-    }
-    outfile.close();
-}
-
-void fill_hash_table_parallel(arguments const & args,
+void fill_hash_table_parallel(min_arguments const & args,
                               seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> & fin,
                               robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
-                              [[maybe_unused]] robin_hood::unordered_node_map<uint64_t, uint8_t> & cutoff_table,
-                              [[maybe_unused]] robin_hood::unordered_set<uint64_t> const & genome_set_table,
-                              bool const only_genome = false,
+                              robin_hood::unordered_node_map<uint64_t, uint8_t> & cutoff_table,
+                              robin_hood::unordered_set<uint64_t> const & include_set_table,
+                              robin_hood::unordered_set<uint64_t> const & exclude_set_table,
+                              bool const only_include = false,
                               uint8_t cutoff = 0)
 {
     using value_t = typename robin_hood::unordered_node_map<uint64_t, uint16_t>::value_type;
     using local_hash_table_t = robin_hood::unordered_node_map<uint64_t, std::atomic<uint16_t>>;
-    // What model do we want to run here?
 
     // Step 1: load file in batches
     // Step 2: construct minimiser hash values
@@ -211,7 +168,7 @@ void fill_hash_table_parallel(arguments const & args,
     // Step 5: Store all non-referenced minimiser values per batch
 
     std::cout << "cutoff = " << (int32_t) cutoff << "\n";
-    constexpr size_t thread_count = 1;
+    size_t thread_count = args.threads;
     // Run thread: block execution and load next 10000 sequences.
 
     auto seq_file_it = std::ranges::begin(fin);
@@ -220,16 +177,14 @@ void fill_hash_table_parallel(arguments const & args,
 
     auto load_next_chunk = [&] ()
     {
-
         constexpr size_t batch_size = 100000;
 
         std::vector<sequence_t> sequence_batch{};
         sequence_batch.reserve(batch_size);
 
-        // std::cout << "chunk_count = " << chunk_count++ << "\n";
         while (seq_file_it != std::ranges::end(fin) && sequence_batch.size() < batch_size)
         {
-            sequence_batch.push_back(seqan3::get<seqan3::field::seq>(*seq_file_it));
+            sequence_batch.push_back((*seq_file_it).sequence());
             ++seq_file_it;
         }
 
@@ -269,7 +224,7 @@ void fill_hash_table_parallel(arguments const & args,
             // if (minimiser_count == 0)
             //     std::cout << '.';
             // If that would be a local hash table, otherwise.
-            if ((only_genome & (genome_set_table.contains(current_minimiser))) | (!only_genome))
+            if ((only_include & (include_set_table.contains(current_minimiser))) | (!only_include) & !(exclude_set_table.contains(current_minimiser)))
             {
                 if (minimiser_count > cutoff)
                 {
@@ -560,6 +515,49 @@ void fill_hash_table_parallel(arguments const & args,
     // std::cout << "Size of hash table " << hash_table.size() << "\n";
 }
 
+void count_genome(min_arguments const & args, std::filesystem::path include_file,
+                  std::filesystem::path exclude_file)
+{
+    robin_hood::unordered_set<uint64_t> include_set_table{};
+    robin_hood::unordered_set<uint64_t> exclude_set_table{};
+    std::ofstream outfile;
+
+    if (exclude_file != "")
+    {
+        seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> fin{exclude_file};
+        for (auto & [seq] : fin)
+        {
+            if (seq.size() >= args.w_size.get())
+            {
+                for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
+                    exclude_set_table.insert(minHash);
+            }
+        }
+    }
+
+    seqan3::sequence_file_input<my_traits,  seqan3::fields<seqan3::field::seq>> fin2{include_file};
+    for (auto & [seq] : fin2)
+    {
+        if (seq.size() >= args.w_size.get())
+        {
+            for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
+            {
+                if ( !(exclude_set_table.contains(minHash)))
+                    include_set_table.insert(minHash);
+            }
+        }
+    }
+
+    // Write minimiser to binary
+    outfile.open(std::string{args.path_out} + std::string{include_file.stem()}
+                 + ".genome", std::ios::binary);
+
+    for (auto && hash : include_set_table)
+    {
+        outfile.write(reinterpret_cast<const char*>(&hash), sizeof(hash));
+    }
+    outfile.close();
+}
 
 void count(min_arguments const & args, std::vector<std::filesystem::path> sequence_files, std::filesystem::path include_file,
            std::filesystem::path genome_file, bool paired)
