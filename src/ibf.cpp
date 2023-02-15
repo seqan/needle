@@ -129,6 +129,10 @@ void fill_hash_table(min_arguments const & args,
                     hash_table[minHash] = cutoff_table[minHash] + 1;
                     cutoff_table.erase(minHash);
                 }
+                else if (cutoff == 0)
+                {
+                    hash_table[minHash]++;
+                }
                 // If none of the above, increase count in cutoff table. Cutoff Table increases RAM usage by storing
                 // minimisers with a low occurence in a smaller hash table.
                 else
@@ -203,7 +207,9 @@ void count(min_arguments const & args, std::vector<std::filesystem::path> sequen
     infile.open(genome_file, std::ios::binary);
     uint64_t minimiser;
     while(infile.read((char*)&minimiser, sizeof(minimiser)))
-    {}
+    {
+        include_set_table.insert(minimiser);
+    }
     infile.close();
 
     for (unsigned i = 0; i < sequence_files.size(); i++)
