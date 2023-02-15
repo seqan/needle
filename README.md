@@ -7,6 +7,12 @@
 Needle is a tool for semi-quantitative analysis of very large collections of nucleotide sequences.
 Needle stores its data in multiple interleaved Bloom filter, a fast and space efficient probabilistic data structure and uses a windowing scheme (also called minimisers) to reduce the amount of data to store. How many interleaved Bloom filter are used is defined by the user. Each interleaved Bloom filter has a so called expression threshold and stores minimisers with an occurrence greater than or equal to its own expression threshold and smaller than the next biggest expression threshold (if there is no bigger expression threshold, all greater than or equal to the threshold are stored). These expression thresholds are then used during the query (called estimate) to approximate the expression values of given transcripts.
 
+## Citation
+
+Please cite: 
+
+Mitra Darvish, Enrico Seiler, Svenja Mehringer, René Rahn, Knut Reinert, Needle: a fast and space-efficient prefilter for estimating the quantification of very large collections of expression experiments, Bioinformatics, Volume 38, Issue 17, 1 September 2022, Pages 4100–4108, https://doi.org/10.1093/bioinformatics/btac492
+
 ## Download, Install & Build
 
 <details><summary>Prerequisites (click to expand)</summary>
