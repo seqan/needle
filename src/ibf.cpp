@@ -125,7 +125,7 @@ void fill_hash_table(min_arguments const & args,
                 // If minHash is already in hash table, increase count in hash table
                 if (it != hash_table.end())
                 {
-                    it->second = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
+                    it->second = std::min<uint16_t>(65534u, hash_table[minHash]) + 1;
                 }
                 // If minHash equals now the cutoff than add it to the hash table and add plus one for the current
                 // iteration.
@@ -224,12 +224,12 @@ void fill_hash_table_parallel(min_arguments const & args,
             // if (minimiser_count == 0)
             //     std::cout << '.';
             // If that would be a local hash table, otherwise.
-            if ((only_include & (include_set_table.contains(current_minimiser))) | (!only_include) & !(exclude_set_table.contains(current_minimiser)))
+            if ((only_include && (include_set_table.contains(current_minimiser))) || (!only_include) && !(exclude_set_table.contains(current_minimiser)))
             {
                 if (minimiser_count > cutoff)
                 {
                     if (auto it = local_hash_table.find(current_minimiser); it != local_hash_table.end()) // update
-                        it->second += minimiser_count; // FIXME: Overflow.
+                        it->second = static_cast<uint16_t>(std::min(65535ul, it->second + minimiser_count));
                     else // insert first.
                         local_hash_table[current_minimiser] = minimiser_count;
                 }
@@ -362,7 +362,7 @@ void fill_hash_table_parallel(min_arguments const & args,
                     for (auto && [key, counter] : local_hash_table)
                     {
                         if (auto it = hash_table.find(key); it != hash_table.end())
-                            it->second += counter.load();
+                            it->second = static_cast<uint16_t>(std::min<uint32_t>(65535ul, it->second + counter.load()));
                         else
                             hash_table.insert(value_t{key, counter.load()});
                     }
@@ -417,8 +417,6 @@ void fill_hash_table_parallel(min_arguments const & args,
         std::cout << "Here 4\n";
         sync_point_2.arrive_and_wait();
 
-        size_t min_count{};
-
         // We split the minimiser interval into chunks.
         while (true)
         {
@@ -432,7 +430,6 @@ void fill_hash_table_parallel(min_arguments const & args,
             {
                 auto begin_it = std::ranges::lower_bound(tmp, thread_range_begin);
                 auto end_it = std::ranges::upper_bound(tmp, thread_range_end);
-                min_count += std::ranges::distance(begin_it, end_it);
 
                 tmp_remaining_minimisers.insert(tmp_remaining_minimisers.end(), begin_it, end_it);
 
@@ -440,16 +437,6 @@ void fill_hash_table_parallel(min_arguments const & args,
             }
             count_minimiser(thread_local_hash_tables[thread_id], std::move(tmp_remaining_minimisers));
         }
-
-        // sync_point_2.arrive_and_wait();
-
-        {// sequential phase to merge sub tables.
-            std::scoped_lock lk{load_mutex};
-            // std::cout << "Thread " << thread_id << " [" << thread_range_begin << ", " << thread_range_end << "]\n";
-            std::cout << "Counts: " << min_count << "\n";
-            std::cout << "close thread " << thread_id << "\n";
-        }
-
     };
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -474,7 +461,7 @@ void fill_hash_table_parallel(min_arguments const & args,
         for (auto && [key, counter] : local_hash_table)
         {
             if (auto it = hash_table.find(key); it != hash_table.end())
-                it->second += counter.load();
+                it->second = static_cast<uint16_t>(std::min<uint32_t>(65535ul, it->second + counter.load()));
             else
                 hash_table.insert(value_t{key, counter.load()});
         }
@@ -483,36 +470,6 @@ void fill_hash_table_parallel(min_arguments const & args,
     }
     stop = std::chrono::high_resolution_clock::now();
     std::cout << "time merge ht = " << std::chrono::duration_cast<std::chrono::seconds>(stop - start).count() << "s\n";
-
-
-    // Reduce minimisers.
-    // start = std::chrono::high_resolution_clock::now();
-    // std::vector<uint64_t> remaining_minimisers{};
-    // for (auto & local_minimisers : thread_local_remaining_minimisers)
-    // {
-    //     remaining_minimisers.insert(remaining_minimisers.end(), local_minimisers.begin(), local_minimisers.end());
-    //     local_minimisers.resize(0);
-    // }
-
-    // stop = std::chrono::high_resolution_clock::now();
-    // std::cout << "time merge minimisers = " << std::chrono::duration_cast<std::chrono::seconds>(stop - start).count() << "s\n";
-
-    // start = std::chrono::high_resolution_clock::now();
-    // auto final_minimiser = count_minimiser(hash_table, std::move(remaining_minimisers));
-    // stop = std::chrono::high_resolution_clock::now();
-    // std::cout << "time reduce final minimisers = " << std::chrono::duration_cast<std::chrono::seconds>(stop - start).count() << "s\n";
-    // std::cout << "Size of final_minimiser " << final_minimiser.size() << "\n";
-    std::cout << "Size of hash table " << hash_table.size() << "\n";
-    // Final step: lookup all remaining minimiser in the hash table.
-    // start = std::chrono::high_resolution_clock::now();
-    // for (uint64_t minimiser : final_minimiser)
-    // {
-    //     if (auto it = hash_table.find(minimiser); it != hash_table.end()) // update
-    //         ++it->second; // FIXME: Overflow.
-    // }
-    // stop = std::chrono::high_resolution_clock::now();
-    // std::cout << "time add last minimisers = " << std::chrono::duration_cast<std::chrono::seconds>(stop - start).count() << "s\n";
-    // std::cout << "Size of hash table " << hash_table.size() << "\n";
 }
 
 void count_genome(min_arguments const & args, std::filesystem::path include_file,
