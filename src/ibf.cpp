@@ -125,7 +125,7 @@ void fill_hash_table(min_arguments const & args,
                 // If minHash is already in hash table, increase count in hash table
                 if (it != hash_table.end())
                 {
-                    it->second = std::min<uint16_t>(65534u, hash_table[minHash]) + 1;
+                    it->second = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
                 }
                 // If minHash equals now the cutoff than add it to the hash table and add plus one for the current
                 // iteration.
@@ -214,7 +214,7 @@ void fill_hash_table_parallel(min_arguments const & args,
                 if (minimiser_count > cutoff)
                 {
                     if (auto it = local_hash_table.find(current_minimiser); it != local_hash_table.end()) // update
-                        it->second = static_cast<uint16_t>(std::min(65535ul, it->second + minimiser_count));
+                        it->second = static_cast<uint16_t>(std::min(65534ul, it->second + minimiser_count));
                     else // insert first.
                         local_hash_table[current_minimiser] = minimiser_count;
                 }
@@ -304,7 +304,7 @@ void fill_hash_table_parallel(min_arguments const & args,
                     for (auto && [key, counter] : local_hash_table)
                     {
                         if (auto it = hash_table.find(key); it != hash_table.end())
-                            it->second = static_cast<uint16_t>(std::min<uint32_t>(65535ul, it->second + counter.load()));
+                            it->second = static_cast<uint16_t>(std::min<uint32_t>(65534ul, it->second + counter.load()));
                         else
                             hash_table.insert(value_t{key, counter.load()});
                     }
@@ -386,7 +386,7 @@ void fill_hash_table_parallel(min_arguments const & args,
         for (auto && [key, counter] : local_hash_table)
         {
             if (auto it = hash_table.find(key); it != hash_table.end())
-                it->second = static_cast<uint16_t>(std::min<uint32_t>(65535ul, it->second + counter.load()));
+                it->second = static_cast<uint16_t>(std::min<uint32_t>(65534ul, it->second + counter.load()));
             else
                 hash_table.insert(value_t{key, counter.load()});
         }
