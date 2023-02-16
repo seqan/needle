@@ -167,7 +167,6 @@ void fill_hash_table_parallel(min_arguments const & args,
     // Step 4: Provid simple table with minimiser value and count pair
     // Step 5: Store all non-referenced minimiser values per batch
 
-    std::cout << "cutoff = " << (int32_t) cutoff << "\n";
     size_t thread_count = args.threads;
     // Run thread: block execution and load next 10000 sequences.
 
@@ -195,19 +194,8 @@ void fill_hash_table_parallel(min_arguments const & args,
     {
         std::vector<uint64_t> orphaned_minimiser{};
 
-        // Prepare positional minimiser vector.
-        // std::vector<size_t> minimiser_indices{};
-        // minimiser_indices.resize(minimisers.size());
-        // std::iota(minimiser_indices.begin(), minimiser_indices.end(), 0u);
-        // auto projection = [&] (size_t const index) { return minimisers[index]; };
-
-        // std::cout << "Size of minimiser_indices " << minimiser_indices.size() << "\n";
-        // seqan3::debug_stream << "minimisers = " << minimisers << "\n";
-        // seqan3::debug_stream << "minimiser_indices = " << minimiser_indices << "\n";
-
         // Sort the minimiser by their value.
         std::ranges::sort(minimisers, std::less{});
-        // seqan3::debug_stream << "sorted minimiser_indices = " << minimiser_indices << "\n";
 
         // Fill the table with all minimiser counts.
         auto minimiser_it = minimisers.begin();
@@ -221,9 +209,6 @@ void fill_hash_table_parallel(min_arguments const & args,
             // minimiser_it now points to the first non equal position
             size_t const minimiser_count = std::ranges::distance(minimiser_it, next_minimiser_it);
 
-            // if (minimiser_count == 0)
-            //     std::cout << '.';
-            // If that would be a local hash table, otherwise.
             if ((only_include && (include_set_table.contains(current_minimiser))) || (!only_include) && !(exclude_set_table.contains(current_minimiser)))
             {
                 if (minimiser_count > cutoff)
@@ -235,20 +220,13 @@ void fill_hash_table_parallel(min_arguments const & args,
                 }
                 else
                 { // not above cutoff.
-                    // std::cout << minimiser_count << '\t';
                     orphaned_minimiser.insert(orphaned_minimiser.end(), minimiser_it, next_minimiser_it);
                 }
             }
 
             minimiser_it = next_minimiser_it;
         }
-        // std::cout << '\n';
         return orphaned_minimiser;
-    };
-
-    auto create_queue = [] (size_t const capacity)
-    {
-        return seqan3::contrib::fixed_buffer_queue<std::pair<size_t, size_t>>{capacity};
     };
 
     // Block 1:
@@ -267,11 +245,12 @@ void fill_hash_table_parallel(min_arguments const & args,
     seqan3::detail::latch sync_point{thread_count};
     seqan3::detail::latch sync_point_2{thread_count};
     std::atomic<size_t> remaining_minimisers_size{};
-    // std::vector<uint64_t> remaining_minimisers{};
+    std::mutex load_mutex{};
+    std::vector<std::pair<size_t, size_t>> intervals{};
+    std::optional<seqan3::contrib::fixed_buffer_queue<std::pair<size_t, size_t>>> queue;
+
     auto job = [&] (size_t const thread_id)
     {
-        std::cout << "start thread " << thread_id << "\n";
-        static std::mutex load_mutex{};
         while (true)
         {
             std::vector<sequence_t> sequence_batch{};
@@ -279,7 +258,6 @@ void fill_hash_table_parallel(min_arguments const & args,
                 std::scoped_lock load_lk{load_mutex};
                 sequence_batch = load_next_chunk();
             }
-            std::cout << "Size of batch " << sequence_batch.size() << "\n";
             if (sequence_batch.empty()) // Stop construction: no more elements are coming
                 break;
 
@@ -290,10 +268,7 @@ void fill_hash_table_parallel(min_arguments const & args,
                 std::ranges::move(sequence | seqan3::views::minimiser_hash(args.shape, args.w_size, args.s),
                                   std::back_inserter(minimisers));
 
-            // std::cout << "Size of minimisers " << minimisers.size() << "\n";
             auto orphaned_minimiser = count_minimiser(thread_local_hash_tables[thread_id], std::move(minimisers));
-            std::cout << "Size of orphaned minimisers " << orphaned_minimiser.size() << "\n";
-            // remaining_minimiser.reserve(remaining_minimiser.size() + orphaned_minimiser.size());
             thread_local_remaining_minimisers[thread_id].insert(thread_local_remaining_minimisers[thread_id].end(),
                                                                 orphaned_minimiser.begin(),
                                                                 orphaned_minimiser.end());
@@ -306,43 +281,14 @@ void fill_hash_table_parallel(min_arguments const & args,
                                     std::move(thread_local_remaining_minimisers[thread_id]));
                 thread_local_remaining_minimisers[thread_id].reserve((++growth_factor) * growth_size);
             }
-
-            std::cout << "Size of remaining minimisers " << thread_local_remaining_minimisers[thread_id].size() << "\n";
-            std::cout << "Size of hash table " << thread_local_hash_tables[thread_id].size() << "\n";
         }
 
         sync_point.arrive_and_wait();
 
-        // size_t position{};
-        // for (uint64_t minimiser : thread_local_remaining_minimisers[thread_id])
-        // {
-        //     bool is_contained{false};
-        //     for (auto & other_hash_tables : thread_local_hash_tables)
-        //     {
-        //         if (auto it = other_hash_tables.find(minimiser); it != other_hash_tables.end()) // update
-        //         {
-        //             ++it->second; // FIXME: Overflow.
-        //             is_contained = true;
-        //             break;
-        //         }
-        //     }
-        //     if (!is_contained)
-        //         tmp_remaining_minimisers.push_back(minimiser);
-
-        //     ++position;
-        // }
-
-        // std::cout << "old = " <<  thread_local_remaining_minimisers[thread_id].size() << " new = " << tmp_remaining_minimisers.size() << "\n";
-        // thread_local_remaining_minimisers[thread_id] = std::move(tmp_remaining_minimisers);
-
-        std::cout << "Here \n";
-
         {// sequential phase to merge sub tables.
             std::scoped_lock lk{load_mutex};
-            std::cout << "Here i\n";
             if (!is_merged)
             {
-                std::cout << "Here j\n";
                 for (auto & tmp : thread_local_remaining_minimisers)
                 {
                     if (tmp.empty())
@@ -351,10 +297,6 @@ void fill_hash_table_parallel(min_arguments const & args,
                     min_hash = std::min(tmp.front(), min_hash);
                     max_hash = std::max(tmp.back(), max_hash);
                 }
-
-                std::cout << "Smallest value = " << min_hash << "\n";
-                std::cout << "Largest value = " << max_hash << "\n";
-                std::cout << "Range value = " << ((max_hash - min_hash + thread_count - 1) / thread_count) << "\n";
 
                 // Merge local hash_tables.
                 for (auto & local_hash_table : thread_local_hash_tables)
@@ -372,56 +314,45 @@ void fill_hash_table_parallel(min_arguments const & args,
                 is_merged = true;
             }
         }
-        std::cout << "Here 2\n";
 
         // So we split the range of hash values into number of threads
         if (min_hash > max_hash)
-        {
-            std::cout << "Early exit\n";
             return;
-        }
 
         constexpr size_t chunk_count = 10;
         size_t const hash_range = ((max_hash - min_hash + (thread_count * chunk_count) - 1) / (thread_count * chunk_count));
-
-        static std::vector<std::pair<size_t, size_t>> intervals{};
         {// sequential phase to merge sub tables.
             std::scoped_lock lk{load_mutex};
             if (create_intervals)
             {
-                std::cout << "Preparing the queue\n";
+                intervals.clear();
                 for (size_t i = 0; i < chunk_count * thread_count; ++i)
                     intervals.emplace_back(min_hash + hash_range * i, min_hash + hash_range * (i + 1));
 
                 create_intervals = false;
-                seqan3::debug_stream << "intervals = " << intervals << "\n";
             }
         }
-        std::cout << "Here 3\n";
 
-        auto queue = create_queue(intervals.size());
         {// sequential phase to merge sub tables.
             std::scoped_lock lk{load_mutex};
             if (fill_queue)
             {
+                queue.emplace(intervals.size());
                 for (auto interval : intervals)
-                    queue.push(interval);
+                    queue->push(interval);
 
-                queue.close();
-
-                std::cout << "Size of intervals = " << intervals.size() << "\n";
-                std::cout << "Size of queue = " << queue.size() << "\n";
+                queue->close();
                 fill_queue = false;
             }
         }
-        std::cout << "Here 4\n";
+
         sync_point_2.arrive_and_wait();
 
         // We split the minimiser interval into chunks.
         while (true)
         {
             std::pair<size_t, size_t> interval{};
-            if (auto status = queue.wait_pop(interval); status == seqan3::contrib::queue_op_status::closed)
+            if (auto status = queue->wait_pop(interval); status == seqan3::contrib::queue_op_status::closed)
                 break;
 
             auto [thread_range_begin, thread_range_end] = interval;
@@ -439,7 +370,6 @@ void fill_hash_table_parallel(min_arguments const & args,
         }
     };
 
-    auto start = std::chrono::high_resolution_clock::now();
     std::vector<std::thread> thread_pool{};
     for (size_t i = 0; i < thread_count; ++i)
         thread_pool.emplace_back(job, i);
@@ -449,13 +379,8 @@ void fill_hash_table_parallel(min_arguments const & args,
         if (thread.joinable())
             thread.join();
 
-    auto stop = std::chrono::high_resolution_clock::now();
-    std::cout << "time initial counting = " << std::chrono::duration_cast<std::chrono::seconds>(stop - start).count() << "s\n";
 
     // Merge local hash_tables.
-    start = std::chrono::high_resolution_clock::now();
-
-    // Record end time
     for (auto & local_hash_table : thread_local_hash_tables)
     {
         for (auto && [key, counter] : local_hash_table)
@@ -468,8 +393,6 @@ void fill_hash_table_parallel(min_arguments const & args,
 
         local_hash_table.clear();
     }
-    stop = std::chrono::high_resolution_clock::now();
-    std::cout << "time merge ht = " << std::chrono::duration_cast<std::chrono::seconds>(stop - start).count() << "s\n";
 }
 
 void count_genome(min_arguments const & args, std::filesystem::path include_file,
