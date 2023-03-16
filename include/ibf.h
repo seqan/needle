@@ -108,7 +108,8 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
 * \param sequence_files  A vector of sequence file paths.
 * \param args            The minimiser arguments to use (seed, shape, window size).
 * \param minimiser_args  The minimiser specific arguments to use.
- * \param cutoffs         List of cutoffs.
+* \param cutoffs         List of cutoffs.
+* \param ram_friendly    If true, parallelization happens over one file instead of multiple files.
 */
 void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_arguments const & args,
-               minimiser_arguments & minimiser_args, std::vector<uint8_t> & cutoffs);
+               minimiser_arguments & minimiser_args, std::vector<uint8_t> & cutoffs, bool ram_friendly);
