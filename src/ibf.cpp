@@ -730,7 +730,10 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             get_include_set_table(ibf_args, minimiser_args.exclude_file, exclude_set_table);
     }
 
-    omp_set_num_threads(ibf_args.threads);
+    if (minimiser_args.ram_friendly)
+        omp_set_num_threads(1);
+    else
+        omp_set_num_threads(ibf_args.threads);
     seqan3::contrib::bgzf_thread_count = ibf_args.threads;
 
     size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / ibf_args.threads), 8u, 64u);
@@ -832,7 +835,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     outfile_fpr.close();
 
     // Add minimisers to ibf
-    //#pragma omp parallel for schedule(dynamic, chunk_size)
+    #pragma omp parallel for schedule(dynamic, chunk_size)
     for (unsigned i = 0; i < num_files; i++)
     {
         robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
@@ -852,7 +855,11 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
             {
                seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_files[file_iterator+f]};
-               fill_hash_table(ibf_args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table,
+               if (minimiser_args.ram_friendly)
+                    fill_hash_table_parallel(ibf_args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table,
+                               (minimiser_args.include_file != ""), cutoffs[i]);
+               else
+                    fill_hash_table(ibf_args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table,
                                (minimiser_args.include_file != ""), cutoffs[i]);
             }
             cutoff_table.clear();
@@ -1067,7 +1074,7 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
 }
 
 void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_arguments const & args,
-               minimiser_arguments & minimiser_args, std::vector<uint8_t> & cutoffs, bool ram_friendly)
+               minimiser_arguments & minimiser_args, std::vector<uint8_t> & cutoffs)
 {
     // Declarations
     robin_hood::unordered_set<uint64_t> include_set_table{}; // Storage for minimisers in include file
@@ -1084,7 +1091,7 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_ar
     size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(minimiser_args.samples.size() / args.threads), 1u, 64u);
 
     // Add minimisers to ibf
-    if (ram_friendly)
+    if (minimiser_args.ram_friendly)
     {
         for(unsigned i = 0; i < minimiser_args.samples.size(); i++)
         {

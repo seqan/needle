@@ -25,6 +25,7 @@ struct minimiser_arguments
     std::vector<int> samples{}; // Can be used to indicate that sequence files belong to the same experiment
     bool paired = false; // If true, than experiments are seen as paired-end experiments
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
+    bool ram_friendly = false;
 };
 
 //!\brief Generates a random integer not greater than a given maximum
@@ -109,7 +110,6 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
 * \param args            The minimiser arguments to use (seed, shape, window size).
 * \param minimiser_args  The minimiser specific arguments to use.
 * \param cutoffs         List of cutoffs.
-* \param ram_friendly    If true, parallelization happens over one file instead of multiple files.
 */
 void minimiser(std::vector<std::filesystem::path> const & sequence_files, min_arguments const & args,
-               minimiser_arguments & minimiser_args, std::vector<uint8_t> & cutoffs, bool ram_friendly);
+               minimiser_arguments & minimiser_args, std::vector<uint8_t> & cutoffs);
