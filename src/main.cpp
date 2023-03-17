@@ -214,6 +214,9 @@ int run_needle_ibf(seqan3::argument_parser & parser)
                                                                             "those minimizers will be considered for "
                                                                             "determining the expression thresholds.");
 
+    parser.add_flag(minimiser_args.ram_friendly, '\0', "ram", "If ram is set and multiple threads are used, the multithreading"
+                                                      " is more RAM friendly at the cost of being slower.");
+
     try
     {
         parsing(parser, ibf_args);
@@ -308,6 +311,9 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
     parser.info.short_description = "Calculates minimiser for given experiments.";
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file OR provide one file "
                                                  "containing all sequence files with the extension '.lst'.");
+
+    parser.add_flag(minimiser_args.ram_friendly, '\0', "ram", "If ram is set and multiple threads are used, the multithreading"
+                                                      " is more RAM friendly at the cost of being slower.");
 
     try
     {
