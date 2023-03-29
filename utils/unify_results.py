@@ -1,4 +1,5 @@
-# python3 unify_results2.py deseq_in.csv infiles.lst acc_info.lst
+# Use: python3 unify_results.py [output_file] [input_files in one file] [file with accession associated with condition]
+# python3 unify_results.py deseq_in.csv infiles.lst accession.lst
 import os
 import sys
 
