@@ -5,9 +5,9 @@
 // shipped with this file and also available at: https://github.com/seqan/needle/blob/master/LICENSE.md
 // -----------------------------------------------------------------------------------------------------
 
-#include <seqan3/argument_parser/all.hpp>
 #include <filesystem>
 #include <seqan3/core/debug_stream.hpp>
+#include <sharg/all.hpp>
 
 #include "shared.h"
 #include "ibf.h"
@@ -17,33 +17,73 @@ uint32_t w_size;
 uint64_t shape{};
 uint64_t se;
 
-void initialise_min_arguments(seqan3::argument_parser & parser, min_arguments & args)
+void initialise_min_arguments(sharg::parser & parser, min_arguments & args)
 {
-    parser.add_option(args.k, 'k', "kmer", "Define k-mer size for the minimisers. Default: 20.");
-    parser.add_option(w_size, 'w', "window", "Define window size for the minimisers. Default: 60.");
-    parser.add_option(shape, '\0', "shape", "Define a shape for the minimisers by the decimal of a bitvector, where 0 symbolizes a "
-                                           "position to be ignored, 1 a position considered. Default: ungapped.");
-    parser.add_option(se, '\0', "seed", "Define seed for the minimisers.");
-    parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
-    parser.add_option(args.threads, 't', "threads", "Number of threads to use. Default: 1.");
+    parser.add_option(args.k, sharg::config {
+        .short_id    = 'k',
+        .long_id     = "kmer",
+        .description = "Define k-mer size for the minimisers. Default: 20."
+    });
+    parser.add_option(w_size, sharg::config {
+        .short_id    = 'w',
+        .long_id     = "window",
+        .description = "Define window size for the minimisers. Default: 60."
+    });
+    parser.add_option(shape, sharg::config {
+        .long_id     = "shape",
+        .description = "Define a shape for the minimisers by the decimal of a bitvector, where 0 symbolizes a "
+                       "position to be ignored, 1 a position considered. Default: ungapped."
+    });
+    parser.add_option(se, sharg::config {
+        .long_id     = "seed",
+        .description = "Define seed for the minimisers."
+    });
+    parser.add_option(args.path_out, sharg::config {
+        .short_id    = 'o',
+        .long_id     = "out",
+        .description = "Directory, where output files should be saved."
+    });
+    parser.add_option(args.threads, sharg::config {
+        .short_id    = 't',
+        .long_id     = "threads",
+        .description = "Number of threads to use. Default: 1."
+    });
 }
 
-void initialise_arguments_ibf(seqan3::argument_parser & parser, estimate_ibf_arguments & ibf_args, size_t & num_hash,
+void initialise_arguments_ibf(sharg::parser & parser, estimate_ibf_arguments & ibf_args, size_t & num_hash,
                               std::vector<double> & fpr)
 {
-    parser.add_flag(ibf_args.compressed, 'c', "compressed", "If c is set, the IBFS are compressed. Default: Not compressed.");
-    parser.add_option(fpr, 'f', "fpr", "List of bin false positive rate per expression level. If only one is given"
-                                                          ", then that fpr is used for all expression levels.");
-    parser.add_option(ibf_args.expression_thresholds, 'e', "expression_thresholds", "Which expression thresholds should be used for"
-                                                                                " constructing the IBFs.");
-    parser.add_option(ibf_args.number_expression_thresholds, 'l', "number_expression_thresholds", "Number of expression thresholds. "
-                                                              "Can be set alternatively to expression_thresholds, then "
-                                                              "the expression thresholds are determined automatically.");
-    parser.add_option(num_hash, 'n', "hash", "Number of hash functions that should be used when constructing "
-                                             "one IBF.");
+    parser.add_flag(ibf_args.compressed, sharg::config {
+        .short_id    = 'c',
+        .long_id     = "compressed",
+        .description = "If c is set, the IBFS are compressed. Default: Not compressed."
+    });
+    parser.add_option(fpr, sharg::config {
+        .short_id    = 'f',
+        .long_id     = "fpr",
+        .description = "List of bin false positive rate per expression level. If only one is given, "
+                       "then that fpr is used for all expression levels."
+    });
+    parser.add_option(ibf_args.expression_thresholds, sharg::config {
+        .short_id    = 'e',
+        .long_id     = "expression_thresholds",
+        .description = "Which expression thresholds should be used for "
+                       "constructing the IBFs."
+    });
+    parser.add_option(ibf_args.number_expression_thresholds, sharg::config {
+        .short_id    = 'l',
+        .long_id     = "number_expression_thresholds",
+        .description = "Number of expression thresholds. Can be set alternatively to expression_thresholds, then "
+                       "the expression thresholds are determined automatically."
+    });
+    parser.add_option(num_hash, sharg::config {
+        .short_id    = 'n',
+        .long_id     = "hash",
+        .description = "Number of hash functions that should be used when constructing one IBF."
+    });
 }
 
-void parsing(seqan3::argument_parser & parser, min_arguments & args)
+void parsing(sharg::parser & parser, min_arguments & args)
 {
     w_size = args.w_size.get();
     se = args.s.get();
@@ -57,21 +97,32 @@ void parsing(seqan3::argument_parser & parser, min_arguments & args)
 }
 
 // Initialize arguments for ibf and minimiser
-void initialise_arguments_minimiser(seqan3::argument_parser & parser, minimiser_arguments & minimiser_args, std::vector<uint8_t> & cutoffs)
+void initialise_arguments_minimiser(sharg::parser & parser, minimiser_arguments & minimiser_args, std::vector<uint8_t> & cutoffs)
 {
-    parser.add_option(minimiser_args.include_file, '\0', "include", "Sequence file containing minimizers, only those "
-                                                                    "minimizers will be considered.");
-    parser.add_option(minimiser_args.exclude_file, '\0', "exclude", "Sequence file containing minimizers that should "
-                                                                    "not be stored.");
-    parser.add_option(minimiser_args.samples, '\0', "samples", "Define which samples belong together, sum has to be "
-                                                               "equal to number of sequence files. Default: Every"
-                                                               " sequence file is one sample from one experiment.");
-    parser.add_flag(minimiser_args.paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
-    parser.add_option(cutoffs, '\0', "cutoff", "Define for each sample, what number of found minimisers "
-                                                              "should be considered the result of a sequencing error "
-                                                              "and therefore be ignored. Default: Every sample has an"
-                                                              "automatically generated cutoff, which is based on the "
-                                                              "file size.");
+    parser.add_option(minimiser_args.include_file, sharg::config {
+        .long_id  =      "include",
+        .description =   "Sequence file containing minimizers, only those minimizers will be considered."
+    });
+    parser.add_option(minimiser_args.exclude_file, sharg::config {
+        .long_id  =      "exclude",
+        .description =   "Sequence file containing minimizers that should not be stored."
+    });
+    parser.add_option(minimiser_args.samples, sharg::config {
+        .long_id  =      "samples",
+        .description =   "Define which samples belong together, sum has to be equal to number of sequence files. "
+                         "Default: Every sequence file is one sample from one experiment."
+    });
+    parser.add_flag(minimiser_args.paired, sharg::config {
+        .short_id    = 'p',
+        .long_id     = "paired",
+        .description = "If set, experiments are paired. Default: Not paired."
+    });
+    parser.add_option(cutoffs, sharg::config {
+        .long_id  =      "cutoff",
+        .description =   "Define for each sample, what number of found minimisers should be considered the result of "
+                         "a sequencing error and therefore be ignored. Default: Every sample has an automatically "
+                         "generated cutoff, which is based on the file size."
+    });
 
 }
 
@@ -89,7 +140,7 @@ void read_input_file_list(std::vector<std::filesystem::path> & sequence_files, s
     }
 }
 
-int run_needle_count(seqan3::argument_parser & parser)
+int run_needle_count(sharg::parser & parser)
 {
     min_arguments args;
     initialise_min_arguments(parser, args);
@@ -103,16 +154,28 @@ int run_needle_count(seqan3::argument_parser & parser)
                                     "pseudoaligners like kallisto. It estimates the expression value "
                                     "for all sequences in the genome file based on the exact minimiser occurrences of "
                                     "the given sequence files. Please run genome beforehand to create the genome file.";
-    parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
-    parser.add_option(include_file, '\0', "include", "Please provide one sequence file with transcripts.");
-    parser.add_option(genome_file, '\0', "genome", "Please provide one *.genome file created with the genome command.");
-    parser.add_flag(paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
+    parser.add_positional_option(sequence_files, sharg::config {
+        .description = "Please provide at least one sequence file."
+    });
+    parser.add_option(include_file, sharg::config {
+        .long_id     = "include",
+        .description = "Please provide one sequence file with transcripts."
+    });
+    parser.add_option(genome_file, sharg::config {
+        .long_id     = "genome",
+        .description = "Please provide one *.genome file created with the genome command."
+    });
+    parser.add_flag(paired, sharg::config {
+        .short_id    = 'p',
+        .long_id     = "paired",
+        .description = "If set, experiments are paired. Default: Not paired."
+    });
 
     try
     {
         parsing(parser, args);
     }
-    catch (seqan3::argument_parser_error const & ext)
+    catch (sharg::parser_error const & ext)
     {
         seqan3::debug_stream << "Error. Incorrect command line input for count. " << ext.what() << "\n";
         return -1;
@@ -123,7 +186,7 @@ int run_needle_count(seqan3::argument_parser & parser)
     return 0;
 }
 
-int run_needle_count_genome(seqan3::argument_parser & parser)
+int run_needle_count_genome(sharg::parser & parser)
 {
     min_arguments args;
     initialise_min_arguments(parser, args);
@@ -133,14 +196,19 @@ int run_needle_count_genome(seqan3::argument_parser & parser)
     bool paired = false;
 
     parser.info.short_description = "Creates the genome file necessary as an input to count.";
-    parser.add_positional_option(genome_file, "Please provide one sequence file with transcripts.");
-    parser.add_option(exclude_file, '\0', "exclude", "Please provide one sequence file with minimizers to ignore.");
+    parser.add_positional_option(genome_file, sharg::config {
+        .description = "Please provide one sequence file with transcripts."
+    });
+    parser.add_option(exclude_file, sharg::config {
+        .long_id     = "exclude",
+        .description = "Please provide one sequence file with minimizers to ignore."
+    });
 
     try
     {
         parsing(parser, args);
     }
-    catch (seqan3::argument_parser_error const & ext)
+    catch (sharg::parser_error const & ext)
     {
         seqan3::debug_stream << "Error. Incorrect command line input for count. " << ext.what() << "\n";
         return -1;
@@ -151,7 +219,7 @@ int run_needle_count_genome(seqan3::argument_parser & parser)
     return 0;
 }
 
-int run_needle_estimate(seqan3::argument_parser & parser)
+int run_needle_estimate(sharg::parser & parser)
 {
     estimate_ibf_arguments args{};
     estimate_arguments estimate_args{};
@@ -161,23 +229,38 @@ int run_needle_estimate(seqan3::argument_parser & parser)
 
     args.path_out = "expressions.out";
 
-    parser.add_positional_option(estimate_args.search_file, "Please provide a sequence file.");
-    parser.add_option(estimate_args.path_in, 'i', "in", "Directory where input files can be found.");
-    parser.add_option(args.path_out, 'o', "out", "Directory, where output files should be saved.");
-    parser.add_option(args.threads, 't', "threads", "Number of threads to use. Default: 1.");
-    parser.add_flag(estimate_args.normalization_method, 'm', "normalization-mode",
-                                                            "Set, if normalization is wanted. Normalization is achieved by"
-                                                            "dividing the expression value with the expression threshold of the first"
-                                                            " ibf. Only make sense if every bin has its own expression "
-                                                            "thresholds (which is the case if expression thresholds "
-                                                            "were generated automatically)."
-                                                            "Default: False.");
+    parser.add_positional_option(estimate_args.search_file, sharg::config {
+        .description = "Please provide a sequence file."
+    });
+    parser.add_option(estimate_args.path_in, sharg::config {
+        .short_id    = 'i',
+        .long_id     = "in",
+        .description = "Directory where input files can be found."
+    });
+    parser.add_option(args.path_out, sharg::config {
+        .short_id    = 'o',
+        .long_id     = "out",
+        .description = "Directory, where output files should be saved."
+    });
+    parser.add_option(args.threads, sharg::config {
+        .short_id    = 't',
+        .long_id     = "threads",
+        .description = "Number of threads to use. Default: 1."
+    });
+    parser.add_flag(estimate_args.normalization_method, sharg::config {
+        .short_id    = 'm',
+        .long_id     = "normalization-mode",
+        .description = "Set, if normalization is wanted. Normalization is achieved by dividing the expression value "
+                       "with the expression threshold of the first ibf. Only make sense if every bin has its own "
+                       "expression thresholds (which is the case if expression thresholds were generated "
+                       "automatically). Default: False."
+    });
 
     try
     {
         parsing(parser, args);
     }
-    catch (seqan3::argument_parser_error const & ext)                     // catch user errors
+    catch (sharg::parser_error const & ext)                     // catch user errors
     {
         seqan3::debug_stream << "Error. Incorrect command line input for estimate. " << ext.what() << "\n";
         return -1;
@@ -189,7 +272,7 @@ int run_needle_estimate(seqan3::argument_parser & parser)
 }
 
 
-int run_needle_ibf(seqan3::argument_parser & parser)
+int run_needle_ibf(sharg::parser & parser)
 {
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
@@ -206,16 +289,25 @@ int run_needle_ibf(seqan3::argument_parser & parser)
 
     parser.info.short_description = "Constructs the Needle index.";
 
-    parser.add_positional_option(sequence_files, "Please provide at least one sequence file OR provide one file "
-                                                 "containing all sequence files with the extension '.lst'.");
-    parser.add_option(minimiser_args.experiment_names, '\0', "experiment-names", "If set, names of the experiments are stored"
-                                                                                 " in a txt file.");
-    parser.add_option(expression_by_genome_file, '\0', "levels-by-genome", "Sequence file containing minimizers, only "
-                                                                            "those minimizers will be considered for "
-                                                                            "determining the expression thresholds.");
+    parser.add_positional_option(sequence_files, sharg::config {
+        .description = "Please provide at least one sequence file OR provide one file containing all sequence files "
+                       "with the extension '.lst'."
+    });
+    parser.add_option(minimiser_args.experiment_names, sharg::config {
+        .long_id     = "experiment-names",
+        .description = "If set, names of the experiments are stored in a txt file."
+    });
+    parser.add_option(expression_by_genome_file, sharg::config {
+        .long_id     = "levels-by-genome",
+        .description = "Sequence file containing minimizers, only those minimizers will be considered for "
+                       "determining the expression thresholds."
+    });
 
-    parser.add_flag(minimiser_args.ram_friendly, '\0', "ram", "If ram is set and multiple threads are used, the multithreading"
-                                                      " is more RAM friendly at the cost of being slower.");
+    parser.add_flag(minimiser_args.ram_friendly, sharg::config {
+        .long_id     = "ram",
+        .description = "If ram is set and multiple threads are used, the multithreading"
+                       " is more RAM friendly at the cost of being slower."
+    });
 
     try
     {
@@ -228,7 +320,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
         }
 
     }
-    catch (seqan3::argument_parser_error const & ext)
+    catch (sharg::parser_error const & ext)
     {
         seqan3::debug_stream << "Error. Incorrect command line input for ibf. " << ext.what() << "\n";
         return -1;
@@ -247,7 +339,7 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     return 0;
 }
 
-int run_needle_ibf_min(seqan3::argument_parser & parser)
+int run_needle_ibf_min(sharg::parser & parser)
 {
     estimate_ibf_arguments ibf_args{};
     std::vector<std::filesystem::path> minimiser_files{};
@@ -258,14 +350,26 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
 
     parser.info.short_description = "Constructs the Needle index from the minimiser files created by needle minimiser.";
 
-    parser.add_positional_option(minimiser_files, "Please provide at least one minimiser file OR provide one file "
-                                                 "containing all minimiser files with the extension '.lst'.");
+    parser.add_positional_option(minimiser_files, sharg::config {
+        .description = "Please provide at least one minimiser file OR provide one file "
+                       "containing all minimiser files with the extension '.lst'."
+    });
 
-    parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
-    parser.add_option(ibf_args.threads, 't', "threads", "Number of threads to use. Default: 1.");
-    parser.add_option(expression_by_genome_file, '\0', "levels-by-genome", "Sequence file containing minimizers, only "
-                                                                            "those minimizers will be considered for "
-                                                                            "determining the expression thresholds.");
+    parser.add_option(ibf_args.path_out, sharg::config {
+        .short_id    = 'o',
+        .long_id     = "out",
+        .description = "Directory, where output files should be saved."
+    });
+    parser.add_option(ibf_args.threads, sharg::config {
+        .short_id    = 't',
+        .long_id     = "threads",
+        .description = "Number of threads to use. Default: 1."
+    });
+    parser.add_option(expression_by_genome_file, sharg::config {
+        .long_id     = "levels-by-genome",
+        .description = "Sequence file containing minimizers, only those minimizers will be considered for "
+                       "determining the expression thresholds."
+    });
 
     initialise_arguments_ibf(parser, ibf_args, num_hash, fpr);
 
@@ -279,7 +383,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
             read_input_file_list(minimiser_files, input_file);
         }
     }
-    catch (seqan3::argument_parser_error const & ext)
+    catch (sharg::parser_error const & ext)
     {
         seqan3::debug_stream << "Error. Incorrect command line input for ibfmin. " << ext.what() << "\n";
         return -1;
@@ -298,7 +402,7 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     return 0;
 }
 
-int run_needle_minimiser(seqan3::argument_parser & parser)
+int run_needle_minimiser(sharg::parser & parser)
 {
     min_arguments args{};
     minimiser_arguments minimiser_args{};
@@ -309,11 +413,16 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
     std::filesystem::path input_file{};
 
     parser.info.short_description = "Calculates minimiser for given experiments.";
-    parser.add_positional_option(sequence_files, "Please provide at least one sequence file OR provide one file "
-                                                 "containing all sequence files with the extension '.lst'.");
+    parser.add_positional_option(sequence_files, sharg::config {
+        .description = "Please provide at least one sequence file OR provide one file "
+                       "containing all sequence files with the extension '.lst'."
+    });
 
-    parser.add_flag(minimiser_args.ram_friendly, '\0', "ram", "If ram is set and multiple threads are used, the multithreading"
-                                                      " is more RAM friendly at the cost of being slower.");
+    parser.add_flag(minimiser_args.ram_friendly, sharg::config {
+        .long_id     = "ram",
+        .description = "If ram is set and multiple threads are used, the multithreading "
+                       "is more RAM friendly at the cost of being slower."
+    });
 
     try
     {
@@ -325,7 +434,7 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
             read_input_file_list(sequence_files, input_file);
         }
     }
-    catch (seqan3::argument_parser_error const & ext)
+    catch (sharg::parser_error const & ext)
     {
         seqan3::debug_stream << "Error. Incorrect command line input for minimiser. " << ext.what() << "\n";
         return -1;
@@ -345,7 +454,7 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
 
 int main(int argc, char const ** argv)
 {
-    seqan3::argument_parser needle_parser{"needle", argc, argv, seqan3::update_notifications::on,
+    sharg::parser needle_parser{"needle", argc, argv, sharg::update_notifications::on,
     {"count", "estimate", "genome", "ibf", "ibfmin", "minimiser"}};
     needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
                                              "command ibf or estimate the expression of transcripts with the command "
@@ -357,12 +466,12 @@ int main(int argc, char const ** argv)
     {
         needle_parser.parse(); // trigger command line parsing
     }
-    catch (seqan3::argument_parser_error const & ext) // catch user errors
+    catch (sharg::parser_error const & ext) // catch user errors
     {
         seqan3::debug_stream << "Error. Incorrect command. See needle help for more information." << ext.what() << "\n";
         return -1;
     }
-    seqan3::argument_parser & sub_parser = needle_parser.get_sub_parser(); // hold a reference to the sub_parser
+    sharg::parser & sub_parser = needle_parser.get_sub_parser(); // hold a reference to the sub_parser
     if (sub_parser.info.app_name == std::string_view{"needle-count"})
         run_needle_count(sub_parser);
     if (sub_parser.info.app_name == std::string_view{"needle-genome"})
