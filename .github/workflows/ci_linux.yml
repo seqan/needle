@@ -32,22 +32,26 @@ jobs:
           - name: "Coverage gcc12"
             cxx: "g++-12"
             cc: "gcc-12"
+            cxx_flags: "-std=c++20"
             build: coverage
             build_type: Coverage
 
           - name: "gcc12"
             cxx: "g++-12"
             cc: "gcc-12"
+            cxx_flags: "-std=c++20"
             build_type: Release
 
           - name: "gcc11"
             cxx: "g++-11"
             cc: "gcc-11"
+            cxx_flags: "-std=c++20"
             build_type: Release
 
           - name: "gcc10"
             cxx: "g++-10"
             cc: "gcc-10"
+            cxx_flags: "-std=c++20"
             build_type: Release
 
     steps:
