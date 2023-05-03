@@ -30,6 +30,7 @@ jobs:
         include:
           - name: "Documentation"
             build: documentation
+            cxx_flags: "-std=c++20"
             build_threads: 2
             test_threads: 2
             cmake: 3.16.9
