@@ -22,17 +22,17 @@ void initialise_min_arguments(sharg::parser & parser, min_arguments & args)
     parser.add_option(args.k, sharg::config {
         .short_id    = 'k',
         .long_id     = "kmer",
-        .description = "Define k-mer size for the minimisers. Default: 20."
+        .description = "Define k-mer size for the minimisers."
     });
     parser.add_option(w_size, sharg::config {
         .short_id    = 'w',
         .long_id     = "window",
-        .description = "Define window size for the minimisers. Default: 60."
+        .description = "Define window size for the minimisers. Default: 60."//!TODO default value?
     });
     parser.add_option(shape, sharg::config {
         .long_id     = "shape",
         .description = "Define a shape for the minimisers by the decimal of a bitvector, where 0 symbolizes a "
-                       "position to be ignored, 1 a position considered. Default: ungapped."
+                       "position to be ignored, 1 a position considered. Default: ungapped." //!TODO default value?
     });
     parser.add_option(se, sharg::config {
         .long_id     = "seed",
@@ -46,7 +46,7 @@ void initialise_min_arguments(sharg::parser & parser, min_arguments & args)
     parser.add_option(args.threads, sharg::config {
         .short_id    = 't',
         .long_id     = "threads",
-        .description = "Number of threads to use. Default: 1."
+        .description = "Number of threads to use."
     });
 }
 
@@ -56,7 +56,7 @@ void initialise_arguments_ibf(sharg::parser & parser, estimate_ibf_arguments & i
     parser.add_flag(ibf_args.compressed, sharg::config {
         .short_id    = 'c',
         .long_id     = "compressed",
-        .description = "If c is set, the IBFS are compressed. Default: Not compressed."
+        .description = "If c is set, the IBFS are compressed."
     });
     parser.add_option(fpr, sharg::config {
         .short_id    = 'f',
@@ -110,18 +110,18 @@ void initialise_arguments_minimiser(sharg::parser & parser, minimiser_arguments 
     parser.add_option(minimiser_args.samples, sharg::config {
         .long_id  =      "samples",
         .description =   "Define which samples belong together, sum has to be equal to number of sequence files. "
-                         "Default: Every sequence file is one sample from one experiment."
+                         "Default: Every sequence file is one sample from one experiment." //!TODO default value?
     });
     parser.add_flag(minimiser_args.paired, sharg::config {
         .short_id    = 'p',
         .long_id     = "paired",
-        .description = "If set, experiments are paired. Default: Not paired."
+        .description = "If set, experiments are paired."
     });
     parser.add_option(cutoffs, sharg::config {
         .long_id  =      "cutoff",
         .description =   "Define for each sample, what number of found minimisers should be considered the result of "
                          "a sequencing error and therefore be ignored. Default: Every sample has an automatically "
-                         "generated cutoff, which is based on the file size."
+                         "generated cutoff, which is based on the file size." //!TODO default value
     });
 
 }
@@ -168,7 +168,7 @@ int run_needle_count(sharg::parser & parser)
     parser.add_flag(paired, sharg::config {
         .short_id    = 'p',
         .long_id     = "paired",
-        .description = "If set, experiments are paired. Default: Not paired."
+        .description = "If set, experiments are paired.",
     });
 
     try
@@ -245,7 +245,7 @@ int run_needle_estimate(sharg::parser & parser)
     parser.add_option(args.threads, sharg::config {
         .short_id    = 't',
         .long_id     = "threads",
-        .description = "Number of threads to use. Default: 1."
+        .description = "Number of threads to use."
     });
     parser.add_flag(estimate_args.normalization_method, sharg::config {
         .short_id    = 'm',
@@ -253,7 +253,7 @@ int run_needle_estimate(sharg::parser & parser)
         .description = "Set, if normalization is wanted. Normalization is achieved by dividing the expression value "
                        "with the expression threshold of the first ibf. Only make sense if every bin has its own "
                        "expression thresholds (which is the case if expression thresholds were generated "
-                       "automatically). Default: False."
+                       "automatically)."
     });
 
     try
@@ -363,7 +363,7 @@ int run_needle_ibf_min(sharg::parser & parser)
     parser.add_option(ibf_args.threads, sharg::config {
         .short_id    = 't',
         .long_id     = "threads",
-        .description = "Number of threads to use. Default: 1."
+        .description = "Number of threads to use."
     });
     parser.add_option(expression_by_genome_file, sharg::config {
         .long_id     = "levels-by-genome",
