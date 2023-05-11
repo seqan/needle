@@ -124,5 +124,5 @@ void store_ibf(IBFType const & ibf,
 {
     std::ofstream os{opath, std::ios::binary};
     cereal::BinaryOutputArchive oarchive{os};
-    oarchive(seqan3::interleaved_bloom_filter(ibf));
+    oarchive(ibf);
 }
