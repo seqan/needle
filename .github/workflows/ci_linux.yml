@@ -33,25 +33,29 @@ jobs:
             cxx: "g++-12"
             cc: "gcc-12"
             cxx_flags: "-std=c++20"
+            pkg: "g++-12"
             build: coverage
             build_type: Coverage
+
+          - name: "gcc13"
+            cxx: "g++"
+            cc: "gcc"
+            cxx_flags: "-std=c++20"
+            pkg: "g++-13"
+            build_type: Release
 
           - name: "gcc12"
             cxx: "g++-12"
             cc: "gcc-12"
             cxx_flags: "-std=c++20"
+            pkg: "g++-12"
             build_type: Release
 
           - name: "gcc11"
             cxx: "g++-11"
             cc: "gcc-11"
             cxx_flags: "-std=c++20"
-            build_type: Release
-
-          - name: "gcc10"
-            cxx: "g++-10"
-            cc: "gcc-10"
-            cxx_flags: "-std=c++20"
+            pkg: "g++-11"
             build_type: Release
 
     steps:
@@ -72,7 +76,7 @@ jobs:
         run: sudo apt-get install --yes ccache
 
       - name: Install compiler ${{ matrix.cxx }}
-        run: sudo apt-get install --yes ${{ matrix.cxx }}
+        run: sudo apt-get install --yes ${{ matrix.pkg }}
 
       - name: Install lcov
         if: matrix.build == 'coverage'
