@@ -7,46 +7,94 @@ library("DESeq2")
 BiocManager::install("pheatmap")
 library("pheatmap")
 
+library(cluster)
+library(factoextra)
 
-counts <- as.matrix(read.csv("deseq_breast.csv", header = TRUE, row.names=1, sep ='\t'))
-colData <- read.csv("C:true_breast.csv", sep = ';', row.names=1)
-colData$condition <- factor(colData$condition)
+counts <- as.matrix(read.csv("Cutoff_1_Compressed_20_24_gene_expression_all.csv", header = TRUE, row.names=1, sep ='\t'))
+colData <- read.csv("experiments_biosample.csv", sep = '\t', header = FALSE,row.names=1)
 
-dds <- DESeqDataSetFromMatrix(counts, colData = colData, design = ~condition)
-dds <- DESeq(dds)
-res <- results(dds, alpha=0.05)
-resOrderd <- res[order(res$padj),]
-number_de_genes = sum(resOrderd$padj < 0.05, na.rm=TRUE)
-res_de <- resOrderd[1:number_de_genes,]
-res_de <- subset(res_de, abs(res_de$log2FoldChange) >= 2)
+dds_all <- DESeqDataSetFromMatrix(counts, colData = colData, design = ~V2)
+dds_all <- DESeq(dds_all)
+res_all <- results(dds_all, alpha=0.05)
+res_all_TN <- results(dds_all, alpha = 0.05, contrast=c("V2", "Triple Negative Breast Cancer Primary Tumor", "ER+ Breast Cancer Primary Tumor"),)
 
-rescounts23 <- as.matrix(read.csv("deseq_breast_23.csv", header = TRUE, row.names=1, sep ='\t'))
-dds23 <- DESeqDataSetFromMatrix(counts23, colData = colData, design = ~condition)
-dds23 <- DESeq(dds23)
-res23 <- results(dds23, alpha=0.05)
-resOrderd23 <- res23[order(res23$padj),]
-number_de_genes23 = sum(resOrderd23$padj < 0.05, na.rm=TRUE)
-res_de23 <- resOrderd[1:number_de_genes23,]
-res_de23 <- subset(res_de23, abs(res_de23$log2FoldChange) >= 2)
+# Normalized counts
+dds <- estimateSizeFactors(dds_all)
+normalized_counts <- counts(dds_all, normalized=TRUE)
 
-counts39 <- as.matrix(read.csv("deseq_breast_39.csv", header = TRUE, row.names=1, sep ='\t'))
-dds39 <- DESeqDataSetFromMatrix(counts39, colData = colData, design = ~condition)
-dds39 <- DESeq(dds39)
-res39 <- results(dds39, alpha=0.05)
-resOrderd39 <- res39[order(res39$padj),]
-number_de_genes39 = sum(resOrderd39$padj < 0.05, na.rm=TRUE)
-res_de39 <- resOrderd[1:number_de_genes39,]
-res_de39 <- subset(res_de39, abs(res_de39$log2FoldChange) >= 2)
+# TNBC analysis
 
-# Differentially expressed genes according to https://doi.org/10.1016/j.dib.2018.03.079
-# genes = genes_up + genes_down
-genes_up <- c("ADAMDEC1","GBP5", "IDO1", "SLAMF7", "CD274", "STAT1", "UBD", "MS4A1", "BANK1", "PLA2G2D", "CD8A", "ITGAL", "CD8B", "TIGIT", "IKZF3", "CD3G", "CXCL13", "FYB1", "SELL", "SLAMF6", "SH2D1A", "CYTIP", "IL7R", "ITK", "IKZF1", "PTPRC", "ITGA4", "CD3D", "CD2", "KLRK1", "CR2", "FGF10", "MMP9", "CD79A", "TBC1D10C", "CD19", "CD5", "CCR7", "LCK", "ITGB7", "HSH2D", "LILRB4", "SIT1", "CD27", "SPOCK2", "CD6", "CD247", "CARD11", "CD79B", "PRF1")
-genes_down <- c("HMGCS2", "G0S2", "LIPE", "CYP4F22", "DGAT2", "ANGPTL4", "CD36", "AKR1C1", "FABP4", "AKR1C2", "ADIPOQ", "PLIN1", "LEP", "GPD1", "PLIN4", "AQP7", "CIDEC")
-genes <- c("ADAMDEC1","GBP5", "IDO1", "SLAMF7", "CD274", "STAT1", "UBD", "MS4A1", "BANK1", "PLA2G2D", "CD8A", "ITGAL", "CD8B", "TIGIT", "IKZF3", "CD3G", "CXCL13", "FYB1", "SELL", "SLAMF6", "SH2D1A", "CYTIP", "IL7R", "ITK", "IKZF1", "PTPRC", "ITGA4", "CD3D", "CD2", "KLRK1", "CR2", "FGF10", "MMP9", "CD79A", "TBC1D10C", "CD19", "CD5", "CCR7", "LCK", "ITGB7", "HSH2D", "LILRB4", "SIT1", "CD27", "SPOCK2", "CD6", "CD247", "CARD11", "CD79B", "PRF1","HMGCS2", "G0S2", "LIPE", "CYP4F22", "DGAT2", "ANGPTL4", "CD36", "AKR1C1", "FABP4", "AKR1C2", "ADIPOQ", "PLIN1", "LEP", "GPD1", "PLIN4", "AQP7", "CIDEC")
+# signature from: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5469719/
+# Not found:
+genes_tnp <- c("PRKX", "UGT8", "HMGA1", "LPIN1", "HAPLN3", "FAM171A1", "BCL11A", "FOXC1", "ANKRD11")
+# Not found: 
+genes_tnp_under <- c("AR", "ANXA9","ATP8B1", "BCAS1", "CERS6","CCDC86", "CCDC96", "CMBL", "CXXC5", "DNAJC12", "ERBB4", "FAM174B", "GATA3", "LMNTD2-AS1", 
+                     "MACIR","MLPH", "MMEL1", "NAT1", "TTC6", "PRR15", "RAB26", "RARA", "RHOB", "SLC44A4","SPATA20", "STARD10", "TBC1D9", "TFF1", "TFF3","TTC8", "TEC")
 
-# Cancer signature according to https://doi.org/10.3389/fgene.2022.912125
-gene_sig <- c("KIF4A", "COL11A1", "RBP4", "SAA1", "SFRP1")
+genes_tnp_all <- c(genes_tnp, genes_tnp_under)
 
-counts_map <- counts
-colnames(counts_map) <- c("C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "N0", "N1", "N2")
-pheatmap(t(counts_map[genes,]), cluster_rows = FALSE, cluster_cols = FALSE, scale = "column")
+# Look at DE analysis result of gene signature
+# 2 where padj > 0.05, log2FoldChange is correct for all others
+res_all_TN[genes_tnp_all,]
+
+# Get Z-Scores
+vsd <- assay(vst(dds_all))
+Z <- t(scale(t(vsd)))
+Z_tnp <- Z[genes_tnp_all, c(row.names(subset(colData, colData$V2 =="Triple Negative Breast Cancer Primary Tumor")),row.names(subset(colData, colData$V2 =="ER+ Breast Cancer Primary Tumor")))]
+colnames(Z_tnp) <- c(paste0(rep("TNBC", 42), 1:42), paste0(rep("ERBC", 42), 1:42))
+svg(filename="heatmap_tnbc.svg", width = 15, height = 3)
+pheatmap(Z_tnp, cluster_rows = FALSE, cluster_cols = FALSE)
+dev.off()
+
+
+# Clustering
+colnames(Z_tnp) <- c(1:42, LETTERS, letters[1:16])
+pam_res <- pam(t(Z_tnp), 2) # 4 misclassified
+
+png(file="cluster_tnbc.png",   width     = 5.35,
+    height    = 5.35,
+    units     = "in",
+    res       = 1000,
+    pointsize = 2)
+p<- fviz_cluster(pam_res, palette = "jco", legend.title = "Cluster", show.legend=F, main = "")
+p <- p + geom_point(data=p$data[c(31,39),], aes(x=x, y=y), color=c("#0073C2"), shape = 2)
+p + geom_point(data=p$data["m",], aes(x=x, y=y), color=c("#EFC000"), shape = 1)
+dev.off()
+
+#Signature from: https://www.nature.com/articles/s41467-017-01027-z
+genes_tsa <- c("EGR1","EGR2", "FOS", "FOSB", "EGR3", "RCAN1", "TPPP", "NR4A3", "DPT", "CSRP1","JUND", "ATF3", "ACE",  "CXCL12", "CNN1", "FGL2", "MYADM", "CCN1")
+
+res_all_nat <- results(dds_all, alpha = 0.05, contrast=c("V2", "Uninvolved Breast Tissue Adjacent to TNBC Primary Tumor", "Reduction Mammoplasty - No known cancer"),)
+res_er_nat <- results(dds_all, alpha = 0.05, contrast=c("V2", "ER+ Breast Cancer Primary Tumor", "Uninvolved Breast Tissue Adjacent to ER+ Primary Tumor"),)
+res_tn_nat <- results(dds_all, alpha = 0.05, contrast=c("V2", "Triple Negative Breast Cancer Primary Tumor", "Uninvolved Breast Tissue Adjacent to TNBC Primary Tumor"),)
+res_er_nocancer <- results(dds_all, alpha = 0.05, contrast=c("V2", "ER+ Breast Cancer Primary Tumor", "Reduction Mammoplasty - No known cancer"),)
+res_nater_nocancer <-results(dds_all, alpha = 0.05, contrast=c("V2", "Uninvolved Breast Tissue Adjacent to ER+ Primary Tumor", "Reduction Mammoplasty - No known cancer"),)
+res_nat_nat <- results(dds_all, alpha = 0.05, contrast=c("V2", "Uninvolved Breast Tissue Adjacent to ER+ Primary Tumor", "Uninvolved Breast Tissue Adjacent to TNBC Primary Tumor"),)
+
+normalized_counts_tsa_er <- Z[genes_tsa,c(row.names(subset(colData, colData$V2 =="ER+ Breast Cancer Primary Tumor")),row.names(subset(colData, colData$V2 =="Uninvolved Breast Tissue Adjacent to ER+ Primary Tumor")))]
+colnames(normalized_counts_tsa_er) <- c(paste0(rep("", 42), 1:42), LETTERS, letters[1:4])
+
+type <- c(rep("blue",42), rep("yellow",30))
+pam_tsa_er <- pam(t(normalized_counts_tsa_er), 2) 
+png(file="cluster_tsa_er.png",   width     = 5.35,
+    height    = 5.35,
+    units     = "in",
+    res       = 1000,
+    pointsize = 2)
+p<- fviz_cluster(pam_tsa_er, palette = "jco", legend.title = "Cluster", show.legend=F, main = "")
+p <- p + geom_point(data=p$data[c(2,24),], aes(x=x, y=y), color=c("#0073C2"), shape = 2)
+p + geom_point(data=p$data[c("F","J","K","P","V","c"),], aes(x=x, y=y), color=c("#EFC000"), shape = 1)
+dev.off()
+
+normalized_counts_tsa_tn <- Z[genes_tsa,c(row.names(subset(colData, colData$V2 =="Triple Negative Breast Cancer Primary Tumor")),row.names(subset(colData, colData$V2 =="Uninvolved Breast Tissue Adjacent to TNBC Primary Tumor")))]
+colnames(normalized_counts_tsa_tn) <- c(paste0(rep("", 42), 1:42), LETTERS[1:21])
+
+pam_tsa_tn <- pam(t(normalized_counts_tsa_tn), 2) 
+png(file="cluster_tsa_tn.png",   width     = 5.35,
+    height    = 5.35,
+    units     = "in",
+    res       = 1000,
+    pointsize = 2)
+p<- fviz_cluster(pam_tsa_tn, palette = "jco", legend.title = "Cluster", show.legend=F, main = "")
+p + geom_point(data=p$data[c(25,40,41),], aes(x=x, y=y), color=c("#0073C2"), shape = 2)
+dev.off()
