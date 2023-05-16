@@ -12,8 +12,6 @@ library(factoextra)
 
 counts <- as.matrix(read.csv("Cutoff_1_Compressed_20_24_gene_expression_all.csv", header = TRUE, row.names=1, sep ='\t'))
 colData <- read.csv("experiments_biosample.csv", sep = '\t', header = FALSE,row.names=1)
-colData_cancer <- read.csv("experiments_cancer.csv", sep = '\t', header = FALSE,row.names=1)
-colData_cancer$condition <- factor(colData_cancer$condition)
 
 dds_all <- DESeqDataSetFromMatrix(counts, colData = colData, design = ~V2)
 dds_all <- DESeq(dds_all)
@@ -39,11 +37,6 @@ genes_tnp_all <- c(genes_tnp, genes_tnp_under)
 # 2 where padj > 0.05, log2FoldChange is correct for all others
 res_all_TN[genes_tnp_all,]
 
-
-normalized_counts_tnp <- normalized_counts[genes_tnp_all, c(row.names(subset(colData, colData$V2 =="Triple Negative Breast Cancer Primary Tumor")),row.names(subset(colData, colData$V2 =="ER+ Breast Cancer Primary Tumor")))]
-counts_tnp <- counts[genes_tnp_all, c(row.names(subset(colData, colData$V2 =="Triple Negative Breast Cancer Primary Tumor")),row.names(subset(colData, colData$V2 =="ER+ Breast Cancer Primary Tumor")))]
-
-
 # Get Z-Scores
 vsd <- assay(vst(dds_all))
 Z <- t(scale(t(vsd)))
@@ -55,8 +48,8 @@ dev.off()
 
 
 # Clustering
-colnames(normalized_counts_tnp) <- c(1:42, LETTERS, letters[1:16])
-pam_res <- pam(t(normalized_counts_tnp), 2) # 4 misclassified
+colnames(Z_tnp) <- c(1:42, LETTERS, letters[1:16])
+pam_res <- pam(t(Z_tnp), 2) # 4 misclassified
 
 png(file="cluster_tnbc.png",   width     = 5.35,
     height    = 5.35,
@@ -64,10 +57,9 @@ png(file="cluster_tnbc.png",   width     = 5.35,
     res       = 1000,
     pointsize = 2)
 p<- fviz_cluster(pam_res, palette = "jco", legend.title = "Cluster", show.legend=F, main = "")
-p + geom_point(data=p$data[c("C","T","U", "m"),], aes(x=x, y=y), color=c("#EFC000"), shape = 1)
-
+p <- p + geom_point(data=p$data[c(31,39),], aes(x=x, y=y), color=c("#0073C2"), shape = 2)
+p + geom_point(data=p$data["m",], aes(x=x, y=y), color=c("#EFC000"), shape = 1)
 dev.off()
-
 
 #Signature from: https://www.nature.com/articles/s41467-017-01027-z
 genes_tsa <- c("EGR1","EGR2", "FOS", "FOSB", "EGR3", "RCAN1", "TPPP", "NR4A3", "DPT", "CSRP1","JUND", "ATF3", "ACE",  "CXCL12", "CNN1", "FGL2", "MYADM", "CCN1")
@@ -92,7 +84,6 @@ png(file="cluster_tsa_er.png",   width     = 5.35,
 p<- fviz_cluster(pam_tsa_er, palette = "jco", legend.title = "Cluster", show.legend=F, main = "")
 p <- p + geom_point(data=p$data[c(2,24),], aes(x=x, y=y), color=c("#0073C2"), shape = 2)
 p + geom_point(data=p$data[c("F","J","K","P","V","c"),], aes(x=x, y=y), color=c("#EFC000"), shape = 1)
-
 dev.off()
 
 normalized_counts_tsa_tn <- Z[genes_tsa,c(row.names(subset(colData, colData$V2 =="Triple Negative Breast Cancer Primary Tumor")),row.names(subset(colData, colData$V2 =="Uninvolved Breast Tissue Adjacent to TNBC Primary Tumor")))]
@@ -107,10 +98,3 @@ png(file="cluster_tsa_tn.png",   width     = 5.35,
 p<- fviz_cluster(pam_tsa_tn, palette = "jco", legend.title = "Cluster", show.legend=F, main = "")
 p + geom_point(data=p$data[c(25,40,41),], aes(x=x, y=y), color=c("#0073C2"), shape = 2)
 dev.off()
-
-
-colnames(normalized_counts_tsa) <- c(paste0(rep("ERBC", 42), 1:42), paste0(rep("TNBC", 42), 1:42), paste0(rep("ERNAT", 30), 1:30), paste0(rep("TNNAT", 21), 1:21), paste0(rep("Normal", 5), 1:5))
-
-
-
-
