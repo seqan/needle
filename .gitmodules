@@ -5,3 +5,6 @@
 [submodule "lib/robin-hood-hashing"]
 	path = lib/robin-hood-hashing
 	url = https://github.com/martinus/robin-hood-hashing
+[submodule "lib/sharg-parser"]
+	path = lib/sharg-parser
+	url = https://github.com/seqan/sharg-parser.git
