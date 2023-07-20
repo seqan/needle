@@ -238,3 +238,101 @@ TEST(ibfmin, different_shape)
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Shape_IBF_FPRs.fprs");
     std::filesystem::remove(tmp_dir/("IBFMIN_Test_Shape_mini_example.minimiser"));
 }
+
+TEST(ibfmin, insert)
+{
+    estimate_ibf_arguments ibf_args{};
+    initialization_args(ibf_args);
+    ibf_args.expression_thresholds = {1, 2};
+    std::vector<double> fpr = {0.05, 0.05};
+    ibf_args.path_out = tmp_dir/"IBFMIN_Test_Given_";
+    ibf_args.compressed = false;
+    std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser", std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
+
+    std::vector<uint16_t> expected{1, 2};
+
+    std::vector<uint16_t> medians = ibf(minimiser_file, ibf_args, fpr);
+
+    EXPECT_EQ(expected, medians);
+
+    estimate_ibf_arguments ibf_args_insert{};
+    initialization_args(ibf_args_insert);
+    ibf_args_insert.expression_thresholds = {1, 2};
+    ibf_args_insert.path_out = tmp_dir/"IBFMIN_Insert_Given_";
+    ibf_args_insert.compressed = false;
+    std::vector<std::filesystem::path> minimiser_file_insert = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
+    std::vector<uint16_t> medians_insert = ibf(minimiser_file_insert, ibf_args_insert, fpr);
+    std::vector<uint16_t> medians_insert2 = insert(minimiser_file_insert, ibf_args_insert, "",  tmp_dir/"IBFMIN_Insert_Given_", false);
+
+    EXPECT_EQ(expected, medians_insert2);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf_insert;
+
+    load_ibf(ibf, tmp_dir/"IBFMIN_Test_Given_IBF_1");
+    load_ibf(ibf_insert, tmp_dir/"IBFMIN_Insert_Given_IBF_1");
+    EXPECT_TRUE((ibf == ibf_insert));
+
+    load_ibf(ibf, tmp_dir/"IBFMIN_Test_Given_IBF_2");
+    load_ibf(ibf_insert, tmp_dir/"IBFMIN_Insert_Given_IBF_2");
+    EXPECT_TRUE((ibf == ibf_insert));
+
+
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_1");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_2");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_Data");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_FPRs.fprs");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Insert_Test_Given_IBF_1");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Insert_Given_IBF_2");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Insert_Given_IBF_Data");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Insert_Given_IBF_FPRs.fprs");
+}
+
+TEST(ibfmin, insert_no_given_thresholds)
+{
+    estimate_ibf_arguments ibf_args{};
+    initialization_args(ibf_args);
+    ibf_args.number_expression_thresholds = 2;
+    std::vector<double> fpr = {0.05, 0.05};
+    ibf_args.path_out = tmp_dir/"IBFMIN_Test_Given_";
+    ibf_args.compressed = false;
+    std::vector<std::filesystem::path> minimiser_file = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser", std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
+
+    std::vector<uint16_t> expected{};
+
+    std::vector<uint16_t> medians = ibf(minimiser_file, ibf_args, fpr);
+
+    EXPECT_EQ(expected, medians);
+
+    estimate_ibf_arguments ibf_args_insert{};
+    initialization_args(ibf_args_insert);
+    ibf_args_insert.number_expression_thresholds = 2;
+    ibf_args_insert.path_out = tmp_dir/"IBFMIN_Insert_Given_";
+    ibf_args_insert.compressed = false;
+    std::vector<std::filesystem::path> minimiser_file_insert = {std::string(DATA_INPUT_DIR) + "mini_example.minimiser"};
+    std::vector<uint16_t> medians_insert = ibf(minimiser_file_insert, ibf_args_insert, fpr);
+    std::vector<uint16_t> medians_insert2 = insert(minimiser_file_insert, ibf_args_insert, "",  tmp_dir/"IBFMIN_Insert_Given_", true);
+
+    EXPECT_EQ(expected, medians_insert2);
+
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
+    seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf_insert;
+
+    load_ibf(ibf, tmp_dir/"IBFMIN_Test_Given_IBF_Level_0");
+    load_ibf(ibf_insert, tmp_dir/"IBFMIN_Insert_Given_IBF_Level_0");
+    EXPECT_TRUE((ibf == ibf_insert));
+
+    load_ibf(ibf, tmp_dir/"IBFMIN_Test_Given_IBF_Level_1");
+    load_ibf(ibf_insert, tmp_dir/"IBFMIN_Insert_Given_IBF_Level_1");
+    EXPECT_TRUE((ibf == ibf_insert));
+
+
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_Level_0");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_Level_1");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_Data");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_FPRs.fprs");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Insert_Test_Given_IBF_Level_0");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Insert_Given_IBF_Level_1");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Insert_Given_IBF_Data");
+    std::filesystem::remove(tmp_dir/"IBFMIN_Insert_Given_IBF_FPRs.fprs");
+}
