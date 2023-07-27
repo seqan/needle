@@ -60,6 +60,45 @@ TEST(delete, no_given_thresholds)
     std::filesystem::remove(tmp_dir/"IBF_delete_Exp_IBF_Deleted");
 }
 
+// Reads the level file ibf creates
+template<typename float_or_int>
+void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::filesystem::path filename)
+{
+    std::ifstream fin;
+    fin.open(filename);
+    auto stream_view = seqan3::detail::istreambuf(fin);
+    auto stream_it = std::ranges::begin(stream_view);
+    int j{0};
+    std::vector<float_or_int> empty_vector{};
+
+    std::string buffer{};
+
+    // Read line = expression levels
+    do
+    {
+        if (j == expressions.size())
+            expressions.push_back(empty_vector);
+        std::ranges::copy(stream_view | seqan3::detail::take_until_or_throw(seqan3::is_char<' '>),
+                                        std::back_inserter(buffer));
+        if constexpr(std::same_as<uint16_t, float_or_int>)
+            expressions[j].push_back((uint16_t)  std::stoi(buffer));
+        else
+            expressions[j].push_back((double)  std::stod(buffer));
+        buffer.clear();
+        if(*stream_it != '/')
+            ++stream_it;
+
+        if (*stream_it == '\n')
+        {
+            ++stream_it;
+            j++;
+        }
+    } while (*stream_it != '/');
+    ++stream_it;
+
+    fin.close();
+}
+
 TEST(insert, ibf)
 {
     std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
@@ -101,51 +140,18 @@ TEST(insert, ibf)
     load_ibf(ibf_insert, tmp_dir/"IBF_Insert_Exp_IBF_2");
     EXPECT_TRUE((ibf == ibf_insert));
 
+    std::vector<std::vector<double>> fpr_ibf{};
+    read_levels<double>(fpr_ibf, tmp_dir/"IBF_True_Exp_IBF_FPRs.fprs");
+    std::vector<std::vector<double>> fpr_insert{};
+    read_levels<double>(fpr_insert, tmp_dir/"IBF_Insert_Exp_IBF_FPRs.fprs");
+    EXPECT_EQ(fpr_ibf,fpr_insert);
 
     std::filesystem::remove(tmp_dir/"IBF_True_Exp_IBF_1");
     std::filesystem::remove(tmp_dir/"IBF_True_Exp_IBF_2");
+    std::filesystem::remove(tmp_dir/"IBF_True_Exp_IBF_FPRs.fprs");
     std::filesystem::remove(tmp_dir/"IBF_Insert_Exp_IBF_1");
     std::filesystem::remove(tmp_dir/"IBF_Insert_Exp_IBF_2");
-}
-
-
-// Reads the level file ibf creates
-template<typename float_or_int>
-void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::filesystem::path filename)
-{
-    std::ifstream fin;
-    fin.open(filename);
-    auto stream_view = seqan3::detail::istreambuf(fin);
-    auto stream_it = std::ranges::begin(stream_view);
-    int j{0};
-    std::vector<float_or_int> empty_vector{};
-
-    std::string buffer{};
-
-    // Read line = expression levels
-    do
-    {
-        if (j == expressions.size())
-            expressions.push_back(empty_vector);
-        std::ranges::copy(stream_view | seqan3::detail::take_until_or_throw(seqan3::is_char<' '>),
-                                        std::back_inserter(buffer));
-        if constexpr(std::same_as<uint16_t, float_or_int>)
-            expressions[j].push_back((uint16_t)  std::stoi(buffer));
-        else
-            expressions[j].push_back((double)  std::stod(buffer));
-        buffer.clear();
-        if(*stream_it != '/')
-            ++stream_it;
-
-        if (*stream_it == '\n')
-        {
-            ++stream_it;
-            j++;
-        }
-    } while (*stream_it != '/');
-    ++stream_it;
-
-    fin.close();
+    std::filesystem::remove(tmp_dir/"IBF_Insert_Exp_IBF_FPRs.fprs");
 }
 
 TEST(insert, ibf_no_given_thresholds)
@@ -194,12 +200,11 @@ TEST(insert, ibf_no_given_thresholds)
     read_levels<uint16_t>(expressions_insert, tmp_dir/"IBF_Insert_Exp_IBF_Levels.levels");
     EXPECT_EQ(expressions_ibf,expressions_insert);
 
-    /*std::vector<std::vector<double>> fpr_ibf{};
+    std::vector<std::vector<double>> fpr_ibf{};
     read_levels<double>(fpr_ibf, tmp_dir/"IBF_True_Exp_IBF_FPRs.fprs");
     std::vector<std::vector<double>> fpr_insert{};
     read_levels<double>(fpr_insert, tmp_dir/"IBF_Insert_Exp_IBF_FPRs.fprs");
-    EXPECT_EQ(fpr_ibf,fpr_insert);*/
-
+    EXPECT_EQ(fpr_ibf,fpr_insert);
 
     std::filesystem::remove(tmp_dir/"IBF_True_Exp_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"IBF_True_Exp_IBF_Level_1");
@@ -249,18 +254,19 @@ TEST(insert, ibf_delete)
     load_ibf(ibf_insert, tmp_dir/"IBF_Insert_Exp_IBF_2");
     EXPECT_TRUE((ibf == ibf_insert));
 
-    /*std::vector<std::vector<double>> fpr_ibf{};
+    std::vector<std::vector<double>> fpr_ibf{};
     read_levels<double>(fpr_ibf, tmp_dir/"IBF_True_Exp_IBF_FPRs.fprs");
     std::vector<std::vector<double>> fpr_insert{};
     read_levels<double>(fpr_insert, tmp_dir/"IBF_Insert_Exp_IBF_FPRs.fprs");
-    EXPECT_EQ(fpr_ibf,fpr_insert);*/
-
+    EXPECT_EQ(fpr_ibf,fpr_insert);
 
     std::filesystem::remove(tmp_dir/"IBF_True_Exp_IBF_1");
     std::filesystem::remove(tmp_dir/"IBF_True_Exp_IBF_2");
+    std::filesystem::remove(tmp_dir/"IBF_True_Exp_IBF_FPRs.fprs");
     std::filesystem::remove(tmp_dir/"IBF_Insert_Exp_IBF_1");
     std::filesystem::remove(tmp_dir/"IBF_Insert_Exp_IBF_2");
     std::filesystem::remove(tmp_dir/"IBF_Insert_Exp_IBF_Deleted");
+    std::filesystem::remove(tmp_dir/"IBF_Insert_Exp_IBF_FPRs.fprs");
 }
 
 
@@ -313,11 +319,11 @@ TEST(insert, ibf_delete_no_given_threshold)
     read_levels<uint16_t>(expressions_insert, tmp_dir/"IBF_Insert_Exp_IBF_Levels.levels");
     EXPECT_EQ(expressions_ibf,expressions_insert);
 
-    /*std::vector<std::vector<double>> fpr_ibf{};
+    std::vector<std::vector<double>> fpr_ibf{};
     read_levels<double>(fpr_ibf, tmp_dir/"IBF_True_Exp_IBF_FPRs.fprs");
     std::vector<std::vector<double>> fpr_insert{};
     read_levels<double>(fpr_insert, tmp_dir/"IBF_Insert_Exp_IBF_FPRs.fprs");
-    EXPECT_EQ(fpr_ibf,fpr_insert);*/
+    EXPECT_EQ(fpr_ibf,fpr_insert);
 
     std::filesystem::remove(tmp_dir/"IBF_True_Exp_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"IBF_True_Exp_IBF_Level_1");
@@ -362,6 +368,12 @@ TEST(insert, ibfmin)
     load_ibf(ibf_insert, tmp_dir/"IBFMIN_Insert_Given_IBF_2");
     EXPECT_TRUE((ibf == ibf_insert));
 
+    std::vector<std::vector<double>> fpr_ibf{};
+    read_levels<double>(fpr_ibf, tmp_dir/"IBFMIN_Test_Given_IBF_FPRs.fprs");
+    std::vector<std::vector<double>> fpr_insert{};
+    read_levels<double>(fpr_insert, tmp_dir/"IBFMIN_Insert_Given_IBF_FPRs.fprs");
+    EXPECT_EQ(fpr_ibf,fpr_insert);
+
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_1");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_2");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_Data");
@@ -404,6 +416,12 @@ TEST(insert, ibfmin_delete)
     load_ibf(ibf, tmp_dir/"IBFMIN_Test_Given_IBF_2");
     load_ibf(ibf_insert, tmp_dir/"IBFMIN_Insert_Given_IBF_2");
     EXPECT_TRUE((ibf == ibf_insert));
+
+    std::vector<std::vector<double>> fpr_ibf{};
+    read_levels<double>(fpr_ibf, tmp_dir/"IBFMIN_Test_Given_IBF_FPRs.fprs");
+    std::vector<std::vector<double>> fpr_insert{};
+    read_levels<double>(fpr_insert, tmp_dir/"IBFMIN_Insert_Given_IBF_FPRs.fprs");
+    EXPECT_EQ(fpr_ibf,fpr_insert);
 
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_1");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_2");
@@ -456,21 +474,19 @@ TEST(insert, ibfmin_no_given_thresholds)
     read_levels<uint16_t>(expressions_insert, tmp_dir/"IBFMIN_Insert_Given_IBF_Levels.levels");
     EXPECT_EQ(expressions_ibf,expressions_insert);
 
-    /*std::vector<std::vector<double>> fpr_ibf{};
+    std::vector<std::vector<double>> fpr_ibf{};
     read_levels<double>(fpr_ibf, tmp_dir/"IBFMIN_Test_Given_IBF_FPRs.fprs");
     std::vector<std::vector<double>> fpr_insert{};
     read_levels<double>(fpr_insert, tmp_dir/"IBFMIN_Insert_Given_IBF_FPRs.fprs");
-    EXPECT_EQ(fpr_ibf,fpr_insert);*/
+    EXPECT_EQ(fpr_ibf,fpr_insert);
 
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_Level_1");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_Data");
-    std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_FPRs.fprs");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_IBF_Levels.levels");
     std::filesystem::remove(tmp_dir/"IBFMIN_Insert_Given_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"IBFMIN_Insert_Given_IBF_Level_1");
     std::filesystem::remove(tmp_dir/"IBFMIN_Insert_Given_IBF_Data");
-    std::filesystem::remove(tmp_dir/"IBFMIN_Insert_Given_IBF_FPRs.fprs");
     std::filesystem::remove(tmp_dir/"IBFMIN_Insert_Given_IBF_Levels.levels");
 }
 
@@ -515,11 +531,11 @@ TEST(insert, delete_ibfmin_no_given_thresholds)
     read_levels<uint16_t>(expressions_insert, tmp_dir/"IBFMIN_Insert_Given_Del_IBF_Levels.levels");
     EXPECT_EQ(expressions_ibf,expressions_insert);
 
-    /*std::vector<std::vector<double>> fpr_ibf{};
+    std::vector<std::vector<double>> fpr_ibf{};
     read_levels<double>(fpr_ibf, tmp_dir/"IBFMIN_Test_Given_IBF_FPRs.fprs");
     std::vector<std::vector<double>> fpr_insert{};
     read_levels<double>(fpr_insert, tmp_dir/"IBFMIN_Insert_Given_IBF_FPRs.fprs");
-    EXPECT_EQ(fpr_ibf,fpr_insert);*/
+    EXPECT_EQ(fpr_ibf,fpr_insert);
 
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_Del_IBF_Level_0");
     std::filesystem::remove(tmp_dir/"IBFMIN_Test_Given_Del_IBF_Level_1");

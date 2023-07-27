@@ -710,6 +710,8 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     std::vector<std::vector<uint16_t>> expressions{};
     std::vector<std::vector<uint64_t>> sizes{};
     sizes.assign(num_files, {});
+    std::vector<uint64_t> sizes_ibf{};
+    std::vector<std::vector<uint64_t>> counts_per_level{};
 
     bool const calculate_cutoffs = cutoffs.empty();
 
@@ -720,8 +722,12 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         std::vector<uint16_t> zero_vector(ibf_args.number_expression_thresholds);
         for (unsigned j = 0; j < num_files; j++)
             expressions.push_back(zero_vector);
-
     }
+
+    std::vector<uint64_t> zero_vector2(ibf_args.number_expression_thresholds);
+    for (unsigned j = 0; j < num_files; j++)
+        counts_per_level.push_back(zero_vector2);
+
     if constexpr (!minimiser_files_given)
     {
         if (minimiser_args.include_file != "")
@@ -799,8 +805,6 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         }
     }
 
-    std::ofstream outfile_fpr;
-    outfile_fpr.open(std::string{ibf_args.path_out} +  "IBF_FPRs.fprs"); // File to store actual false positive rates per experiment.
     // Create IBFs
     std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
     for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
@@ -819,19 +823,11 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         }
         // m = -hn/ln(1-p^(1/h))
         size = static_cast<uint64_t>((-1.0*num_hash*((1.0*size)/num_files))/(std::log(1.0-std::pow(fprs[j], 1.0/num_hash))));
+        sizes_ibf.push_back(size);
         ibfs.push_back(seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(
                      seqan3::bin_count{num_files}, seqan3::bin_size{size},
                      seqan3::hash_function_count{num_hash}));
-
-        for (unsigned i = 0; i < num_files; i++)
-        {
-            double fpr = std::pow(1.0- std::pow(1.0-(1.0/size), num_hash*sizes[i][j]), num_hash);
-            outfile_fpr << fpr << " ";
-        }
-        outfile_fpr << "\n";
     }
-    outfile_fpr << "/\n";
-    outfile_fpr.close();
 
     // Add minimisers to ibf
     #pragma omp parallel for schedule(dynamic, chunk_size)
@@ -888,6 +884,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                     if (elem.second >= expressions[i][j])
                     {
                         ibfs[j].emplace(elem.first, seqan3::bin_index{i});
+                        counts_per_level[i][j]++;
                         break;
                     }
                 }
@@ -896,6 +893,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                     if (elem.second >= ibf_args.expression_thresholds[j])
                     {
                         ibfs[j].emplace(elem.first, seqan3::bin_index{i});
+                        counts_per_level[i][j]++;
                         break;
                     }
                 }
@@ -921,7 +919,6 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         {
             store_ibf(ibfs[i], filename);
         }
-
     }
 
     // Store all expression thresholds per level.
@@ -938,6 +935,21 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         outfile << "/\n";
         outfile.close();
     }
+
+    std::ofstream outfile_fpr;
+    outfile_fpr.open(std::string{ibf_args.path_out} +  "IBF_FPRs.fprs");
+    for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
+    {
+        for (unsigned i = 0; i < num_files; i++)
+        {
+            // m = -hn/ln(1-p^(1/h))
+            double fpr = std::pow(1.0- std::pow(1.0-(1.0/sizes_ibf[j]), num_hash *counts_per_level[i][j]), num_hash);
+            outfile_fpr << fpr << " ";
+        }
+        outfile_fpr << "\n";
+    }
+    outfile_fpr << "/\n";
+    outfile_fpr.close();
 }
 
 // Create ibfs
@@ -1072,11 +1084,12 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
         std::vector<uint16_t> zero_vector(ibf_args.number_expression_thresholds);
         for (unsigned j = 0; j < num_files; j++)
             expressions.push_back(zero_vector);
-        std::vector<uint64_t> zero_vector2(ibf_args.number_expression_thresholds);
-        for (unsigned j = 0; j < num_files; j++)
-            counts_per_level.push_back(zero_vector2);
-
     }
+
+    std::vector<uint64_t> zero_vector2(ibf_args.number_expression_thresholds);
+    for (unsigned j = 0; j < num_files; j++)
+        counts_per_level.push_back(zero_vector2);
+
     if constexpr (!minimiser_files_given)
     {
         if (minimiser_args.include_file != "")
@@ -1221,6 +1234,7 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
                     if (elem.second >= ibf_args.expression_thresholds[j])
                     {
                         ibfs[j].emplace(elem.first, seqan3::bin_index{pos_insert[i]});
+                        counts_per_level[i][j]++;
                         break;
                     }
                 }
@@ -1280,35 +1294,32 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
     }
 
     // Store all fprs per level.
-    if constexpr(samplewise)
-    {
-        std::vector<std::vector<double>> fprs_prev{};
-        read_levels<double>(fprs_prev, path_in.string() + "IBF_FPRs.fprs");
+    std::vector<std::vector<double>> fprs_prev{};
+    read_levels<double>(fprs_prev, path_in.string() + "IBF_FPRs.fprs");
 
-        std::ofstream outfile_fpr;
-        outfile_fpr.open(std::string{ibf_args.path_out} +  "IBF_FPRs.fprs");
-        for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
+    std::ofstream outfile_fpr;
+    outfile_fpr.open(std::string{ibf_args.path_out} +  "IBF_FPRs.fprs");
+    for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
+    {
+        int exp_i = 0;
+        for (unsigned i = 0; i < new_bin_number; i++)
         {
-            int exp_i = 0;
-            for (unsigned i = 0; i < new_bin_number; i++)
+            if (std::find(pos_insert.begin(), pos_insert.end(), i) != pos_insert.end())
             {
-                if (std::find(pos_insert.begin(), pos_insert.end(), i) != pos_insert.end())
-                {
-                    // m = -hn/ln(1-p^(1/h))
-                    double fpr = std::pow(1.0- std::pow(1.0-(1.0/sizes[j]), num_hash_functions *counts_per_level[exp_i][j]), num_hash_functions);
-                    outfile_fpr << fpr << " ";
-                    exp_i++;
-                }
-                else
-                {
-                    outfile_fpr << fprs_prev[j][i] << " ";
-                }
+                // m = -hn/ln(1-p^(1/h))
+                double fpr = std::pow(1.0- std::pow(1.0-(1.0/sizes[j]), num_hash_functions *counts_per_level[exp_i][j]), num_hash_functions);
+                outfile_fpr << fpr << " ";
+                exp_i++;
             }
-            outfile_fpr << "\n";
+            else
+            {
+                outfile_fpr << fprs_prev[j][i] << " ";
+            }
         }
-        outfile_fpr << "/\n";
-        outfile_fpr.close();
+        outfile_fpr << "\n";
     }
+    outfile_fpr << "/\n";
+    outfile_fpr.close();
 }
 
 // Insert into ibfs
