@@ -24,7 +24,7 @@ TEST_F(needle_options_test, fail_no_argument)
     std::string expected
     {
         "Error. Incorrect command. See needle help for more information.You either forgot or misspelled the subcommand!"
-        " Please specify which sub-program you want to use: one of [count,estimate,genome,ibf,ibfmin,insert,insertmin,minimiser]. "
+        " Please specify which sub-program you want to use: one of [count,delete,estimate,genome,ibf,ibfmin,insert,insertmin,minimiser]. "
         "Use -h/--help for more information.\n"
     };
     EXPECT_NE(result.exit_code, 0);

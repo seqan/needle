@@ -32,7 +32,7 @@
 template <class IBFType, bool last_exp, bool normalization, typename exp_t>
 void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint16_t> & estimations_i,
                seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
-               exp_t const & expressions, uint16_t const k, std::vector<double> const fprs)
+               exp_t const & expressions, uint16_t const k, std::vector<double> const fprs, std::vector<int> deleted)
 {
     // Check, if one expression threshold for all or individual thresholds
     static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
@@ -55,6 +55,8 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
     // Check every experiment by going over the number of bins in the ibf.
     for(int j = 0; j < counter.size(); j++)
     {
+        if (std::find(deleted.begin(), deleted.end(), j) != deleted.end())
+            continue;
         // Correction by substracting the expected number of false positives
         counter[j] = std::max((double) 0.0, (double) ((counter[j]-(minimiser_length*fprs[j]))/(1.0-fprs[j])));
         // Check, if considering previously seen minimisers and minimisers found ar current level equal to or are greater
@@ -149,6 +151,7 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     std::vector<std::vector<uint16_t>> estimations;
     std::vector<std::vector<uint16_t>> expressions;
     std::vector<std::vector<double>> fprs;
+    std::vector<int> deleted{};
 
     omp_set_num_threads(args.threads);
     seqan3::contrib::bgzf_thread_count = args.threads;
@@ -166,6 +169,20 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
         prev_expression = 0;
 
     read_levels<double>(fprs, estimate_args.path_in.string() + "IBF_FPRs.fprs");
+
+    // Check, if bins have been deleted
+    if (std::filesystem::exists(estimate_args.path_in.string() + "IBF_Deleted"))
+    {
+        std::ifstream fin;
+        fin.open(estimate_args.path_in.string() + "IBF_Deleted");
+        uint64_t number;
+
+        while (fin >> number)
+        {
+            deleted.push_back(number);
+        }
+        fin.close();
+    }
 
     // Make sure expression levels are sorted.
     sort(args.expression_thresholds.begin(), args.expression_thresholds.end());
@@ -193,15 +210,15 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
         if constexpr (samplewise & normalization_method)
             check_ibf<IBFType, true, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
                                            expressions,args.number_expression_thresholds - 1,
-                                           fprs[args.number_expression_thresholds - 1]);
+                                           fprs[args.number_expression_thresholds - 1], deleted);
         else if constexpr (samplewise)
             check_ibf<IBFType, true, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
                                             expressions, args.number_expression_thresholds - 1,
-                                            fprs[args.number_expression_thresholds - 1]);
+                                            fprs[args.number_expression_thresholds - 1], deleted);
         else
             check_ibf<IBFType, true, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
                                             args.expression_thresholds[args.expression_thresholds.size() - 1], prev_expression,
-                                            fprs[args.expression_thresholds.size() - 1]);
+                                            fprs[args.expression_thresholds.size() - 1], deleted);
     }
 
     if constexpr (!samplewise)
@@ -221,13 +238,13 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
         {
             if constexpr (samplewise & normalization_method)
                 check_ibf<IBFType, false, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                      expressions, j, fprs[j]);
+                                      expressions, j, fprs[j], deleted);
             else if constexpr (samplewise)
                 check_ibf<IBFType, false, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                          expressions, j, fprs[j]);
+                                          expressions, j, fprs[j], deleted);
             else
                 check_ibf<IBFType, false, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                          args.expression_thresholds[j], prev_expression, fprs[j]);
+                                          args.expression_thresholds[j], prev_expression, fprs[j], deleted);
         }
 
         if (!samplewise)

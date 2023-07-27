@@ -144,3 +144,12 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & sequence
 std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & minimiser_files,
                              estimate_ibf_arguments & ibf_args,
                              std::filesystem::path const expression_by_genome_file, std::filesystem::path path_in, bool samplewise);
+
+/*! \brief Delete bins from ibfs
+* \param delete_files    A vector of integers specifiying the bins to delete.
+* \param ibf_args        The IBF specific arguments to use (bin size, number of hash functions, ...). See
+*                        struct ibf_arguments.
+* \param path_in         Input directory.
+* \param samplewise      True, if expression levels were set beforehand.
+*/
+void delete_bin(std::vector<uint64_t> const & delete_files, estimate_ibf_arguments & ibf_args, std::filesystem::path path_in, bool samplewise);

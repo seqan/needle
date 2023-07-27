@@ -1050,15 +1050,18 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
                    minimiser_arguments const & minimiser_args = {})
 {
     size_t old_bin_number{};
+    size_t new_bin_number{};
     size_t num_files;
+    int num_hash_functions{};
+
     if constexpr (minimiser_files_given)
         num_files = minimiser_files.size();
     else
         num_files = minimiser_args.samples.size();
 
     std::vector<std::vector<uint16_t>> expressions{};
-    std::vector<std::vector<uint64_t>> sizes{};
-    sizes.assign(num_files, {});
+    std::vector<std::vector<uint64_t>> counts_per_level{};
+    std::vector<uint64_t> sizes{};
 
     bool const calculate_cutoffs = cutoffs.empty();
 
@@ -1069,6 +1072,9 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
         std::vector<uint16_t> zero_vector(ibf_args.number_expression_thresholds);
         for (unsigned j = 0; j < num_files; j++)
             expressions.push_back(zero_vector);
+        std::vector<uint64_t> zero_vector2(ibf_args.number_expression_thresholds);
+        for (unsigned j = 0; j < num_files; j++)
+            counts_per_level.push_back(zero_vector2);
 
     }
     if constexpr (!minimiser_files_given)
@@ -1093,69 +1099,23 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
         get_include_set_table(ibf_args, expression_by_genome_file, genome);
     bool const expression_by_genome = (expression_by_genome_file == "");
 
-    // Get expression levels and sizes
-    for (unsigned i = 0; i < num_files; i++)
+    // Check, if there are deleted bins
+    std::vector<uint64_t> pos_insert{};
+    if (std::filesystem::exists(path_in.string() + "IBF_Deleted"))
     {
-        uint64_t filesize{}; // Store filesize(minimiser_files_given=false) or number of minimisers(minimiser_files_given=true)
+        std::ifstream fin;
+        fin.open(path_in.string() + "IBF_Deleted");
+        uint64_t number;
 
-        if constexpr(minimiser_files_given)
+        while (fin >> number)
         {
-            uint8_t cutoff;
-            read_binary_start(ibf_args, minimiser_files[i], filesize, cutoff);
-            cutoffs.push_back(cutoff);
+            pos_insert.push_back(number);
         }
-        else
-        {
-            // Estimate sizes on filesize, assuming every byte translates to one letter (which is obiously not true,
-            // because ids contain letters as well), so size might be overestimated. TODO: Find a better estimation!
-            unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
-
-            // Determine cutoffs
-            if (calculate_cutoffs)
-                cutoffs.push_back(calculate_cutoff(minimiser_files[file_iterator], minimiser_args.samples[i]));
-
-            bool const is_compressed = minimiser_files[file_iterator].extension() == ".gz" || minimiser_files[file_iterator].extension() == ".bgzf" || minimiser_files[file_iterator].extension() == ".bz2";
-            bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions,minimiser_files[file_iterator].stem())
-                                                 : check_for_fasta_format(seqan3::format_fasta::file_extensions, minimiser_files[file_iterator].extension());
-            filesize = std::filesystem::file_size(minimiser_files[file_iterator]) * minimiser_args.samples[i] * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
-            filesize = filesize/((cutoffs[i] + 1) * (is_fasta ? 1 : 2));
-        }
-        // If set_expression_thresholds_samplewise is not set the expressions as determined by the first file are used for
-        // all files.
-        if constexpr (samplewise)
-        {
-            uint64_t diff{1};
-            for (std::size_t c = 0; c < ibf_args.number_expression_thresholds - 1; c++)
-            {
-                diff = diff * 2;
-                sizes[i].push_back(filesize/diff);
-            }
-            sizes[i].push_back(filesize/diff);
-        }
-        else if constexpr (minimiser_files_given)
-        {
-            get_filsize_per_expression_level(minimiser_files[i], ibf_args.number_expression_thresholds, ibf_args.expression_thresholds, sizes[i],
-                                             genome, expression_by_genome);
-        }
-        else
-        {
-            float diff{1};
-            for (std::size_t c = 0; c < ibf_args.number_expression_thresholds - 1; c++)
-            {
-                diff = ibf_args.expression_thresholds[c+1]/ibf_args.expression_thresholds[c];
-                sizes[i].push_back(filesize/diff);
-            }
-            sizes[i].push_back(filesize/diff);
-        }
+        fin.close();
     }
+    int num_deleted = pos_insert.size();
 
-    std::vector<std::vector<double>> fprs_prev{};
-    std::ifstream infile_fpr;
-    read_levels<double>(fprs_prev, path_in.string() + "IBF_FPRs.fprs");
-
-    std::ofstream outfile_fpr;
-    outfile_fpr.open(std::string{ibf_args.path_out} +  "IBF_FPRs.fprs"); // File to store actual false positive rates per experiment.
-    // Create IBFs
+    // Adjust IBFs
     std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
     for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
     {
@@ -1166,25 +1126,17 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
             load_ibf(ibf_load, path_in.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[j]));
 
         old_bin_number = ibf_load.bin_count();
-        ibf_load.increase_bin_number_to(seqan3::bin_count{old_bin_number + num_files});
+        new_bin_number = old_bin_number + num_files - num_deleted;
+        if (new_bin_number > old_bin_number)
+            ibf_load.increase_bin_number_to(seqan3::bin_count{new_bin_number});
         ibfs.push_back(ibf_load);
 
-        uint64_t size = ibf_load.bin_size();
-
-        for (unsigned i = 0; i < old_bin_number; i++)
-        {
-            outfile_fpr << fprs_prev[j][i] << " ";
-        }
-        for (unsigned i = 0; i < num_files; i++)
-        {
-            // m = -hn/ln(1-p^(1/h))
-            double fpr = std::pow(1.0- std::pow(1.0-(1.0/size), ibf_load.hash_function_count() *sizes[i][j]), ibf_load.hash_function_count());
-            outfile_fpr << fpr << " ";
-        }
-        outfile_fpr << "\n";
+        num_hash_functions = ibf_load.hash_function_count();
+        sizes.push_back(ibf_load.bin_size());
     }
-    outfile_fpr << "/\n";
-    outfile_fpr.close();
+
+    for (unsigned j = old_bin_number; j < new_bin_number; j++)
+        pos_insert.push_back(j);
 
     // Add minimisers to ibf
     #pragma omp parallel for schedule(dynamic, chunk_size)
@@ -1200,10 +1152,27 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
         if constexpr (minimiser_files_given)
         {
             read_binary(minimiser_files[i], hash_table);
+            uint8_t cutoff;
+            uint64_t tmp_var{};
+            read_binary_start(ibf_args, minimiser_files[i], tmp_var, cutoff);
+            cutoffs.push_back(cutoff);
         }
         else
         {
+            // Estimate sizes on filesize, assuming every byte translates to one letter (which is obiously not true,
+            // because ids contain letters as well), so size might be overestimated. TODO: Find a better estimation!
             unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
+            uint64_t filesize{};
+            // Determine cutoffs
+            if (calculate_cutoffs)
+                cutoffs.push_back(calculate_cutoff(minimiser_files[file_iterator], minimiser_args.samples[i]));
+
+            bool const is_compressed = minimiser_files[file_iterator].extension() == ".gz" || minimiser_files[file_iterator].extension() == ".bgzf" || minimiser_files[file_iterator].extension() == ".bz2";
+            bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions,minimiser_files[file_iterator].stem())
+                                                 : check_for_fasta_format(seqan3::format_fasta::file_extensions, minimiser_files[file_iterator].extension());
+            filesize = std::filesystem::file_size(minimiser_files[file_iterator]) * minimiser_args.samples[i] * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
+            filesize = filesize/((cutoffs[i] + 1) * (is_fasta ? 1 : 2));
+
             for (unsigned f = 0; f < minimiser_args.samples[i]; f++)
             {
                seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{minimiser_files[file_iterator+f]};
@@ -1221,14 +1190,16 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
         // all files.
         if constexpr (samplewise)
         {
+           std::vector<uint64_t> sizes_tmp{};
            get_expression_thresholds(ibf_args.number_expression_thresholds,
                                  hash_table,
                                  expression_thresholds,
-                                 sizes[i],
+                                 sizes_tmp,
                                  genome,
                                  cutoffs[i],
                                  expression_by_genome);
            expressions[i] = expression_thresholds;
+           sizes_tmp.clear();
         }
 
         // Every minimiser is stored in IBF, if it occurence is greater than or equal to the expression level
@@ -1240,7 +1211,8 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 {
                     if (elem.second >= expressions[i][j])
                     {
-                        ibfs[j].emplace(elem.first, seqan3::bin_index{old_bin_number+i});
+                        ibfs[j].emplace(elem.first, seqan3::bin_index{pos_insert[i]});
+                        counts_per_level[i][j]++;
                         break;
                     }
                 }
@@ -1248,7 +1220,7 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 {
                     if (elem.second >= ibf_args.expression_thresholds[j])
                     {
-                        ibfs[j].emplace(elem.first, seqan3::bin_index{old_bin_number+i});
+                        ibfs[j].emplace(elem.first, seqan3::bin_index{pos_insert[i]});
                         break;
                     }
                 }
@@ -1287,14 +1259,55 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
         outfile.open(std::string{ibf_args.path_out} +  "IBF_Levels.levels");
         for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
         {
-            for (unsigned i = 0; i < old_bin_number; i++)
-                 outfile << expressions_prev[i][j] << " ";
-            for (unsigned i = 0; i < num_files; i++)
-                 outfile << expressions[i][j] << " ";
+            int exp_i = 0;
+            for (unsigned i = 0; i < new_bin_number; i++)
+            {
+
+                if (std::find(pos_insert.begin(), pos_insert.end(), i) != pos_insert.end())
+                {
+                    outfile << expressions[exp_i][j] << " ";
+                    exp_i++;
+                }
+                else
+                {
+                    outfile << expressions_prev[j][i] << " ";
+                }
+            }
             outfile << "\n";
         }
         outfile << "/\n";
         outfile.close();
+    }
+
+    // Store all fprs per level.
+    if constexpr(samplewise)
+    {
+        std::vector<std::vector<double>> fprs_prev{};
+        read_levels<double>(fprs_prev, path_in.string() + "IBF_FPRs.fprs");
+
+        std::ofstream outfile_fpr;
+        outfile_fpr.open(std::string{ibf_args.path_out} +  "IBF_FPRs.fprs");
+        for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
+        {
+            int exp_i = 0;
+            for (unsigned i = 0; i < new_bin_number; i++)
+            {
+                if (std::find(pos_insert.begin(), pos_insert.end(), i) != pos_insert.end())
+                {
+                    // m = -hn/ln(1-p^(1/h))
+                    double fpr = std::pow(1.0- std::pow(1.0-(1.0/sizes[j]), num_hash_functions *counts_per_level[exp_i][j]), num_hash_functions);
+                    outfile_fpr << fpr << " ";
+                    exp_i++;
+                }
+                else
+                {
+                    outfile_fpr << fprs_prev[j][i] << " ";
+                }
+            }
+            outfile_fpr << "\n";
+        }
+        outfile_fpr << "/\n";
+        outfile_fpr.close();
     }
 }
 
@@ -1310,10 +1323,6 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & sequence
 
     check_cutoffs_samples(sequence_files, minimiser_args.paired, minimiser_args.samples, cutoffs);
     load_args(ibf_args, std::string{path_in} + "IBF_Data");
-
-    std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
-
 
     if (samplewise)
         insert_helper<true, false>(sequence_files, ibf_args, path_in, cutoffs, expression_by_genome_file, minimiser_args);
@@ -1338,6 +1347,57 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & minimise
 
     return ibf_args.expression_thresholds;
 }
+
+// Delete from ibfs
+void delete_bin(std::vector<uint64_t> const & delete_files,
+            estimate_ibf_arguments & ibf_args,
+            std::filesystem::path path_in,
+            bool samplewise)
+{
+    load_args(ibf_args, std::string{path_in} + "IBF_Data");
+
+    std::vector<seqan3::bin_index> bins_to_delete{};
+    for (int i = 0; i< delete_files.size(); i++)
+        bins_to_delete.push_back(seqan3::bin_index{delete_files[i]});
+
+    omp_set_num_threads(ibf_args.threads);
+
+    // Delete bins from ibfs
+    #pragma omp parallel
+    for (unsigned i = 0; i < ibf_args.number_expression_thresholds; i++)
+    {
+        std::filesystem::path filename;
+        if (samplewise)
+            filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(i);
+        else
+            filename = ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[i]);
+
+        seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
+        load_ibf(ibf, filename);
+        ibf.clear(bins_to_delete);
+
+        if (ibf_args.compressed)
+        {
+            seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf{ibf};
+            store_ibf(ibf, filename);
+        }
+        else
+        {
+            store_ibf(ibf, filename);
+        }
+    }
+
+    // Store deleted bins
+    std::ofstream outfile;
+    outfile.open(std::string{ibf_args.path_out} + "IBF_Deleted");
+    for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
+    {
+        outfile << delete_files[j] << ",";
+    }
+    outfile << "\n";
+    outfile.close();
+}
+
 
 // Actuall minimiser calculation
 template<bool parallel = false>
