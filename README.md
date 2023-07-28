@@ -9,7 +9,7 @@ Needle stores its data in multiple interleaved Bloom filter, a fast and space ef
 
 ## Citation
 
-Please cite: 
+Please cite:
 
 Mitra Darvish, Enrico Seiler, Svenja Mehringer, René Rahn, Knut Reinert, Needle: a fast and space-efficient prefilter for estimating the quantification of very large collections of expression experiments, Bioinformatics, Volume 38, Issue 17, 1 September 2022, Pages 4100–4108, https://doi.org/10.1093/bioinformatics/btac492
 
@@ -94,6 +94,34 @@ The created file "expressions.out" (if you prefer a different name, use "-o") sh
 ```
 GeneA   0      32
 ```
+
+## Insert into an existing Needle index
+It is possible to insert new sequence files into an uncompressed Needle index. Similar to the build step this can be done by either using the sequence files as input directly or the minimiser files outputed by `needle minimiser`. Most options are the same as the ones from the build step, however as the Needle index already exist, neither the false positive rate nor the number of hash functions can be changed. It is necessary to specify `i` to the directory, where the existing Needle index can be found.
+
+The following example inserts into the Needle index build above for two paired-end experiments.
+
+```
+./bin/needle ibf ../needle/test/data/exp_0*.fasta --paired -e 16 -e 32 -f 0.3 -c -o example // Create Index
+./bin/needle insert ../needle/test/data/exp_1*.fasta --paired -i example                    // Insert into created index
+```
+
+Based on minimiser files an insertion to the Needle index can be achieved by using the following command:
+```
+./bin/needle ibf ../needle/test/data/exp_0*.fasta --paired -e 16 -e 32 -f 0.3 -c -o example // Create Index
+./bin/needle insertmin exp*.minimiser -i example                                             // Insert into created index
+```
+
+The insert methods based on minimiser or on sequence files is independent of the way the index was created.
+
+## Delete experiments from an existing Needle index
+It is possible to delete sequence files from an uncompressed Needle index by specifiying the position of the experiment, which should be deleted.
+These deleted experiments won't change the size of the index as the space is kept for later insertions.
+```
+./bin/needle ibf ../needle/test/data/exp_*.fasta --paired -e 16 -e 32 -f 0.3 -c -o example // Create Index
+./bin/needle delete  -i example 0                                            // Delete first experiment exp_0 (with position 0) from index
+``
+
+
 
 ## Note
 

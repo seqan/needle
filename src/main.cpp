@@ -247,6 +247,66 @@ int run_needle_ibf(seqan3::argument_parser & parser)
     return 0;
 }
 
+int run_needle_insert(seqan3::argument_parser & parser)
+{
+    estimate_ibf_arguments ibf_args{};
+    minimiser_arguments minimiser_args{};
+    std::filesystem::path input_file{};
+    std::filesystem::path path_in{};
+    std::vector<std::filesystem::path> sequence_files{};
+    std::filesystem::path expression_by_genome_file = "";
+    std::vector<uint8_t> cutoffs{};
+    bool samplewise{false};
+
+    initialise_arguments_minimiser(parser, minimiser_args, cutoffs);
+
+    parser.info.short_description = "Inserts into a given uncompressed Needle index.";
+    parser.add_flag(ibf_args.compressed, 'c', "compressed", "If c is set, the IBFS are compressed. Default: Not compressed.");
+    parser.add_option(ibf_args.threads, 't', "threads", "Number of threads to use. Default: 1.");
+    parser.add_option(path_in, 'i', "in", "Directory where input files can be found.");
+    parser.add_positional_option(sequence_files, "Please provide at least one sequence file OR provide one file "
+                                                 "containing all sequence files with the extension '.lst'.");
+    parser.add_option(minimiser_args.experiment_names, '\0', "experiment-names", "If set, names of the experiments are stored"
+                                                                                 " in a txt file.");
+    parser.add_option(expression_by_genome_file, '\0', "levels-by-genome", "Sequence file containing minimizers, only "
+                                                                            "those minimizers will be considered for "
+                                                                            "determining the expression thresholds.");
+
+    parser.add_flag(minimiser_args.ram_friendly, '\0', "ram", "If ram is set and multiple threads are used, the multithreading"
+                                                      " is more RAM friendly at the cost of being slower.");
+
+    try
+    {
+        parser.parse();
+        if (std::filesystem::exists(path_in.string() + "IBF_Level_0"))
+            samplewise = true;
+        if (sequence_files[0].extension() == ".lst")
+        {
+            input_file = sequence_files[0];
+            sequence_files = {};
+            read_input_file_list(sequence_files, input_file);
+        }
+
+    }
+    catch (seqan3::argument_parser_error const & ext)
+    {
+        seqan3::debug_stream << "Error. Incorrect command line input for insert. " << ext.what() << "\n";
+        return -1;
+    }
+
+    try
+    {
+        insert(sequence_files, ibf_args, minimiser_args, cutoffs, expression_by_genome_file, path_in, samplewise);
+    }
+    catch (const std::invalid_argument & e)
+    {
+        std::cerr << e.what() << std::endl;
+        return -1;
+    }
+
+    return 0;
+}
+
 int run_needle_ibf_min(seqan3::argument_parser & parser)
 {
     estimate_ibf_arguments ibf_args{};
@@ -298,6 +358,101 @@ int run_needle_ibf_min(seqan3::argument_parser & parser)
     return 0;
 }
 
+int run_needle_insert_min(seqan3::argument_parser & parser)
+{
+    estimate_ibf_arguments ibf_args{};
+    std::vector<std::filesystem::path> minimiser_files{};
+    std::filesystem::path path_in{};
+    std::filesystem::path expression_by_genome_file = "";
+    std::filesystem::path input_file{};
+    bool samplewise{false};
+
+    parser.info.short_description = "Constructs the Needle index from the minimiser files created by needle minimiser.";
+
+    parser.add_positional_option(minimiser_files, "Please provide at least one minimiser file OR provide one file "
+                                                 "containing all minimiser files with the extension '.lst'.");
+
+    parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
+    parser.add_flag(ibf_args.compressed, 'c', "compressed", "If c is set, the IBFS are compressed. Default: Not compressed.");
+    parser.add_option(ibf_args.threads, 't', "threads", "Number of threads to use. Default: 1.");
+    parser.add_option(path_in, 'i', "in", "Directory where input files can be found.");
+    parser.add_option(expression_by_genome_file, '\0', "levels-by-genome", "Sequence file containing minimizers, only "
+                                                                            "those minimizers will be considered for "
+                                                                            "determining the expression thresholds.");
+
+    try
+    {
+        parser.parse();
+        if (std::filesystem::exists(path_in.string() + "IBF_Level_0"))
+            samplewise = true;
+        if (minimiser_files[0].extension() == ".lst")
+        {
+            input_file = minimiser_files[0];
+            minimiser_files = {};
+            read_input_file_list(minimiser_files, input_file);
+        }
+    }
+    catch (seqan3::argument_parser_error const & ext)
+    {
+        seqan3::debug_stream << "Error. Incorrect command line input for insertmin. " << ext.what() << "\n";
+        return -1;
+    }
+
+    try
+    {
+        insert(minimiser_files, ibf_args,expression_by_genome_file, path_in, samplewise);
+    }
+    catch (const std::invalid_argument & e)
+    {
+        std::cerr << e.what() << std::endl;
+        return -1;
+    }
+
+    return 0;
+}
+
+int run_needle_delete_bin(seqan3::argument_parser & parser)
+{
+    estimate_ibf_arguments ibf_args{};
+    std::vector<uint64_t> delete_files{};
+    std::filesystem::path path_in{};
+    bool samplewise{false};
+
+    parser.info.short_description = "Delete experiments specified by their position from the Needle index.";
+
+    parser.add_positional_option(delete_files, "Please provide at one position to be deleted.");
+
+    parser.add_option(ibf_args.path_out, 'o', "out", "Directory, where output files should be saved.");
+    parser.add_flag(ibf_args.compressed, 'c', "compressed", "If c is set, the IBFS are compressed. Default: Not compressed.");
+    parser.add_option(ibf_args.threads, 't', "threads", "Number of threads to use. Default: 1.");
+    parser.add_option(path_in, 'i', "in", "Directory where input files can be found.");
+
+    try
+    {
+        parser.parse();
+    }
+    catch (seqan3::argument_parser_error const & ext)
+    {
+        seqan3::debug_stream << "Error. Incorrect command line input for delete. " << ext.what() << "\n";
+        return -1;
+    }
+
+    try
+    {
+        if (std::filesystem::exists(path_in.string() + "IBF_Level_0"))
+            samplewise = true;
+        delete_bin(delete_files, ibf_args, path_in, samplewise);
+    }
+    catch (const std::invalid_argument & e)
+    {
+        std::cerr << e.what() << std::endl;
+        return -1;
+    }
+
+    return 0;
+}
+
+
 int run_needle_minimiser(seqan3::argument_parser & parser)
 {
     min_arguments args{};
@@ -346,7 +501,7 @@ int run_needle_minimiser(seqan3::argument_parser & parser)
 int main(int argc, char const ** argv)
 {
     seqan3::argument_parser needle_parser{"needle", argc, argv, seqan3::update_notifications::on,
-    {"count", "estimate", "genome", "ibf", "ibfmin", "minimiser"}};
+    {"count", "delete","estimate", "genome", "ibf", "ibfmin", "insert", "insertmin", "minimiser"}};
     needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
                                              "command ibf or estimate the expression of transcripts with the command "
                                              "estimate.");
@@ -365,7 +520,9 @@ int main(int argc, char const ** argv)
     seqan3::argument_parser & sub_parser = needle_parser.get_sub_parser(); // hold a reference to the sub_parser
     if (sub_parser.info.app_name == std::string_view{"needle-count"})
         run_needle_count(sub_parser);
-    if (sub_parser.info.app_name == std::string_view{"needle-genome"})
+    else if (sub_parser.info.app_name == std::string_view{"needle-delete"})
+        run_needle_delete_bin(sub_parser);
+    else if (sub_parser.info.app_name == std::string_view{"needle-genome"})
         run_needle_count_genome(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-estimate"})
         run_needle_estimate(sub_parser);
@@ -373,6 +530,10 @@ int main(int argc, char const ** argv)
         run_needle_ibf(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-ibfmin"})
         run_needle_ibf_min(sub_parser);
+    else if (sub_parser.info.app_name == std::string_view{"needle-insert"})
+        run_needle_insert(sub_parser);
+    else if (sub_parser.info.app_name == std::string_view{"needle-insertmin"})
+        run_needle_insert_min(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-minimiser"})
         run_needle_minimiser(sub_parser);
 }
