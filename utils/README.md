@@ -1,4 +1,4 @@
-# Evaluation of Needle count
+`# Evaluation of Needle count
 
 ## Differential Expression
 Download the sequencing experiments listed in accession.lst and the human transcripts from gencode as a fasta file.
@@ -55,4 +55,22 @@ python3 needle_gene_exp.py Cutoff_1_Compressed_expressions_all.out experiments.o
 
 Now, you can run the RScript "breastcancer_big.R" to analye the differential expressed genes for different breast cancer gene signatures.
 
+## Gene Ontology Analysis
+
+The gene ontology analysis can be repeated by querying all proteincoding human transcripts in the Needle index created [here](https://github.com/MitraDarja/analysis_needle/blob/main/run_large_dataset.sh) by running:
+```
+needle estimate -i w_21/SRR_Compressed gencode_all_human_pc.fa.gz -o gencode_srr.out
+```
+
+Then obtain all expressions per gene by using the file [sras_1742.lst](https://github.com/MitraDarja/analysis_needle/blob/main/data/sras_1742.lst):
+```
+python3 needle_gene_exp.py gencode_srr.out sras_1742.lst gencode_srr.csv
+```
+
+Afterwards, the differential expressed genes per tissue type can be obtained by:
+```
+RScrip tissue_type.R
+```
+
+The differential expressed genes can then by obtained via ShinyGo using Ontology.Jensen.TISSUES as a database.
 
