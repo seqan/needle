@@ -1,4 +1,4 @@
-`# Evaluation of Needle count
+# Evaluation of Needle count
 
 ## Differential Expression
 Download the sequencing experiments listed in accession.lst and the human transcripts from gencode as a fasta file.
@@ -34,6 +34,15 @@ differential expressed genes from https://doi.org/10.1016/j.dib.2018.03.079.
 
 
 # Evaluation of Needle
+
+## Parallelization
+
+In order to compare the two parallelization methods of Needle when computing minimizers, four sequencing experiments were tested.
+For the simple version the following command was used with either `X=1` or `X=4` threads.
+```
+needle minimiser -k 21 -w 25 -t X SRR1313229.fastq.gz SRR1313228.fastq.gz  SRR1313227.fastq.gz SRR1313226.fastq.gz
+```
+For the ram friendly version a `--ram` was added to the previous command.
 
 ## Differential Expression
 Download the sequencing experiments of the GEO experiment with the accession number GSE58135 (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE58135).
