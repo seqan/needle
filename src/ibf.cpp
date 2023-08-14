@@ -1340,6 +1340,7 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & sequence
     else
         insert_helper<false, false>(sequence_files,ibf_args, path_in, cutoffs, expression_by_genome_file, minimiser_args);
 
+    store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
     return ibf_args.expression_thresholds;
 }
 
@@ -1349,6 +1350,7 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & minimise
                              std::filesystem::path const expression_by_genome_file, std::filesystem::path path_in, bool samplewise)
 {
     std::vector<uint8_t> cutoffs{};
+    load_args(ibf_args, std::string{path_in} + "IBF_Data");
     if (samplewise)
         insert_helper<true>(minimiser_files, ibf_args, path_in, cutoffs, expression_by_genome_file);
     else
@@ -1379,15 +1381,20 @@ void delete_bin(std::vector<uint64_t> const & delete_files,
     {
         std::filesystem::path filename;
         if (samplewise)
-            filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(i);
+            filename = path_in.string() + "IBF_Level_" + std::to_string(i);
         else
-            filename = ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[i]);
+            filename = path_in.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[i]);
 
         seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
         load_ibf(ibf, filename);
         ibf.clear(bins_to_delete);
 
-        if (ibf_args.compressed)
+        if (samplewise)
+            filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(i);
+        else
+            filename = ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[i]);
+        
+	if (ibf_args.compressed)
         {
             seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf{ibf};
             store_ibf(ibf, filename);

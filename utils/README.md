@@ -1,4 +1,4 @@
-`# Evaluation of Needle count
+# Evaluation of Needle count
 
 ## Differential Expression
 Download the sequencing experiments listed in accession.lst and the human transcripts from gencode as a fasta file.
@@ -34,6 +34,22 @@ differential expressed genes from https://doi.org/10.1016/j.dib.2018.03.079.
 
 
 # Evaluation of Needle
+
+## Insertion and Deletion
+
+If Needle indices were built according to the scripts [here](https://github.com/MitraDarja/analysis_needle/tree/main). Then insertion and deletion were tested in the following way:
+
+```
+# Testing insertion
+/usr/bin/time -v ../needle/build_thesis/bin/needle insertmin -o w_21/Insert_ -i w_21/SRR_ w_21/SRR1313229.fastq.minimiser w_21/SRR1313228.fastq.minimiser w_21/SRR1313227.fastq.minimiser w_21/SRR1313226.fastq.minimiser
+/usr/bin/time -v ../needle/build_thesis/bin/needle insertmin -o w_25/Insert_ -i w_25/SRR_ w_25/SRR1313229.fastq.minimiser w_25/SRR1313228.fastq.minimiser w_25/SRR1313227.fastq.minimiser w_25/SRR1313226.fastq.minimiser
+/usr/bin/time -v ../needle/build_thesis/bin/needle insertmin -o w_41/Insert_ -i w_41/SRR_ w_41/SRR1313229.fastq.minimiser w_41/SRR1313228.fastq.minimiser w_41/SRR1313227.fastq.minimiser w_41/SRR1313226.fastq.minimiser
+
+# Testing Deletion
+/usr/bin/time -v ../needle/build_thesis/bin/needle delete -i w_21/SRR_ -o w_21/DeletedIBF_ 614 615 616 617
+/usr/bin/time -v ../needle/build_thesis/bin/needle delete -i w_25/SRR_ -o w_25/DeletedIBF_ 614 615 616 617
+/usr/bin/time -v ../needle/build_thesis/bin/needle delete -i w_41/SRR_ -o w_41/DeletedIBF_ 614 615 616 617
+```
 
 ## Differential Expression
 Download the sequencing experiments of the GEO experiment with the accession number GSE58135 (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE58135).

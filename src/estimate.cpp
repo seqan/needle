@@ -32,7 +32,7 @@
 template <class IBFType, bool last_exp, bool normalization, typename exp_t>
 void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint16_t> & estimations_i,
                seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
-               exp_t const & expressions, uint16_t const k, std::vector<double> const fprs, std::vector<int> deleted)
+               exp_t const & expressions, uint16_t const k, std::vector<double> const fprs, std::vector<int> & deleted)
 {
     // Check, if one expression threshold for all or individual thresholds
     static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
