@@ -1,5 +1,9 @@
 # Evaluation of Needle count
 
+## Comparison with kallisto and salmon
+All scripts for the comparison with kallisto and salmon can be found in this [repo](https://github.com/MitraDarja/analysis_needle/tree/main), please use the provided scripts `run_simulated.sh` and `run_seqc.sh`.
+
+
 ## Differential Expression
 Download the sequencing experiments listed in accession.lst and the human transcripts from gencode as a fasta file.
 Then create a Needle-genome file via:
@@ -59,6 +63,26 @@ If Needle indices were built according to the scripts [here](https://github.com/
 /usr/bin/time -v ../needle/build_thesis/bin/needle delete -i w_25/SRR_ -o w_25/DeletedIBF_ 614 615 616 617
 /usr/bin/time -v ../needle/build_thesis/bin/needle delete -i w_41/SRR_ -o w_41/DeletedIBF_ 614 615 616 617
 ```
+
+## Comparison with Reindeer and MetaGraph in regards of space and speed
+The scripts for the comparison with Reindeer can be found in this [repo](https://github.com/MitraDarja/analysis_needle/tree/main).
+There you can find what data to download and how Reindeer and Needle are run, here the commands for MetaGraph are given. Please, check out
+the scripts before using them, as the paths to the executable need to be added and sometimes an input file created first.
+
+
+```
+# Preprocessing
+bash run_kmc.sh
+bash run_build.sh
+# From here on each step was considered for the comparison
+/usr/bin/time -v bash run_clean.sh
+/usr/bin/time -v bash run_clean_smooth.sh
+bash metagraph.sh
+```
+
+### Preprocessing
+The comparison of the preprocessing steps was based on the same files as the parallelization analysis. Use the script `compare_preprocess.sh` to obtain the numbers.
+
 
 ## Differential Expression
 Download the sequencing experiments of the GEO experiment with the accession number GSE58135 (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE58135).
