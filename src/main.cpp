@@ -104,7 +104,7 @@ int run_needle_count(seqan3::argument_parser & parser)
                                     "for all sequences in the genome file based on the exact minimiser occurrences of "
                                     "the given sequence files. Please run genome beforehand to create the genome file.";
     parser.add_positional_option(sequence_files, "Please provide at least one sequence file.");
-    parser.add_option(include_file, '\0', "include", "Please provide one sequence file with transcripts.");
+    parser.add_option(include_file, '\0', "include", "Please provide one sequence file with transcripts.",seqan3::option_spec::required);
     parser.add_option(genome_file, '\0', "genome", "Please provide one *.genome file created with the genome command.");
     parser.add_flag(paired, 'p', "paired", "If set, experiments are paired. Default: Not paired.");
 
