@@ -28,7 +28,7 @@ TEST_F(count_options_test, no_options)
 
 TEST_F(count_options_test, fail_no_argument)
 {
-    cli_test_result result = execute_app("needle count", "--seed 0");
+    cli_test_result result = execute_app("needle count", "--seed 0 --genome", data("mini_gen.genome")," --include", data("mini_gen.fasta"));
     std::string expected
     {
         "Error. Incorrect command line input for count. Not enough positional arguments provided "
