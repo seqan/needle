@@ -156,7 +156,7 @@ int run_needle_estimate(seqan3::argument_parser & parser)
     estimate_ibf_arguments args{};
     estimate_arguments estimate_args{};
     parser.info.short_description = "Estimate expression value of transcript based on the Needle index.";
-    parser.info.version = "1.0.0";
+    parser.info.version = "1.0.3";
     parser.info.author = "Mitra Darvish";
 
     args.path_out = "expressions.out";
@@ -505,7 +505,7 @@ int main(int argc, char const ** argv)
     needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
                                              "command ibf or estimate the expression of transcripts with the command "
                                              "estimate.");
-    needle_parser.info.version = "1.0.0";
+    needle_parser.info.version = "1.0.3";
     needle_parser.info.author = "Mitra Darvish";
 
     try
