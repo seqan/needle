@@ -53,7 +53,7 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
     float minimiser_pos = minimiser_length/2.0;
 
     // Check every experiment by going over the number of bins in the ibf.
-    for(int j = 0; j < counter.size(); j++)
+    for(size_t j = 0; j < counter.size(); j++)
     {
         if (std::find(deleted.begin(), deleted.end(), j) != deleted.end())
             continue;
@@ -62,7 +62,7 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
         // Check, if considering previously seen minimisers and minimisers found ar current level equal to or are greater
         // than the minimiser_pow, which gives the median position.
         // If ań estimation took already place (estimations_i[j]!=0), a second estimation is not performed.
-        if (((prev_counts[j] + counter[j]) >= minimiser_pos) & (estimations_i[j] == 0))
+        if (((prev_counts[j] + counter[j]) >= minimiser_pos) && (estimations_i[j] == 0))
         {
             // If there was no previous level, because we are looking at the last level.
             if constexpr(last_exp)
@@ -82,7 +82,7 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
             }
 
             // Perform normalization by dividing through the threshold of the first level. Only works, if multiple expressions were used.
-            if constexpr (normalization & multiple_expressions)
+            if constexpr (normalization && multiple_expressions)
                 estimations_i[j] = estimations_i[j]/expressions[1][j];
         }
         else
@@ -101,7 +101,7 @@ void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::file
     fin.open(filename);
     auto stream_view = seqan3::detail::istreambuf(fin);
     auto stream_it = std::ranges::begin(stream_view);
-    int j{0};
+    size_t j{0};
     std::vector<float_or_int> empty_vector{};
 
     std::string buffer{};
@@ -195,7 +195,7 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     counter.assign(ibf.bin_count(), 0);
     counter_est.assign(ibf.bin_count(), 0);
 
-    for (int i = 0; i < seqs.size(); ++i)
+    for (size_t i = 0; i < seqs.size(); ++i)
     {
         estimations.push_back(counter_est);
         prev_counts.push_back(counter);
@@ -205,9 +205,9 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
 
     // Go over the sequences
     #pragma omp parallel for
-    for (int i = 0; i < seqs.size(); ++i)
+    for (size_t i = 0; i < seqs.size(); ++i)
     {
-        if constexpr (samplewise & normalization_method)
+        if constexpr (samplewise && normalization_method)
             check_ibf<IBFType, true, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
                                            expressions,args.number_expression_thresholds - 1,
                                            fprs[args.number_expression_thresholds - 1], deleted);
@@ -234,9 +234,9 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
 
         // Go over the sequences
         #pragma omp parallel for
-        for (int i = 0; i < seqs.size(); ++i)
+        for (size_t i = 0; i < seqs.size(); ++i)
         {
-            if constexpr (samplewise & normalization_method)
+            if constexpr (samplewise && normalization_method)
                 check_ibf<IBFType, false, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
                                       expressions, j, fprs[j], deleted);
             else if constexpr (samplewise)
@@ -254,10 +254,10 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     // Write output file.
     std::ofstream outfile;
     outfile.open(std::string{file_out});
-    for (int i = 0; i <  seqs.size(); ++i)
+    for (size_t i = 0; i <  seqs.size(); ++i)
     {
         outfile << ids[i] << "\t";
-        for (int j = 0; j < ibf.bin_count(); ++j)
+        for (size_t j = 0; j < ibf.bin_count(); ++j)
              outfile << estimations[i][j] << "\t";
 
         outfile << "\n";

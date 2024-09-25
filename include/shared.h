@@ -75,7 +75,7 @@ struct estimate_ibf_arguments : min_arguments
  *  \param args   arguments to load
  *  \param ipath Path, where the arguments can be found.
  */
-static void load_args(estimate_ibf_arguments & args, std::filesystem::path ipath)
+[[maybe_unused]] static void load_args(estimate_ibf_arguments & args, std::filesystem::path ipath)
 {
     std::ifstream is{ipath, std::ios::binary};
     cereal::BinaryInputArchive iarchive{is};
@@ -86,7 +86,7 @@ static void load_args(estimate_ibf_arguments & args, std::filesystem::path ipath
  *  \param args  arguments to store
  *  \param opath Path, where the arguments should be stored.
  */
-static void store_args(estimate_ibf_arguments const & args, std::filesystem::path opath)
+[[maybe_unused]] static void store_args(estimate_ibf_arguments const & args, std::filesystem::path opath)
 {
     std::ofstream os{opath, std::ios::binary};
     cereal::BinaryOutputArchive oarchive{os};
@@ -124,5 +124,5 @@ void store_ibf(IBFType const & ibf,
 {
     std::ofstream os{opath, std::ios::binary};
     cereal::BinaryOutputArchive oarchive{os};
-    oarchive(seqan3::interleaved_bloom_filter(ibf));
+    oarchive(ibf);
 }
