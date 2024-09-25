@@ -5,15 +5,22 @@
 
 #include "ibf.h"
 #include "shared.h"
+#include "../app_test.hpp"
 
-#ifndef DATA_INPUT_DIR
-#  define DATA_INPUT_DIR @DATA_INPUT_DIR@
-#endif
+// To prevent issues when running multiple CLI tests in parallel, give each CLI test unique names:
+struct minimiser_test : public app_test
+{
+    void initialization_args(estimate_ibf_arguments & args)
+    {
+        args.k = 4;
+        args.shape = seqan3::ungapped{args.k};
+        args.w_size = seqan3::window_size{4};
+        args.s = seqan3::seed{0};
+        args.path_out = "Minimiser_Test_";
+        args.compressed = true;
+    }
 
-using seqan3::operator""_shape;
-std::filesystem::path tmp_dir = std::filesystem::temp_directory_path(); // get the temp directory
-
-std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> expected_hash_tables{   // minimisers:
+    std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> expected_hash_tables{   // minimisers:
                                                                              {{0,2},   // AAAA
                                                                               {1,4},   // AAAC
                                                                               {6,4},   // AACG
@@ -40,18 +47,9 @@ std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> expected_hash_ta
                                                                               {165,1}, // GGCC
                                                                               {168,1}, // GGGA
                                                                                      },};
+};
 
-void initialization_args(estimate_ibf_arguments & args)
-{
-    args.k = 4;
-    args.shape = seqan3::ungapped{args.k};
-    args.w_size = seqan3::window_size{4};
-    args.s = seqan3::seed{0};
-    args.path_out = tmp_dir/"Minimiser_Test_";
-    args.compressed = true;
-}
-
-TEST(minimiser, small_example)
+TEST_F(minimiser_test, small_example)
 {
     estimate_ibf_arguments args{};
     minimiser_arguments minimiser_args{};
@@ -59,20 +57,19 @@ TEST(minimiser, small_example)
     std::vector<uint8_t> cutoffs = {0, 0};
     args.expression_thresholds = {0};
     std::vector<double> fpr = {0.05};
-    std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
-                                                         std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
+                                                         data("mini_example2.fasta")};
     minimiser(sequence_files, args, minimiser_args, cutoffs);
-    uint32_t normalized_exp_value{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     uint64_t num_of_minimisers{};
     std::vector<uint64_t> expected_nums{12, 12};
 
-    for (int i = 0; i < sequence_files.size(); ++i)
+    for (size_t i = 0; i < sequence_files.size(); ++i)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, tmp_dir/("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args, ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -82,8 +79,8 @@ TEST(minimiser, small_example)
         EXPECT_EQ(0, cutoff);
 
         // Test binary file
-        read_binary(tmp_dir/("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
-        minimiser_files.push_back(tmp_dir/("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
+        read_binary(("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
+        minimiser_files.push_back(("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
         for (auto & hash : expected_hash_tables[i])
         {
             EXPECT_EQ(expected_hash_tables[i][hash.first], result_hash_table[hash.first]);
@@ -94,7 +91,7 @@ TEST(minimiser, small_example)
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    load_ibf(ibf, tmp_dir/"Minimiser_Test_IBF_0");
+    load_ibf(ibf, "Minimiser_Test_IBF_0");
     auto agent = ibf.membership_agent();
 
     std::vector<bool> expected_result(2, 0);
@@ -107,32 +104,28 @@ TEST(minimiser, small_example)
     auto & res3 = agent.bulk_contains(27);
     EXPECT_RANGE_EQ(expected_result,  res3);
 
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_0");
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_Data");
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_FPRs.fprs");
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example.minimiser"));
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example2.minimiser"));
 }
 
-TEST(minimiser, small_example_different_shape)
+TEST_F(minimiser_test, small_example_different_shape)
 {
     estimate_ibf_arguments args{};
     minimiser_arguments minimiser_args{};
     initialization_args(args);
     std::vector<uint8_t> cutoffs = {0, 0};
     args.shape = seqan3::bin_literal{0b1101};
-    std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
-                                                         std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    EXPECT_EQ(13, args.shape.to_ulong());
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
+                                                         data("mini_example2.fasta")};
     minimiser(sequence_files, args, minimiser_args, cutoffs);
 
     uint64_t num_of_minimisers{};
     std::vector<uint64_t> expected_nums{12, 11};
 
-    for (int i = 0; i < sequence_files.size(); ++i)
+    for (size_t i = 0; i < sequence_files.size(); ++i)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, tmp_dir/("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args, ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -142,11 +135,9 @@ TEST(minimiser, small_example_different_shape)
         EXPECT_EQ(0, cutoff);
     }
 
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example.minimiser"));
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example2.minimiser"));
 }
 
-TEST(minimiser, small_example_samplewise)
+TEST_F(minimiser_test, small_example_samplewise)
 {
     estimate_ibf_arguments args{};
     minimiser_arguments minimiser_args{};
@@ -155,11 +146,10 @@ TEST(minimiser, small_example_samplewise)
     std::vector<uint8_t> cutoffs = {0, 0};
     args.number_expression_thresholds = 1;
     std::vector<double> fpr = {0.05};
-    std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
-                                                         std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
+                                                         data("mini_example2.fasta")};
 
     minimiser(sequence_files, args, minimiser_args, cutoffs);
-    uint32_t normalized_exp_value{};
     std::vector<std::vector<uint32_t>> expected_counts{{7}, {12}};
     std::vector<uint16_t> expected_levels{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
@@ -167,12 +157,12 @@ TEST(minimiser, small_example_samplewise)
     uint64_t num_of_minimisers{};
     std::vector<uint64_t> expected_nums{12, 12};
 
-    for (int i = 0; i < sequence_files.size(); ++i)
+    for (size_t i = 0; i < sequence_files.size(); ++i)
     {
         uint8_t cutoff{};
         // Test Header file
         args.expression_thresholds = {};
-        read_binary_start(args, tmp_dir/("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args, ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
@@ -181,8 +171,8 @@ TEST(minimiser, small_example_samplewise)
         EXPECT_EQ(0, cutoff);
 
         // Test binary file
-        read_binary(tmp_dir/("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
-        minimiser_files.push_back(tmp_dir/("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
+        read_binary(("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
+        minimiser_files.push_back(("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
         for (auto & hash : expected_hash_tables[i])
         {
             EXPECT_EQ(expected_hash_tables[i][hash.first], result_hash_table[hash.first]);
@@ -194,7 +184,7 @@ TEST(minimiser, small_example_samplewise)
     EXPECT_EQ(expected_levels, ibf(minimiser_files, args, fpr));
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    load_ibf(ibf, tmp_dir/"Minimiser_Test_IBF_Level_0");
+    load_ibf(ibf, "Minimiser_Test_IBF_Level_0");
     auto agent = ibf.membership_agent();
 
     std::vector<bool> expected_result(2, 0);
@@ -206,15 +196,9 @@ TEST(minimiser, small_example_samplewise)
     expected_result[1] = 1;
     auto & res3 = agent.bulk_contains(27);
     EXPECT_RANGE_EQ(expected_result,  res3);
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_Level_0");
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_Levels.levels");
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_FPRs.fprs");
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_Data");
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example.minimiser"));
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example2.minimiser"));
 }
 
-TEST(minimiser, cutoff_by_filesize)
+TEST_F(minimiser_test, cutoff_by_filesize)
 {
     estimate_ibf_arguments args{};
     minimiser_arguments minimiser_args{};
@@ -222,20 +206,20 @@ TEST(minimiser, cutoff_by_filesize)
     args.expression_thresholds = {0};
     std::vector<double> fpr = {0.05};
     std::vector<uint8_t> cutoffs{};
-    std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
-                                                         std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
+                                                         data("mini_example2.fasta")};
 
     minimiser(sequence_files, args, minimiser_args, cutoffs);
-    uint32_t normalized_exp_value{};
+
     std::vector<std::filesystem::path> minimiser_files{};
     uint64_t num_of_minimisers{};
     std::vector<uint64_t> expected_nums{12, 12};
 
-    for (int i = 0; i < sequence_files.size(); ++i)
+    for (size_t i = 0; i < sequence_files.size(); ++i)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, tmp_dir/("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args, ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -243,13 +227,13 @@ TEST(minimiser, cutoff_by_filesize)
         EXPECT_EQ(15, args.shape.to_ulong());
         EXPECT_EQ(0, cutoff);
         EXPECT_EQ(expected_nums[i], num_of_minimisers);
-        minimiser_files.push_back(tmp_dir/("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
+        minimiser_files.push_back(("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
     }
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    load_ibf(ibf, tmp_dir/"Minimiser_Test_IBF_0");
+    load_ibf(ibf, "Minimiser_Test_IBF_0");
     auto agent = ibf.membership_agent();
 
     std::vector<bool> expected_result(2, 0);
@@ -263,14 +247,9 @@ TEST(minimiser, cutoff_by_filesize)
     auto & res3 = agent.bulk_contains(85);
     EXPECT_RANGE_EQ(expected_result, res3);
 
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_0");
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_Data");
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_FPRs.fprs");
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example.minimiser"));
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example2.minimiser"));
 }
 
-TEST(minimiser, small_example_two_threads)
+TEST_F(minimiser_test, small_example_two_threads)
 {
     estimate_ibf_arguments args{};
     minimiser_arguments minimiser_args{};
@@ -279,21 +258,20 @@ TEST(minimiser, small_example_two_threads)
     std::vector<uint8_t> cutoffs = {0, 0};
     args.expression_thresholds = {0};
     std::vector<double> fpr = {0.05};
-    std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
-                                                         std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
+                                                         data("mini_example2.fasta")};
     minimiser(sequence_files, args, minimiser_args, cutoffs);
     args.threads = 1;
-    uint32_t normalized_exp_value{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     uint64_t num_of_minimisers{};
     std::vector<uint64_t> expected_nums{12, 12};
 
-    for (int i = 0; i < sequence_files.size(); ++i)
+    for (size_t i = 0; i < sequence_files.size(); ++i)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, tmp_dir/("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args, ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -303,8 +281,8 @@ TEST(minimiser, small_example_two_threads)
         EXPECT_EQ(expected_nums[i], num_of_minimisers);
 
         // Test binary file
-        read_binary(tmp_dir/("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
-        minimiser_files.push_back(tmp_dir/("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
+        read_binary(("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
+        minimiser_files.push_back(("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"));
         for (auto & hash : expected_hash_tables[i])
         {
             EXPECT_EQ(expected_hash_tables[i][hash.first], result_hash_table[hash.first]);
@@ -316,7 +294,7 @@ TEST(minimiser, small_example_two_threads)
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
 
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    load_ibf(ibf, tmp_dir/"Minimiser_Test_IBF_0");
+    load_ibf(ibf, "Minimiser_Test_IBF_0");
     auto agent = ibf.membership_agent();
 
     std::vector<bool> expected_result(2, 0);
@@ -329,35 +307,29 @@ TEST(minimiser, small_example_two_threads)
     auto & res3 = agent.bulk_contains(27);
     EXPECT_RANGE_EQ(expected_result, res3);
 
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_0");
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_Data");
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_IBF_FPRs.fprs");
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example.minimiser"));
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_mini_example2.minimiser"));
 }
 
-TEST(minimiser, small_example_include)
+TEST_F(minimiser_test, small_example_include)
 {
     estimate_ibf_arguments args{};
     minimiser_arguments minimiser_args{};
     initialization_args(args);
-    args.path_out = tmp_dir/"Minimiser_Test_In_";
+    args.path_out = "Minimiser_Test_In_";
     std::vector<uint8_t> cutoffs = {0, 0};
-    minimiser_args.include_file = std::string(DATA_INPUT_DIR) + "mini_gen.fasta";
-    std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
-                                                         std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    minimiser_args.include_file = data("mini_gen.fasta");
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
+                                                         data("mini_example2.fasta")};
     minimiser(sequence_files, args, minimiser_args, cutoffs);
-    uint32_t normalized_exp_value{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     uint64_t num_of_minimisers{};
     std::vector<uint64_t> expected_nums{1, 0};
 
-    for (int i = 0; i < sequence_files.size(); ++i)
+    for (size_t i = 0; i < sequence_files.size(); ++i)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, tmp_dir/("Minimiser_Test_In_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args, ("Minimiser_Test_In_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -367,8 +339,8 @@ TEST(minimiser, small_example_include)
         EXPECT_EQ(expected_nums[i], num_of_minimisers);
 
         // Test binary file
-        read_binary(tmp_dir/("Minimiser_Test_In_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
-        minimiser_files.push_back(tmp_dir/("Minimiser_Test_In_" + std::string{sequence_files[i].stem()} + ".minimiser"));
+        read_binary(("Minimiser_Test_In_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
+        minimiser_files.push_back(("Minimiser_Test_In_" + std::string{sequence_files[i].stem()} + ".minimiser"));
         if (i==0)
         {
             for (auto & hash : result_hash_table)
@@ -385,34 +357,31 @@ TEST(minimiser, small_example_include)
         result_hash_table.clear();
     }
 
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_In_mini_example.minimiser"));
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_In_mini_example2.minimiser"));
 }
 
-TEST(minimiser, small_example_exclude)
+TEST_F(minimiser_test, small_example_exclude)
 {
     estimate_ibf_arguments args{};
     minimiser_arguments minimiser_args{};
     initialization_args(args);
-    args.path_out = tmp_dir/"Minimiser_Test_Ex_";
+    args.path_out = "Minimiser_Test_Ex_";
     std::vector<uint8_t> cutoffs = {0, 0};
-    minimiser_args.exclude_file = std::string(DATA_INPUT_DIR) + "mini_gen2.fasta";
+    minimiser_args.exclude_file = data("mini_gen2.fasta");
     args.expression_thresholds = {0};
     std::vector<double> fpr = {0.05};
-    std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
-                                                         std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
+                                                         data("mini_example2.fasta")};
     minimiser(sequence_files, args, minimiser_args, cutoffs);
-    uint32_t normalized_exp_value{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     uint64_t num_of_minimisers{};
     std::vector<uint64_t> expected_nums{11, 12};
 
-    for (int i = 0; i < sequence_files.size(); ++i)
+    for (size_t i = 0; i < sequence_files.size(); ++i)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, tmp_dir/("Minimiser_Test_Ex_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args, ("Minimiser_Test_Ex_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -422,8 +391,8 @@ TEST(minimiser, small_example_exclude)
         EXPECT_EQ(0, cutoff);
 
         // Test binary file
-        read_binary(tmp_dir/("Minimiser_Test_Ex_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
-        minimiser_files.push_back(tmp_dir/("Minimiser_Test_Ex_" + std::string{sequence_files[i].stem()} + ".minimiser"));
+        read_binary(("Minimiser_Test_Ex_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
+        minimiser_files.push_back(("Minimiser_Test_Ex_" + std::string{sequence_files[i].stem()} + ".minimiser"));
         EXPECT_TRUE(result_hash_table.find(216) == result_hash_table.end()); //TCGA, only minimiser in mini_gen2
         for (auto & hash : expected_hash_tables[i])
         {
@@ -438,7 +407,7 @@ TEST(minimiser, small_example_exclude)
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    load_ibf(ibf, tmp_dir/"Minimiser_Test_Ex_IBF_0");
+    load_ibf(ibf, "Minimiser_Test_Ex_IBF_0");
     auto agent = ibf.membership_agent();
 
     std::vector<bool> expected_result(2, 0);
@@ -451,14 +420,9 @@ TEST(minimiser, small_example_exclude)
     auto & res3 = agent.bulk_contains(27);
     EXPECT_RANGE_EQ(expected_result,  res3);
 
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_Ex_IBF_0");
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_Ex_IBF_Data");
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_Ex_IBF_FPRs.fprs");
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_Ex_mini_example.minimiser"));
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_Ex_mini_example2.minimiser"));
 }
 
-TEST(minimiser, small_example_shape)
+TEST_F(minimiser_test, small_example_shape)
 {
     std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> expected_hash_tables_shape{   // minimisers:
                                                                                  {
@@ -484,24 +448,24 @@ TEST(minimiser, small_example_shape)
     minimiser_arguments minimiser_args{};
     initialization_args(args);
     args.shape = seqan3::bin_literal{9};
-    args.path_out = tmp_dir/"Minimiser_Test_Shape_";
+    EXPECT_EQ(9, args.shape.to_ulong());
+    args.path_out = "Minimiser_Test_Shape_";
     std::vector<uint8_t> cutoffs = {0, 0};
     args.expression_thresholds = {0};
     std::vector<double> fpr = {0.05};
-    std::vector<std::filesystem::path> sequence_files = {std::string(DATA_INPUT_DIR) + "mini_example.fasta",
-                                                         std::string(DATA_INPUT_DIR) + "mini_example2.fasta"};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
+                                                         data("mini_example2.fasta")};
     minimiser(sequence_files, args, minimiser_args, cutoffs);
-    uint32_t normalized_exp_value{};
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
     uint64_t num_of_minimisers{};
     std::vector<uint64_t> expected_nums{8, 7};
 
-    for (int i = 0; i < sequence_files.size(); ++i)
+    for (size_t i = 0; i < sequence_files.size(); ++i)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, tmp_dir/("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args, ("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -511,8 +475,8 @@ TEST(minimiser, small_example_shape)
         EXPECT_EQ(0, cutoff);
 
         // Test binary file
-        read_binary(tmp_dir/("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
-        minimiser_files.push_back(tmp_dir/("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"));
+        read_binary(("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
+        minimiser_files.push_back(("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"));
         for (auto & hash : expected_hash_tables_shape[i])
             EXPECT_EQ(expected_hash_tables_shape[i][hash.first], result_hash_table[hash.first]);
 
@@ -521,7 +485,7 @@ TEST(minimiser, small_example_shape)
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
     seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-    load_ibf(ibf, tmp_dir/"Minimiser_Test_Shape_IBF_0");
+    load_ibf(ibf, "Minimiser_Test_Shape_IBF_0");
     auto agent = ibf.membership_agent();
 
     std::vector<bool> expected_result(2, 0);
@@ -534,9 +498,4 @@ TEST(minimiser, small_example_shape)
     auto & res3 = agent.bulk_contains(2);
     EXPECT_RANGE_EQ(expected_result,  res3);
 
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_Shape_IBF_0");
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_Shape_IBF_Data");
-    std::filesystem::remove(tmp_dir/"Minimiser_Test_Shape_IBF_FPRs.fprs");
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_Shape_mini_example.minimiser"));
-    std::filesystem::remove(tmp_dir/("Minimiser_Test_Shape_mini_example2.minimiser"));
 }
