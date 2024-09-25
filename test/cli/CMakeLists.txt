@@ -1,15 +1,13 @@
-cmake_minimum_required (VERSION 3.9)
+# SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin
+# SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
+# SPDX-License-Identifier: CC0-1.0
 
-add_cli_test (needle_options_test.cpp)
-add_cli_test (ibf_options_test.cpp)
-target_use_datasources (ibf_options_test FILES exp_01.fasta mini_example.fasta mini_example.minimiser)
-add_cli_test (insert_options_test.cpp)
-target_use_datasources (insert_options_test FILES exp_01.fasta mini_example.fasta mini_example.minimiser)
-add_cli_test (minimiser_options_test.cpp)
-target_use_datasources (minimiser_options_test FILES mini_example.fasta)
-add_cli_test (estimate_options_test.cpp)
-target_use_datasources (estimate_options_test FILES IBF_1 mini_gen.fasta)
-add_cli_test (count_options_test.cpp)
-target_use_datasources (count_options_test FILES mini_example.fasta mini_gen.fasta mini_gen.genome)
-add_cli_test (delete_options_test.cpp)
-target_use_datasources (delete_options_test FILES exp_01.fasta)
+cmake_minimum_required (VERSION 3.25)
+
+add_app_test (needle_options_test.cpp)
+add_app_test (ibf_options_test.cpp)
+add_app_test (insert_options_test.cpp)
+add_app_test (minimiser_options_test.cpp)
+add_app_test (estimate_options_test.cpp)
+add_app_test (count_options_test.cpp)
+add_app_test (delete_options_test.cpp)
