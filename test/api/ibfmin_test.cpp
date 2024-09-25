@@ -61,7 +61,7 @@ TEST_F(ibfmin_test, given_expression_thresholds_multiple_threads)
     ibf_args.threads = 2;
     ibf_args.path_out = "IBFMIN_Test_Multiple_";
     std::vector<std::filesystem::path> minimiser_file{};
-    minimiser_file.assign(16, data("mini_example.minimiser"));
+    minimiser_file.assign(128, data("mini_example.minimiser"));
 
     std::vector<uint16_t> expected{1, 2};
 
@@ -73,10 +73,10 @@ TEST_F(ibfmin_test, given_expression_thresholds_multiple_threads)
     load_ibf(ibf, "IBFMIN_Test_Multiple_IBF_1");
     auto agent = ibf.membership_agent();
 
-    std::vector<bool> expected_result(16, 0);
+    std::vector<bool> expected_result(128, 0);
     auto & res = agent.bulk_contains(97);
     EXPECT_RANGE_EQ(expected_result,  res);
-    std::vector<bool> expected_result2(16, 1);
+    std::vector<bool> expected_result2(128, 1);
     auto & res2 = agent.bulk_contains(24);
     EXPECT_RANGE_EQ(expected_result2,  res2);
 }
