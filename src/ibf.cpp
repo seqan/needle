@@ -457,22 +457,21 @@ void count(min_arguments const & args, std::vector<std::filesystem::path> sequen
 
 void read_binary(std::filesystem::path filename, robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table)
 {
-    std::ifstream fin;
+    std::ifstream fin{filename, std::ios::binary};
 
-    uint8_t small_buffer;
-    uint32_t window;
-    uint64_t buffer;
-    fin.open(filename, std::ios::binary);
-    fin.read((char*)&buffer, sizeof(buffer));
-    fin.read((char*)&small_buffer, sizeof(small_buffer));
-    fin.read((char*)&small_buffer, sizeof(small_buffer));
-    fin.read((char*)&window, sizeof(window));
-    fin.read((char*)&buffer, sizeof(buffer));
+    // Skip the first 22 bytes:
+    //   8 num_of_minimisers
+    //   1 cutoff
+    //   1 args.k
+    //   4 args.w_size
+    //   8 args.s
+    fin.ignore(22);
+
     bool ungapped;
     fin.read((char*)&ungapped, sizeof(ungapped));
     if (!ungapped)
     {
-        fin.read((char*)&buffer, sizeof(buffer));
+        fin.ignore(8); // args.shape
     }
 
     uint64_t minimiser;
@@ -491,22 +490,13 @@ void read_binary_start(min_arguments & args,
                  std::filesystem::path filename,
                  uint64_t & num_of_minimisers, uint8_t & cutoff)
 {
-    std::ifstream fin;
+    std::ifstream fin{filename, std::ios::binary};
 
-    uint32_t window;
-    uint64_t buffer;
-    uint8_t small_buffer;
-    fin.open(filename, std::ios::binary);
-    fin.read((char*)&buffer, sizeof(buffer));
-    num_of_minimisers = buffer;
-
-    fin.read((char*)&small_buffer, sizeof(small_buffer));
-    cutoff = small_buffer;
+    fin.read((char*)&num_of_minimisers, sizeof(num_of_minimisers));
+    fin.read((char*)&cutoff, sizeof(cutoff));
     fin.read((char*)&args.k, sizeof(args.k));
-    fin.read((char*)&window, sizeof(window));
-    args.w_size = seqan3::window_size{window};
-    fin.read((char*)&buffer, sizeof(buffer));
-    args.s = seqan3::seed{buffer};
+    fin.read((char*)&args.w_size, sizeof(args.w_size));
+    fin.read((char*)&args.s, sizeof(args.s));
 
     bool ungapped;
     fin.read((char*)&ungapped, sizeof(ungapped));
@@ -516,8 +506,7 @@ void read_binary_start(min_arguments & args,
     }
     else
     {
-        fin.read((char*)&buffer, sizeof(buffer));
-        args.shape = seqan3::bin_literal{buffer};
+        fin.read((char*)&args.shape, sizeof(args.shape));
     }
 
     fin.close();
@@ -531,11 +520,11 @@ void check_expression(std::vector<uint16_t> & expression_thresholds, uint8_t & n
     sort(expression_thresholds.begin(), expression_thresholds.end());
 
      // If no expression levels are given and the no number of expression levels is specified, throw.
-    if ((number_expression_thresholds == 0) & (expression_thresholds.size() == 0))
+    if ((number_expression_thresholds == 0) && (expression_thresholds.size() == 0))
     {
         throw std::invalid_argument{"Error. Please set the expression levels OR give the number of expression levels."};
     }
-    else if ((expression_by_genome_file != "") & (expression_thresholds.size() > 0))
+    else if ((expression_by_genome_file != "") && (expression_thresholds.size() > 0))
     {
         throw std::invalid_argument{"Error. The determination of expression levels can not be used with individual levels"
                                     " already given. Please set the expression levels without the option "
@@ -545,7 +534,7 @@ void check_expression(std::vector<uint16_t> & expression_thresholds, uint8_t & n
     {
         number_expression_thresholds = expression_thresholds.size();
     }
-    else if ((number_expression_thresholds != expression_thresholds.size()) & (expression_thresholds.size() > 0))
+    else if ((number_expression_thresholds != expression_thresholds.size()) && (expression_thresholds.size() > 0))
     {
         throw std::invalid_argument{"Error. Please set the expression levels OR give the number of expression levels."};
     }
@@ -1386,7 +1375,7 @@ void delete_bin(std::vector<uint64_t> const & delete_files,
             filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(i);
         else
             filename = ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[i]);
-        
+
 	if (ibf_args.compressed)
         {
             seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibfc{std::move(ibf)};
@@ -1459,15 +1448,14 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
     outfile.write(reinterpret_cast<const char*>(&hash_size), sizeof(hash_size));
     outfile.write(reinterpret_cast<const char*>(&cutoff), sizeof(cutoff));
     outfile.write(reinterpret_cast<const char*>(&args.k), sizeof(args.k));
-    outfile.write(reinterpret_cast<const char*>(&args.w_size.get()), sizeof(args.w_size.get()));
-    outfile.write(reinterpret_cast<const char*>(&args.s.get()), sizeof(args.s.get()));
+    outfile.write(reinterpret_cast<const char*>(&args.w_size), sizeof(args.w_size));
+    outfile.write(reinterpret_cast<const char*>(&args.s), sizeof(args.s));
     bool ungapped = args.shape.all();
     outfile.write(reinterpret_cast<const char*>(&ungapped), sizeof(ungapped));
 
     if (!ungapped)
     {
-        uint64_t shapesize = args.shape.to_ulong();
-        outfile.write(reinterpret_cast<const char*>(&shapesize), sizeof(shapesize));
+        outfile.write(reinterpret_cast<const char*>(&args.shape), sizeof(args.shape));
     }
 
     for (auto && hash : hash_table)
