@@ -1,9 +1,12 @@
-cmake_minimum_required (VERSION 3.9)
+# SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin
+# SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
+# SPDX-License-Identifier: CC0-1.0
 
-# The api_test build target.
-add_api_test (count_test.cpp)
-add_api_test (insert_delete_test.cpp)
-add_api_test (estimate_test.cpp)
-add_api_test (ibf_test.cpp)
-add_api_test (ibfmin_test.cpp)
-add_api_test (minimiser_test.cpp)
+cmake_minimum_required (VERSION 3.25)
+
+add_app_test (count_test.cpp)
+add_app_test (insert_delete_test.cpp)
+add_app_test (estimate_test.cpp)
+add_app_test (ibf_test.cpp)
+add_app_test (ibfmin_test.cpp)
+add_app_test (minimiser_test.cpp)

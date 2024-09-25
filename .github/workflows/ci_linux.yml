@@ -1,140 +1,65 @@
-name: CI on Linux
+# SPDX-FileCopyrightText: 2006-2023, Knut Reinert & Freie Universität Berlin
+# SPDX-FileCopyrightText: 2016-2023, Knut Reinert & MPI für molekulare Genetik
+# SPDX-License-Identifier: CC0-1.0
+
+name: Linux
 
 on:
   push:
     branches:
-      - 'master'
       - 'main'
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: linux-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 env:
-  CMAKE_VERSION: 3.10.3
-  SEQAN3_NO_VERSION_CHECK: 1
   TZ: Europe/Berlin
 
 defaults:
   run:
-    shell: bash -ex {0}
+    shell: bash -Eexuo pipefail {0}
 
 jobs:
   build:
-    name: ${{ matrix.name }}
-    runs-on: ubuntu-22.04
-    timeout-minutes: 120
+    runs-on: ubuntu-latest
+    name: ${{ matrix.compiler }}
+    if: github.repository_owner == 'seqan' || github.event_name == 'workflow_dispatch'
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        include:
-          - name: "Coverage gcc12"
-            cxx: "g++-12"
-            cc: "gcc-12"
-            build: coverage
-            build_type: Coverage
-
-          - name: "gcc12"
-            cxx: "g++-12"
-            cc: "gcc-12"
-            build_type: Release
-
-          - name: "gcc11"
-            cxx: "g++-11"
-            cc: "gcc-11"
-            build_type: Release
-
-          - name: "gcc10"
-            cxx: "g++-10"
-            cc: "gcc-10"
-            build_type: Release
-
+        compiler: ["clang-18", "clang-17", "gcc-14", "gcc-13", "gcc-12", "intel"]
+    container:
+      image: ghcr.io/seqan/${{ matrix.compiler }}
+      volumes:
+        - /home/runner:/home/runner
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          path: needle
-          fetch-depth: 2
-          submodules: recursive
-
-      - name: Add package source
-        run: bash ./needle/lib/seqan3/.github/workflows/scripts/configure_apt.sh
-
-      - name: Install CMake
-        run: bash ./needle/lib/seqan3/.github/workflows/scripts/install_cmake.sh
-
-      - name: Install ccache
-        run: sudo apt-get install --yes ccache
-
-      - name: Install compiler ${{ matrix.cxx }}
-        run: sudo apt-get install --yes ${{ matrix.cxx }}
-
-      - name: Install lcov
-        if: matrix.build == 'coverage'
-        run: |
-          sudo apt-get install --yes lcov
-          sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-12 100
+        uses: actions/checkout@v4
 
       - name: Load ccache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
-          path: .ccache
-          key: ${{ runner.os }}-${{ matrix.name }}-ccache-${{ github.ref }}-${{ github.run_number }}
-          # Restoring: From current branch, otherwise from base branch, otherwise from any branch.
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.name }}-ccache-${{ github.ref }}
-            ${{ runner.os }}-${{ matrix.name }}-ccache-${{ github.base_ref }}
-            ${{ runner.os }}-${{ matrix.name }}-ccache-
-
-      - name: Tool versions
-        run: |
-          env cmake --version
-          env ${{ matrix.cxx }} --version
+          path: /home/runner/.ccache
+          save-always: true
+          key: ccache-${{ runner.os }}-${{ github.workflow }}-${{ matrix.compiler }}-${{ github.ref }}
 
       - name: Configure tests
-        env:
-          CXX: ${{ matrix.cxx }}
-          CC: ${{ matrix.cc }}
         run: |
-          mkdir build
-          cd build
-          cmake ../needle -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }} -Wno-interference-size"
+          mkdir build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          make gtest_main
 
       - name: Build tests
-        env:
-          CCACHE_BASEDIR: ${{ github.workspace }}
-          CCACHE_DIR: ${{ github.workspace }}/.ccache
-          CCACHE_COMPRESS: true
-          CCACHE_COMPRESSLEVEL: 6
-          CCACHE_MAXSIZE: 500M
+        working-directory: build
         run: |
-          ccache -p || true
-          cd build
-          make -k -j2 api_test cli_test
-          ccache -s || true
-
-      - name: Generate coverage baseline
-        if: matrix.build == 'coverage'
-        run: |
-          lcov --directory ./build/ --zerocounters
-          lcov --directory ./build/ --capture --initial --output-file ./build/coverage_report.baseline
+          ccache -z
+          make -k tests
+          ccache -svvx
 
       - name: Run tests
-        run: |
-          cd build
-          ctest . -j2 --output-on-failure
+        working-directory: build
+        run: ctest -j --output-on-failure --test-dir test
 
-      - name: Generate coverage report
-        if: matrix.build == 'coverage'
-        run: |
-          lcov --directory ./build/ --capture --output-file ./build/coverage_report.captured
-          lcov -a ./build/coverage_report.baseline -a ./build/coverage_report.captured --output-file ./build/coverage_report.total
-          lcov --remove ./build/coverage_report.total '/usr/*' '${{ github.workspace }}/needle/lib/*' '${{ github.workspace }}/needle/test/*' '${{ github.workspace }}/build/vendor/*' --output-file ./build/coverage_report
-
-      - name: Submit coverage report
-        if: matrix.build == 'coverage'
-        uses: codecov/codecov-action@v2
-        with:
-          files: ${{ github.workspace }}/build/coverage_report
-          root_dir: ${{ github.workspace }}/needle

@@ -1,115 +1,59 @@
-name: CI on macOS
+# SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin
+# SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
+# SPDX-License-Identifier: CC0-1.0
+
+name: macOS
 
 on:
   push:
     branches:
-      - 'master'
       - 'main'
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: macos-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 env:
-  CMAKE_VERSION: 3.10.3
-  SEQAN3_NO_VERSION_CHECK: 1
   TZ: Europe/Berlin
 
 defaults:
   run:
-    shell: bash -ex {0}
+    shell: bash -Eeuxo pipefail {0}
 
 jobs:
   build:
-    name: ${{ matrix.name }}
-    runs-on: macos-12
-    timeout-minutes: 120
+    name: ${{ matrix.compiler }}
+    runs-on: macos-14
+    if: github.repository_owner == 'seqan' || github.event_name == 'workflow_dispatch'
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        include:
-          - name: "gcc12"
-            cxx: "g++-12"
-            cc: "gcc-12"
-            build_type: Release
-
-          - name: "gcc11"
-            cxx: "g++-11"
-            cc: "gcc-11"
-            build_type: Release
-
-          - name: "gcc10"
-            cxx: "g++-10"
-            cc: "gcc-10"
-            build_type: Release
-
+        compiler: ["clang-18", "clang-17", "gcc-14", "gcc-13", "gcc-12"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Setup toolchain
+        uses: seqan/actions/setup-toolchain@main
         with:
-          path: needle
-          fetch-depth: 2
-          submodules: recursive
-
-      - name: Configure Homebrew
-        uses: Homebrew/actions/setup-homebrew@master
-
-      - name: Install CMake
-        run: bash ./needle/lib/seqan3/.github/workflows/scripts/install_cmake.sh
-
-      - name: Install ccache
-        run: bash ./needle/lib/seqan3/.github/workflows/scripts/install_via_brew.sh ccache
-
-      - name: Install compiler ${{ matrix.cxx }}
-        run: bash ./needle/lib/seqan3/.github/workflows/scripts/install_via_brew.sh gcc $(echo "${{ matrix.cxx }}" | sed "s/g++-//g")
-
-      - name: Load ccache
-        uses: actions/cache@v3
-        with:
-          path: .ccache
-          key: ${{ runner.os }}-${{ matrix.name }}-ccache-${{ github.ref }}-${{ github.run_number }}
-          # Restoring: From current branch, otherwise from base branch, otherwise from any branch.
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.name }}-ccache-${{ github.ref }}
-            ${{ runner.os }}-${{ matrix.name }}-ccache-${{ github.base_ref }}
-            ${{ runner.os }}-${{ matrix.name }}-ccache-
-
-      - name: Tool versions
-        run: |
-          env cmake --version
-          env ${{ matrix.cxx }} --version
-          sudo xcode-select -s '/Applications/Xcode_13.4.1.app/Contents/Developer' # https://github.com/actions/runner-images/issues/6350
+          compiler: ${{ matrix.compiler }}
+          ccache_size: 75M
 
       - name: Configure tests
-        env:
-          CXX: ${{ matrix.cxx }}
-          CC: ${{ matrix.cc }}
         run: |
-          mkdir build
-          cd build
-          cmake ../needle -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }} -Wno-interference-size"
+          mkdir build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          make gtest_main
 
-      - name: Build application
-        env:
-          CCACHE_BASEDIR: ${{ github.workspace }}
-          CCACHE_DIR: ${{ github.workspace }}/.ccache
-          CCACHE_COMPRESS: true
-          CCACHE_COMPRESSLEVEL: 6
-          CCACHE_MAXSIZE: 500M
+      - name: Build tests
+        working-directory: build
         run: |
-          ccache -p || true
-          cd build
-          make -k -j3
-          ccache -s || true
+          ccache -z
+          make -k tests
+          ccache -svvx
 
-      - name: Build and run tests
-        env:
-          CCACHE_BASEDIR: ${{ github.workspace }}
-          CCACHE_DIR: ${{ github.workspace }}/.ccache
-          CCACHE_COMPRESS: true
-          CCACHE_COMPRESSLEVEL: 6
-          CCACHE_MAXSIZE: 500M
-        run: |
-          cd build
-          ctest . -j3 --output-on-failure
+      - name: Run tests
+        working-directory: build
+        run: ctest -j --output-on-failure --test-dir test

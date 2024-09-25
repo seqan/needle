@@ -1,26 +1,26 @@
 #include <string>                // strings
 
-#include "cli_test.hpp"
+#include "../app_test.hpp"
 
-struct needle_options_test : public cli_test {};
+struct needle_options_test : public app_test {};
 
 TEST_F(needle_options_test, no_options)
 {
-    cli_test_result result = execute_app("needle");
+    app_test_result result = execute_app();
     std::string expected
     {
         "needle\n"
         "======\n"
         "    Try -h or --help for more information.\n"
     };
-    EXPECT_EQ(result.exit_code, 0);
+    EXPECT_SUCCESS(result);
     EXPECT_EQ(result.out, expected);
     EXPECT_EQ(result.err, std::string{});
 }
 
 TEST_F(needle_options_test, fail_no_argument)
 {
-    cli_test_result result = execute_app("needle", "-v");
+    app_test_result result = execute_app("-v");
     std::string expected
     {
         "Error. Incorrect command. See needle help for more information.You either forgot or misspelled the subcommand!"

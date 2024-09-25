@@ -1,52 +1,45 @@
-cmake_minimum_required (VERSION 3.10)
-
-## CUSTOMISE
+cmake_minimum_required (VERSION 3.25)
 
 # Define the application name and version.
-project (needle VERSION 1.0.3)
+project (needle
+         LANGUAGES CXX
+         VERSION 1.0.3
+         DESCRIPTION "A fast and space-efficient pre-filter for estimating the quantification of very large collections of nucleotide sequences"
+)
 
-## BUILD
+# This allows including `*.cmake` files from the `cmake` directory without specifying the full path.
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-# Make Release default build type
-if (NOT CMAKE_BUILD_TYPE)
-    set (CMAKE_BUILD_TYPE Release CACHE STRING
-         "Choose the type of build, options are: Debug Release Coverage RelWithDebInfo MinSizeRel."
-         FORCE)
+# Specify the directories where to store the built archives, libraries and executables.
+include (output_directories)
+
+# Add packages.
+# We use CPM for package management: https://github.com/cpm-cmake/CPM.cmake
+# The added packages (e.g., hibf, sharg, seqan3) are defined in the `cmake/package-lock.cmake` file.
+include (CPM)
+CPMUsePackageLock (${CMAKE_CURRENT_LIST_DIR}/cmake/package-lock.cmake)
+
+# Use ccache if available. This speeds up the build process by caching files that have been compiled before.
+CPMGetPackage (use_ccache)
+CPMGetPackage (seqan3)
+CPMGetPackage (robin-hood)
+
+# Add the application. This will include `src/CMakeLists.txt`.
+add_subdirectory (src)
+
+# An option to disable configuring and building the tests. Tests are enabled by default.
+# If your project-name (line 8 of this file) is `app-template`, the option will be `app-template_TEST`.
+# It can be used when calling CMake: `cmake .. -Dapp-template_TEST=OFF`.
+# It is good practice to allow disabling tests. If another project includes your application,
+# it might not want to build your tests.
+option (${PROJECT_NAME}_TEST "Enable testing for ${PROJECT_NAME}." ON)
+
+if (${PROJECT_NAME}_TEST)
+    # Add the tests. This will include `test/CMakeLists.txt`.
+    add_subdirectory (test EXCLUDE_FROM_ALL)
 endif ()
 
-# Specify the directories where to store the built archives, libraries and executables
-set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
-set (CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-
-# Messages
-string (ASCII 27 Esc)
-set (FontBold "${Esc}[1m")
-set (FontReset "${Esc}[m")
-
-# Dependency: SeqAn3.
-find_package (SeqAn3 QUIET REQUIRED HINTS lib/seqan3/build_system)
-
-# Use ccache.
-include ("${SEQAN3_CLONE_DIR}/test/cmake/seqan3_require_ccache.cmake")
-seqan3_require_ccache ()
-
-# Dependency: robin_hood.
-add_subdirectory(lib/robin-hood-hashing)
-
-# Add the application.
-add_subdirectory (src)
-message (STATUS "${FontBold}You can run `make` to build the application.${FontReset}")
-
-
-## DOCUMENTATION
-
-add_subdirectory (doc EXCLUDE_FROM_ALL)
-
-## TEST
-
-enable_testing ()
-add_subdirectory (test EXCLUDE_FROM_ALL)
+# add_subdirectory (doc EXCLUDE_FROM_ALL)
 
 ## PACKAGE
 # Change version in this file: project (needle VERSION x.x.x)
@@ -74,15 +67,15 @@ add_subdirectory (test EXCLUDE_FROM_ALL)
 # This should be done in a clean directory, because everything in the needle checkout will be packaged, i.e., also
 # local build directories if they exist.
 
-set (CPACK_GENERATOR "TXZ")
+# set (CPACK_GENERATOR "TXZ")
 
-set (CPACK_PACKAGE_VERSION "${needle_VERSION}")
-set (CPACK_PACKAGE_VENDOR "seqan")
-set (CPACK_PACKAGE_CHECKSUM "SHA256")
-set (CPACK_RESOURCE_FILE_LICENSE "${needle_SOURCE_DIR}/LICENSE.md")
-set (CPACK_RESOURCE_FILE_README "${needle_SOURCE_DIR}/README.md")
+# set (CPACK_PACKAGE_VERSION "${needle_VERSION}")
+# set (CPACK_PACKAGE_VENDOR "seqan")
+# set (CPACK_PACKAGE_CHECKSUM "SHA256")
+# set (CPACK_RESOURCE_FILE_LICENSE "${needle_SOURCE_DIR}/LICENSE.md")
+# set (CPACK_RESOURCE_FILE_README "${needle_SOURCE_DIR}/README.md")
 
-set (CPACK_SOURCE_GENERATOR "TXZ")
-set (CPACK_SOURCE_IGNORE_FILES "\\\\.git($|/)")
+# set (CPACK_SOURCE_GENERATOR "TXZ")
+# set (CPACK_SOURCE_IGNORE_FILES "\\\\.git($|/)")
 
-include (CPack)
+# include (CPack)

@@ -130,7 +130,6 @@ int run_needle_count_genome(seqan3::argument_parser & parser)
     std::filesystem::path genome_file;
     std::filesystem::path exclude_file{""};
     std::filesystem::path out_path = "./";
-    bool paired = false;
 
     parser.info.short_description = "Creates the genome file necessary as an input to count.";
     parser.add_positional_option(genome_file, "Please provide one sequence file with transcripts.");

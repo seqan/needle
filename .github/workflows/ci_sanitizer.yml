@@ -1,0 +1,99 @@
+# SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin
+# SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
+# SPDX-License-Identifier: CC0-1.0
+
+name: Sanitizer
+
+on:
+  schedule:
+    - cron: "0 6 * * SAT"
+  workflow_dispatch:
+
+concurrency:
+  group: sanitizer-actions
+  cancel-in-progress: true
+
+env:
+  TZ: Europe/Berlin
+  ASAN_OPTIONS: strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1:detect_leaks=1
+  TSAN_OPTIONS: ignore_noninstrumented_modules=1
+  UBSAN_OPTIONS: print_stacktrace=1
+
+defaults:
+  run:
+    shell: bash -Eeuxo pipefail {0}
+
+jobs:
+  build:
+    name: ${{ matrix.name }} ${{ matrix.build_type }} ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    if: github.repository_owner == 'seqan' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        name: [ASan, TSan, UBSan]
+        os: [ubuntu-latest, macos-14]
+        build_type: [Release, RelWithDebInfo, Debug]
+        exclude:
+          - name: "TSan"
+            os: macos-14
+        include:
+          - name: "ASan"
+            os: ubuntu-latest
+            cxx_flags: "-fno-omit-frame-pointer -fsanitize=address -Wno-maybe-uninitialized"
+
+          - name: "ASan"
+            os: macos-14
+            cxx_flags: "-fno-omit-frame-pointer -fsanitize=address"
+
+          - name: "TSan"
+            cxx_flags: "-fno-omit-frame-pointer -fsanitize=thread"
+
+          - name: "UBSan"
+            os: ubuntu-latest
+            cxx_flags: "-fno-omit-frame-pointer -fsanitize=undefined,float-divide-by-zero"
+
+          - name: "UBSan"
+            os: macos-14
+            cxx_flags: "-fno-omit-frame-pointer -fsanitize=undefined,float-divide-by-zero,local-bounds,nullability -fno-sanitize=function -Wno-pass-failed"
+
+          - os: macos-14
+            compiler: clang-18
+
+          - os: ubuntu-latest
+            compiler: gcc-14
+            image: ghcr.io/seqan/gcc-14
+
+          - name: "TSan"
+            os: ubuntu-latest
+            compiler: clang-18
+            image: ghcr.io/seqan/clang-18
+    container:
+      image: ${{ matrix.image || '' }}
+      volumes:
+        - /home/runner:/home/runner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup compiler
+        if: contains(matrix.os, 'macos')
+        uses: seqan/actions/setup-compiler@main
+        with:
+          compiler: ${{ matrix.compiler }}
+
+      - name: Configure tests
+        run: |
+          mkdir build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+                   -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }}"
+          make gtest_main
+
+      - name: Build tests
+        working-directory: build
+        run: make -k tests
+
+      - name: Run tests
+        working-directory: build
+        run: ctest -j1 --output-on-failure --test-dir test
+
