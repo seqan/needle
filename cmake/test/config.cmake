@@ -19,7 +19,6 @@ if (NOT TARGET ${PROJECT_NAME}_test)
     add_library (${PROJECT_NAME}_test INTERFACE)
     target_compile_options (${PROJECT_NAME}_lib PUBLIC "-pedantic" "-Wall" "-Wextra" "-Werror")
 
-
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         # Disable bogus warnings in GCC12.
         if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
@@ -36,8 +35,8 @@ if (NOT TARGET ${PROJECT_NAME}_test)
 
     # !Workaround: Get seqan3 test include dir from seqan3 target
     find_path (SEQAN3_TEST_INCLUDE_DIR
-           NAMES seqan3/test/tmp_directory.hpp
-           HINTS "${seqan3_SOURCE_DIR}/test/include"
+               NAMES seqan3/test/tmp_directory.hpp
+               HINTS "${seqan3_SOURCE_DIR}/test/include"
     )
     target_include_directories (${PROJECT_NAME}_test SYSTEM INTERFACE "${SEQAN3_TEST_INCLUDE_DIR}")
 

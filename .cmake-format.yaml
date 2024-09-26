@@ -2,18 +2,20 @@
 # SPDX-FileCopyrightText: 2016-2024, Knut Reinert & MPI für molekulare Genetik
 # SPDX-License-Identifier: CC0-1.0
 
-# find . \( -iname CMakeLists.txt -o -iname *.cmake \) -a -not -path "./lib/*" -a -not -path "./build/*" | xargs cmake-format -c .cmake-format.yaml -i
+# find . \( -iname CMakeLists.txt -o -iname *.cmake \) -a -not -path "./build/*" | xargs cmake-format -c .cmake-format.yaml -i
 _help_parse: Options affecting listfile parsing
 parse:
   _help_additional_commands:
   - Specify structure for custom cmake functions
   additional_commands:
-    declare_internal_datasource:
+    declare_datasource:
+      pargs:
+        nargs: '*'
+        flags: []
       kwargs:
-        FILE: '*'
+        FILE: 1
         URL: '*'
-        URL_HASH: '*'
-        CONFIGURE: '*'
+        URL_HASH: 1
     cpmgetpackage:
       pargs: 1
       spelling: CPMGetPackage

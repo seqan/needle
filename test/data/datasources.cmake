@@ -9,4 +9,3 @@ include (test/declare_datasource)
 # `datasources.cmake`, `README.md`, and files ending in `.license` are ignored.
 # You may organise your data in subdirectories, but each file must have a unique name.
 include (test/add_local_data)
-

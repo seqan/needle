@@ -9,7 +9,7 @@
 
 #include <filesystem>
 
-#include "shared.h"
+#include "shared.hpp"
 
 /*!\brief The arguments necessary for a search.
  * \param std::filesystem::path search_file The sequence file containing the transcripts to be searched for.
