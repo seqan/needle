@@ -9,9 +9,9 @@
 #include <filesystem>
 #include <seqan3/core/debug_stream.hpp>
 
-#include "shared.h"
-#include "ibf.h"
-#include "estimate.h"
+#include "shared.hpp"
+#include "ibf.hpp"
+#include "estimate.hpp"
 
 uint32_t w_size;
 uint64_t shape{};

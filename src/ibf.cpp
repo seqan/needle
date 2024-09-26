@@ -34,8 +34,8 @@
 #include <seqan3/utility/container/dynamic_bitset.hpp>
 #include <seqan3/utility/parallel/detail/latch.hpp>
 
-#include "ibf.h"
-#include "shared.h"
+#include "ibf.hpp"
+#include "shared.hpp"
 
 // Create set with hashes from the minimisers from an include or exclude file.
 void get_include_set_table(min_arguments const & args, std::filesystem::path const include_file,

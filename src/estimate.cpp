@@ -26,7 +26,7 @@
 #include <seqan3/core/concept/cereal.hpp>
 #include <seqan3/io/sequence_file/all.hpp>
 
-#include "estimate.h"
+#include "estimate.hpp"
 
 // Actual estimation
 template <class IBFType, bool last_exp, bool normalization, typename exp_t>

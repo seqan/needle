@@ -3,8 +3,8 @@
 
 #include <seqan3/test/expect_range_eq.hpp>
 
-#include "ibf.h"
-#include "shared.h"
+#include "ibf.hpp"
+#include "shared.hpp"
 #include "../app_test.hpp"
 
 // To prevent issues when running multiple CLI tests in parallel, give each CLI test unique names:

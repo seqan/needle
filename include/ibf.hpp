@@ -16,7 +16,7 @@
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 #include <filesystem>
 
-#include "shared.h"
+#include "shared.hpp"
 
 struct minimiser_arguments
 {

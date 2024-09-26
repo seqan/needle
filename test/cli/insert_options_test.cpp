@@ -2,8 +2,8 @@
 
 #include "../app_test.hpp"
 
-#include "ibf.h"
-#include "shared.h"
+#include "ibf.hpp"
+#include "shared.hpp"
 
 struct insert_options_test : public app_test {};
 
