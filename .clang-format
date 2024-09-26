@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: 2016-2024, Knut Reinert & MPI für molekulare Genetik
 # SPDX-License-Identifier: CC0-1.0
 
-# Format all files in include/test folder, including std module, excluding contrib module
-# find . \( -iname "*.cpp" -or -iname "*.hpp" \) -and -not -path "./lib/*" -and -not -path "./build/*" | xargs clang-format-18 --style=file -i
+# Format all files in include/test folder
+# find . \( -iname "*.cpp" -or -iname "*.hpp" \) -and -not -path "./build/*" | xargs clang-format-18 --style=file -i
 # Staged files: git diff --name-only HEAD --diff-filter=ACMRT | grep -E "(\.cpp|\.hpp)$" | xargs clang-format-18 --style=file -i
 ---
 Language:        Cpp

@@ -1,11 +1,12 @@
 #include <gtest/gtest.h>
+
 #include <iostream>
 
 #include <seqan3/test/expect_range_eq.hpp>
 
+#include "../app_test.hpp"
 #include "ibf.hpp"
 #include "shared.hpp"
-#include "../app_test.hpp"
 
 // To prevent issues when running multiple CLI tests in parallel, give each CLI test unique names:
 struct ibf_test : public app_test
@@ -46,10 +47,10 @@ TEST_F(ibf_test, given_expression_thresholds)
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
-        EXPECT_RANGE_EQ(expected_result,  res);
+        EXPECT_RANGE_EQ(expected_result, res);
         expected_result[0] = 1;
         auto & res2 = agent.bulk_contains(24);
-        EXPECT_RANGE_EQ(expected_result,  res2);
+        EXPECT_RANGE_EQ(expected_result, res2);
     }
 
     ASSERT_TRUE(std::filesystem::exists("IBF_Test_Exp_IBF_Data"));
@@ -93,10 +94,10 @@ TEST_F(ibf_test, given_expression_thresholds_include_file)
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
-        EXPECT_RANGE_EQ(expected_result,  res);
+        EXPECT_RANGE_EQ(expected_result, res);
         expected_result[0] = 1;
         auto & res2 = agent.bulk_contains(24);
-        EXPECT_RANGE_EQ(expected_result,  res2);
+        EXPECT_RANGE_EQ(expected_result, res2);
     }
 }
 
@@ -126,10 +127,10 @@ TEST_F(ibf_test, given_expression_thresholds_exclude_file)
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
-        EXPECT_RANGE_EQ(expected_result,  res);
+        EXPECT_RANGE_EQ(expected_result, res);
         expected_result[0] = 1;
         auto & res2 = agent.bulk_contains(24);
-        EXPECT_RANGE_EQ(expected_result,  res2);
+        EXPECT_RANGE_EQ(expected_result, res2);
     }
 }
 
@@ -159,10 +160,10 @@ TEST_F(ibf_test, no_given_expression_thresholds)
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
-        EXPECT_RANGE_EQ(expected_result,  res);
+        EXPECT_RANGE_EQ(expected_result, res);
         expected_result[0] = 1;
         auto & res2 = agent.bulk_contains(24);
-        EXPECT_RANGE_EQ(expected_result,  res2);
+        EXPECT_RANGE_EQ(expected_result, res2);
     }
 }
 
@@ -179,8 +180,7 @@ TEST_F(ibf_test, expression_thresholds_by_genome)
     std::vector<uint16_t> expected{};
     std::vector<uint8_t> cutoffs{};
 
-    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs,
-                                        data("mini_gen.fasta"));
+    std::vector<uint16_t> medians = ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs, data("mini_gen.fasta"));
 
     EXPECT_EQ(expected, medians);
 
@@ -193,10 +193,10 @@ TEST_F(ibf_test, expression_thresholds_by_genome)
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
-        EXPECT_RANGE_EQ(expected_result,  res);
+        EXPECT_RANGE_EQ(expected_result, res);
         expected_result[0] = 1;
         auto & res2 = agent.bulk_contains(192);
-        EXPECT_RANGE_EQ(expected_result,  res2);
+        EXPECT_RANGE_EQ(expected_result, res2);
     }
 }
 
@@ -248,10 +248,10 @@ TEST_F(ibf_test, given_cutoffs)
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
-        EXPECT_RANGE_EQ(expected_result,  res);
+        EXPECT_RANGE_EQ(expected_result, res);
         expected_result[0] = 1;
         auto & res2 = agent.bulk_contains(24);
-        EXPECT_RANGE_EQ(expected_result,  res2);
+        EXPECT_RANGE_EQ(expected_result, res2);
     }
 
     estimate_ibf_arguments args{};
@@ -295,10 +295,10 @@ TEST_F(ibf_test, different_file_sizes)
 
         std::vector<bool> expected_result(2, 0);
         auto & res = agent.bulk_contains(2);
-        EXPECT_RANGE_EQ(expected_result,  res);
+        EXPECT_RANGE_EQ(expected_result, res);
         expected_result[0] = 1;
         expected_result[1] = 1;
         auto & res2 = agent.bulk_contains(24);
-        EXPECT_RANGE_EQ(expected_result,  res2);
+        EXPECT_RANGE_EQ(expected_result, res2);
     }
 }

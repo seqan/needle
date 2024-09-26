@@ -1,12 +1,13 @@
 #include <gtest/gtest.h>
+
 #include <iostream>
 
 #include <seqan3/test/expect_range_eq.hpp>
 
+#include "../app_test.hpp"
+#include "estimate.hpp"
 #include "ibf.hpp"
 #include "shared.hpp"
-#include "estimate.hpp"
-#include "../app_test.hpp"
 
 // To prevent issues when running multiple CLI tests in parallel, give each CLI test unique names:
 struct estimate_test : public app_test
@@ -44,9 +45,9 @@ TEST_F(estimate_test, small_example)
     std::string expected{"gen1\t3\t"};
     if (output_file.is_open())
     {
-        while ( std::getline (output_file,line) )
+        while (std::getline(output_file, line))
         {
-            EXPECT_EQ(expected,line);
+            EXPECT_EQ(expected, line);
         }
         output_file.close();
     }
@@ -75,9 +76,9 @@ TEST_F(estimate_test, small_example_uncompressed)
     std::string expected{"gen1\t3\t"};
     if (output_file.is_open())
     {
-        while ( std::getline (output_file,line) )
+        while (std::getline(output_file, line))
         {
-            EXPECT_EQ(expected,line);
+            EXPECT_EQ(expected, line);
         }
         output_file.close();
     }
@@ -105,9 +106,9 @@ TEST_F(estimate_test, small_example_gene_not_found)
     std::string expected{"gen2\t0\t"};
     if (output_file.is_open())
     {
-        while ( std::getline (output_file,line) )
+        while (std::getline(output_file, line))
         {
-            EXPECT_EQ(expected,line);
+            EXPECT_EQ(expected, line);
         }
         output_file.close();
     }
@@ -127,7 +128,7 @@ TEST_F(estimate_test, small_example_different_expressions_per_level)
     minimiser(sequence_files, ibf_args, minimiser_args, cutoffs);
     std::vector<std::filesystem::path> minimiser_files{"Estimate_Test_mini_example.minimiser"};
     ASSERT_TRUE(std::filesystem::exists(minimiser_files[0]));
-    ibf_args.expression_thresholds= {};
+    ibf_args.expression_thresholds = {};
     ibf(minimiser_files, ibf_args, fpr);
 
     ibf_args.expression_thresholds = {0, 1, 2};
@@ -141,9 +142,9 @@ TEST_F(estimate_test, small_example_different_expressions_per_level)
     std::string expected{"gen1\t3\t"};
     if (output_file.is_open())
     {
-        while ( std::getline (output_file,line) )
+        while (std::getline(output_file, line))
         {
-            EXPECT_EQ(expected,line);
+            EXPECT_EQ(expected, line);
         }
         output_file.close();
     }
@@ -164,7 +165,7 @@ TEST_F(estimate_test, small_example_different_expressions_per_level_normalizatio
     minimiser(sequence_files, ibf_args, minimiser_args, cutoffs);
     std::vector<std::filesystem::path> minimiser_files{"Estimate_Test_mini_example.minimiser"};
     ASSERT_TRUE(std::filesystem::exists(minimiser_files[0]));
-    ibf_args.expression_thresholds= {};
+    ibf_args.expression_thresholds = {};
     ibf(minimiser_files, ibf_args, fpr);
 
     ibf_args.expression_thresholds = {0, 1, 2};
@@ -178,9 +179,9 @@ TEST_F(estimate_test, small_example_different_expressions_per_level_normalizatio
     std::string expected{"gen1\t1\t"};
     if (output_file.is_open())
     {
-        while ( std::getline (output_file,line) )
+        while (std::getline(output_file, line))
         {
-            EXPECT_EQ(expected,line);
+            EXPECT_EQ(expected, line);
         }
         output_file.close();
     }
@@ -202,7 +203,7 @@ TEST_F(estimate_test, small_example_different_expressions_per_level_normalizatio
     minimiser(sequence_files, ibf_args, minimiser_args, cutoffs);
     std::vector<std::filesystem::path> minimiser_files{"Estimate_Test_mini_example.minimiser"};
     ASSERT_TRUE(std::filesystem::exists(minimiser_files[0]));
-    ibf_args.expression_thresholds= {};
+    ibf_args.expression_thresholds = {};
     ibf(minimiser_files, ibf_args, fpr);
 
     ibf_args.expression_thresholds = {0, 1, 2};
@@ -216,9 +217,9 @@ TEST_F(estimate_test, small_example_different_expressions_per_level_normalizatio
     std::string expected{"gen1\t1\t"};
     if (output_file.is_open())
     {
-        while ( std::getline (output_file,line) )
+        while (std::getline(output_file, line))
         {
-            EXPECT_EQ(expected,line);
+            EXPECT_EQ(expected, line);
         }
         output_file.close();
     }
@@ -230,8 +231,10 @@ TEST_F(estimate_test, example)
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     std::vector<double> fpr = {0.05};
-    std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta"), data("exp_02.fasta"),
-                                                         data("exp_11.fasta"), data("exp_12.fasta")};
+    std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta"),
+                                                         data("exp_02.fasta"),
+                                                         data("exp_11.fasta"),
+                                                         data("exp_12.fasta")};
     minimiser_args.samples = {2, 2};
     ibf_args.expression_thresholds = {4, 32};
     ibf_args.compressed = false;
@@ -248,9 +251,9 @@ TEST_F(estimate_test, example)
     std::string expected{"GeneA\t9\t32\t"};
     if (output_file.is_open())
     {
-        while ( std::getline (output_file,line) )
+        while (std::getline(output_file, line))
         {
-             EXPECT_EQ(expected,line);
+            EXPECT_EQ(expected, line);
         }
         output_file.close();
     }
@@ -261,9 +264,11 @@ TEST_F(estimate_test, example_multiple_threads)
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
-    std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta"), data("exp_02.fasta"),
-                                                         data("exp_11.fasta"), data("exp_12.fasta")};
-    minimiser_args.samples = {2,2};
+    std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta"),
+                                                         data("exp_02.fasta"),
+                                                         data("exp_11.fasta"),
+                                                         data("exp_12.fasta")};
+    minimiser_args.samples = {2, 2};
     ibf_args.expression_thresholds = {4, 32};
     std::vector<double> fpr = {0.05};
     ibf_args.compressed = false;
@@ -281,9 +286,9 @@ TEST_F(estimate_test, example_multiple_threads)
     std::string expected{"GeneA\t9\t32\t"};
     if (output_file.is_open())
     {
-        while ( std::getline (output_file,line) )
+        while (std::getline(output_file, line))
         {
-             EXPECT_EQ(expected,line);
+            EXPECT_EQ(expected, line);
         }
         output_file.close();
     }
@@ -294,10 +299,12 @@ TEST_F(estimate_test, example_different_expressions_per_level)
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
-    std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta"), data("exp_02.fasta"),
-                                                         data("exp_11.fasta"), data("exp_12.fasta")};
+    std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta"),
+                                                         data("exp_02.fasta"),
+                                                         data("exp_11.fasta"),
+                                                         data("exp_12.fasta")};
     std::vector<uint8_t> cutoffs = {0, 0};
-    minimiser_args.samples = {2,2};
+    minimiser_args.samples = {2, 2};
     ibf_args.number_expression_thresholds = 4;
     std::vector<double> fpr = {0.05};
     ibf_args.compressed = false;
@@ -319,9 +326,9 @@ TEST_F(estimate_test, example_different_expressions_per_level)
     std::string expected{"GeneA\t7\t26\t"};
     if (output_file.is_open())
     {
-        while ( std::getline (output_file, line) )
+        while (std::getline(output_file, line))
         {
-             EXPECT_EQ(expected, line);
+            EXPECT_EQ(expected, line);
         }
         output_file.close();
     }
@@ -332,10 +339,12 @@ TEST_F(estimate_test, example_different_expressions_per_level_multiple_threads)
     estimate_ibf_arguments ibf_args{};
     minimiser_arguments minimiser_args{};
     estimate_arguments estimate_args{};
-    std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta"), data("exp_02.fasta"),
-                                                         data("exp_11.fasta"), data("exp_12.fasta")};
+    std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta"),
+                                                         data("exp_02.fasta"),
+                                                         data("exp_11.fasta"),
+                                                         data("exp_12.fasta")};
     std::vector<uint8_t> cutoffs = {0, 0};
-    minimiser_args.samples = {2,2};
+    minimiser_args.samples = {2, 2};
     ibf_args.number_expression_thresholds = 4;
     std::vector<double> fpr = {0.05};
     ibf_args.compressed = false;
@@ -343,7 +352,7 @@ TEST_F(estimate_test, example_different_expressions_per_level_multiple_threads)
     std::vector<std::filesystem::path> minimiser_files{"exp_01.minimiser", "exp_11.minimiser"};
     ASSERT_TRUE(std::filesystem::exists(minimiser_files[0]));
     ASSERT_TRUE(std::filesystem::exists(minimiser_files[1]));
-    ibf_args.expression_thresholds= {};
+    ibf_args.expression_thresholds = {};
     ibf(minimiser_files, ibf_args, fpr);
 
     ibf_args.threads = 2;
@@ -359,9 +368,9 @@ TEST_F(estimate_test, example_different_expressions_per_level_multiple_threads)
     std::string expected{"GeneA\t7\t26\t"};
     if (output_file.is_open())
     {
-        while ( std::getline (output_file,line) )
+        while (std::getline(output_file, line))
         {
-             EXPECT_EQ(expected, line);
+            EXPECT_EQ(expected, line);
         }
         output_file.close();
     }

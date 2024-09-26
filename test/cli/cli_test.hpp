@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
-#include <cstdlib>               // system calls
-#include <filesystem>            // test directory creation
-#include <sstream>               // ostringstream
-#include <string>                // strings
+#include <cstdlib>    // system calls
+#include <filesystem> // test directory creation
+#include <sstream>    // ostringstream
+#include <string>     // strings
 
 // Include the EXPECT_RANGE_EQ macro for better information if range elements differ.
 #include <seqan3/test/expect_range_eq.hpp>
@@ -14,12 +14,10 @@
 struct cli_test : public ::testing::Test
 {
 private:
-
     // Holds the original work directory where Gtest has been started.
     std::filesystem::path original_workdir{};
 
 protected:
-
     // Result struct for captured streams and exit code.
     struct cli_test_result
     {
@@ -37,8 +35,8 @@ protected:
         // Assemble the command string and disable version check.
         std::ostringstream command{};
         command << "SEQAN3_NO_VERSION_CHECK=1 " << BINDIR;
-        int a[] = {0, ((void)(command << command_items << ' '), 0) ... };
-        (void) a;
+        int a[] = {0, ((void)(command << command_items << ' '), 0)...};
+        (void)a;
 
         // Always capture the output streams.
         testing::internal::CaptureStdout();
@@ -62,10 +60,8 @@ protected:
     {
         // Assemble the directory name.
         ::testing::TestInfo const * const info = ::testing::UnitTest::GetInstance()->current_test_info();
-        std::filesystem::path const test_dir{std::string{OUTPUTDIR} +
-                                             std::string{info->test_case_name()} +
-                                             std::string{"."} +
-                                             std::string{info->name()}};
+        std::filesystem::path const test_dir{std::string{OUTPUTDIR} + std::string{info->test_case_name()}
+                                             + std::string{"."} + std::string{info->name()}};
         try
         {
             std::filesystem::remove_all(test_dir);              // delete the directory if it exists
@@ -84,7 +80,7 @@ protected:
     {
         try
         {
-            std::filesystem::current_path(original_workdir);    // restore the original work dir
+            std::filesystem::current_path(original_workdir); // restore the original work dir
         }
         catch (std::exception const & exc)
         {

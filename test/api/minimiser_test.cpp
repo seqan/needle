@@ -1,11 +1,12 @@
 #include <gtest/gtest.h>
+
 #include <iostream>
 
 #include <seqan3/test/expect_range_eq.hpp>
 
+#include "../app_test.hpp"
 #include "ibf.hpp"
 #include "shared.hpp"
-#include "../app_test.hpp"
 
 // To prevent issues when running multiple CLI tests in parallel, give each CLI test unique names:
 struct minimiser_test : public app_test
@@ -20,33 +21,37 @@ struct minimiser_test : public app_test
         args.compressed = true;
     }
 
-    std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> expected_hash_tables{   // minimisers:
-                                                                             {{0,2},   // AAAA
-                                                                              {1,4},   // AAAC
-                                                                              {6,4},   // AACG
-                                                                              {24,1},  // ACGA
-                                                                              {27,5},  // ACGT
-                                                                              {97,3},  // CGAC
-                                                                              {108,2}, // CGTA
-                                                                              {109,3}, // CGTC
-                                                                              {112,3}, // CTAA
-                                                                              {177,1}, // GTAC
-                                                                              {192,3}, // TAAA
-                                                                              {216,1}, // TCGA
-                                                                                     },
-                                                                             {{27,1},  // ACGT
-                                                                              {42,1},  // AGGG
-                                                                              {74,1},  // CAGG
-                                                                              {82,1},  // CCAG
-                                                                              {84,1},  // CCCA
-                                                                              {85,19}, // CCCC
-                                                                              {86,1},  // CCCG
-                                                                              {109,1}, // CGTC
-                                                                              {149,2}, // GCCC
-                                                                              {161,1}, // GGAC
-                                                                              {165,1}, // GGCC
-                                                                              {168,1}, // GGGA
-                                                                                     },};
+    std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> expected_hash_tables{
+        // minimisers:
+        {
+            {0, 2},   // AAAA
+            {1, 4},   // AAAC
+            {6, 4},   // AACG
+            {24, 1},  // ACGA
+            {27, 5},  // ACGT
+            {97, 3},  // CGAC
+            {108, 2}, // CGTA
+            {109, 3}, // CGTC
+            {112, 3}, // CTAA
+            {177, 1}, // GTAC
+            {192, 3}, // TAAA
+            {216, 1}, // TCGA
+        },
+        {
+            {27, 1},  // ACGT
+            {42, 1},  // AGGG
+            {74, 1},  // CAGG
+            {82, 1},  // CCAG
+            {84, 1},  // CCCA
+            {85, 19}, // CCCC
+            {86, 1},  // CCCG
+            {109, 1}, // CGTC
+            {149, 2}, // GCCC
+            {161, 1}, // GGAC
+            {165, 1}, // GGCC
+            {168, 1}, // GGGA
+        },
+    };
 };
 
 TEST_F(minimiser_test, small_example)
@@ -57,8 +62,7 @@ TEST_F(minimiser_test, small_example)
     std::vector<uint8_t> cutoffs = {0, 0};
     args.expression_thresholds = {0};
     std::vector<double> fpr = {0.05};
-    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
-                                                         data("mini_example2.fasta")};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"), data("mini_example2.fasta")};
     minimiser(sequence_files, args, minimiser_args, cutoffs);
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
@@ -69,7 +73,10 @@ TEST_F(minimiser_test, small_example)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args,
+                          ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"),
+                          num_of_minimisers,
+                          cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -96,14 +103,13 @@ TEST_F(minimiser_test, small_example)
 
     std::vector<bool> expected_result(2, 0);
     auto & res = agent.bulk_contains(2);
-    EXPECT_RANGE_EQ(expected_result,  res);
+    EXPECT_RANGE_EQ(expected_result, res);
     expected_result[0] = 1;
     auto & res2 = agent.bulk_contains(0);
-    EXPECT_RANGE_EQ(expected_result,  res2);
+    EXPECT_RANGE_EQ(expected_result, res2);
     expected_result[1] = 1;
     auto & res3 = agent.bulk_contains(27);
-    EXPECT_RANGE_EQ(expected_result,  res3);
-
+    EXPECT_RANGE_EQ(expected_result, res3);
 }
 
 TEST_F(minimiser_test, small_example_different_shape)
@@ -114,8 +120,7 @@ TEST_F(minimiser_test, small_example_different_shape)
     std::vector<uint8_t> cutoffs = {0, 0};
     args.shape = seqan3::bin_literal{0b1101};
     EXPECT_EQ(13, args.shape.to_ulong());
-    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
-                                                         data("mini_example2.fasta")};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"), data("mini_example2.fasta")};
     minimiser(sequence_files, args, minimiser_args, cutoffs);
 
     uint64_t num_of_minimisers{};
@@ -125,7 +130,10 @@ TEST_F(minimiser_test, small_example_different_shape)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args,
+                          ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"),
+                          num_of_minimisers,
+                          cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -134,7 +142,6 @@ TEST_F(minimiser_test, small_example_different_shape)
         EXPECT_EQ(expected_nums[i], num_of_minimisers);
         EXPECT_EQ(0, cutoff);
     }
-
 }
 
 TEST_F(minimiser_test, small_example_samplewise)
@@ -146,8 +153,7 @@ TEST_F(minimiser_test, small_example_samplewise)
     std::vector<uint8_t> cutoffs = {0, 0};
     args.number_expression_thresholds = 1;
     std::vector<double> fpr = {0.05};
-    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
-                                                         data("mini_example2.fasta")};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"), data("mini_example2.fasta")};
 
     minimiser(sequence_files, args, minimiser_args, cutoffs);
     std::vector<std::vector<uint32_t>> expected_counts{{7}, {12}};
@@ -162,7 +168,10 @@ TEST_F(minimiser_test, small_example_samplewise)
         uint8_t cutoff{};
         // Test Header file
         args.expression_thresholds = {};
-        read_binary_start(args, ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args,
+                          ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"),
+                          num_of_minimisers,
+                          cutoff);
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
@@ -189,13 +198,13 @@ TEST_F(minimiser_test, small_example_samplewise)
 
     std::vector<bool> expected_result(2, 0);
     auto & res = agent.bulk_contains(2);
-    EXPECT_RANGE_EQ(expected_result,  res);
+    EXPECT_RANGE_EQ(expected_result, res);
     auto & res2 = agent.bulk_contains(0);
     expected_result[0] = 1;
-    EXPECT_RANGE_EQ(expected_result,  res2);
+    EXPECT_RANGE_EQ(expected_result, res2);
     expected_result[1] = 1;
     auto & res3 = agent.bulk_contains(27);
-    EXPECT_RANGE_EQ(expected_result,  res3);
+    EXPECT_RANGE_EQ(expected_result, res3);
 }
 
 TEST_F(minimiser_test, cutoff_by_filesize)
@@ -206,8 +215,7 @@ TEST_F(minimiser_test, cutoff_by_filesize)
     args.expression_thresholds = {0};
     std::vector<double> fpr = {0.05};
     std::vector<uint8_t> cutoffs{};
-    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
-                                                         data("mini_example2.fasta")};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"), data("mini_example2.fasta")};
 
     minimiser(sequence_files, args, minimiser_args, cutoffs);
 
@@ -219,7 +227,10 @@ TEST_F(minimiser_test, cutoff_by_filesize)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args,
+                          ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"),
+                          num_of_minimisers,
+                          cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -238,7 +249,7 @@ TEST_F(minimiser_test, cutoff_by_filesize)
 
     std::vector<bool> expected_result(2, 0);
     auto & res = agent.bulk_contains(2);
-    EXPECT_RANGE_EQ(expected_result,  res);
+    EXPECT_RANGE_EQ(expected_result, res);
     expected_result[0] = 1;
     auto & res2 = agent.bulk_contains(0);
     EXPECT_RANGE_EQ(expected_result, res2);
@@ -246,7 +257,6 @@ TEST_F(minimiser_test, cutoff_by_filesize)
     expected_result[1] = 1;
     auto & res3 = agent.bulk_contains(85);
     EXPECT_RANGE_EQ(expected_result, res3);
-
 }
 
 TEST_F(minimiser_test, small_example_two_threads)
@@ -258,8 +268,7 @@ TEST_F(minimiser_test, small_example_two_threads)
     std::vector<uint8_t> cutoffs = {0, 0};
     args.expression_thresholds = {0};
     std::vector<double> fpr = {0.05};
-    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
-                                                         data("mini_example2.fasta")};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"), data("mini_example2.fasta")};
     minimiser(sequence_files, args, minimiser_args, cutoffs);
     args.threads = 1;
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
@@ -271,7 +280,10 @@ TEST_F(minimiser_test, small_example_two_threads)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args,
+                          ("Minimiser_Test_" + std::string{sequence_files[i].stem()} + ".minimiser"),
+                          num_of_minimisers,
+                          cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -299,14 +311,13 @@ TEST_F(minimiser_test, small_example_two_threads)
 
     std::vector<bool> expected_result(2, 0);
     auto & res = agent.bulk_contains(2);
-    EXPECT_RANGE_EQ(expected_result,  res);
+    EXPECT_RANGE_EQ(expected_result, res);
     expected_result[0] = 1;
     auto & res2 = agent.bulk_contains(0);
     EXPECT_RANGE_EQ(expected_result, res2);
     expected_result[1] = 1;
     auto & res3 = agent.bulk_contains(27);
     EXPECT_RANGE_EQ(expected_result, res3);
-
 }
 
 TEST_F(minimiser_test, small_example_include)
@@ -317,8 +328,7 @@ TEST_F(minimiser_test, small_example_include)
     args.path_out = "Minimiser_Test_In_";
     std::vector<uint8_t> cutoffs = {0, 0};
     minimiser_args.include_file = data("mini_gen.fasta");
-    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
-                                                         data("mini_example2.fasta")};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"), data("mini_example2.fasta")};
     minimiser(sequence_files, args, minimiser_args, cutoffs);
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
@@ -329,7 +339,10 @@ TEST_F(minimiser_test, small_example_include)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, ("Minimiser_Test_In_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args,
+                          ("Minimiser_Test_In_" + std::string{sequence_files[i].stem()} + ".minimiser"),
+                          num_of_minimisers,
+                          cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -341,7 +354,7 @@ TEST_F(minimiser_test, small_example_include)
         // Test binary file
         read_binary(("Minimiser_Test_In_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
         minimiser_files.push_back(("Minimiser_Test_In_" + std::string{sequence_files[i].stem()} + ".minimiser"));
-        if (i==0)
+        if (i == 0)
         {
             for (auto & hash : result_hash_table)
             {
@@ -356,7 +369,6 @@ TEST_F(minimiser_test, small_example_include)
 
         result_hash_table.clear();
     }
-
 }
 
 TEST_F(minimiser_test, small_example_exclude)
@@ -369,8 +381,7 @@ TEST_F(minimiser_test, small_example_exclude)
     minimiser_args.exclude_file = data("mini_gen2.fasta");
     args.expression_thresholds = {0};
     std::vector<double> fpr = {0.05};
-    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
-                                                         data("mini_example2.fasta")};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"), data("mini_example2.fasta")};
     minimiser(sequence_files, args, minimiser_args, cutoffs);
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
@@ -381,7 +392,10 @@ TEST_F(minimiser_test, small_example_exclude)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, ("Minimiser_Test_Ex_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args,
+                          ("Minimiser_Test_Ex_" + std::string{sequence_files[i].stem()} + ".minimiser"),
+                          num_of_minimisers,
+                          cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -412,37 +426,39 @@ TEST_F(minimiser_test, small_example_exclude)
 
     std::vector<bool> expected_result(2, 0);
     auto & res = agent.bulk_contains(2);
-    EXPECT_RANGE_EQ(expected_result,  res);
+    EXPECT_RANGE_EQ(expected_result, res);
     expected_result[0] = 1;
     auto & res2 = agent.bulk_contains(0);
-    EXPECT_RANGE_EQ(expected_result,  res2);
+    EXPECT_RANGE_EQ(expected_result, res2);
     expected_result[1] = 1;
     auto & res3 = agent.bulk_contains(27);
-    EXPECT_RANGE_EQ(expected_result,  res3);
-
+    EXPECT_RANGE_EQ(expected_result, res3);
 }
 
 TEST_F(minimiser_test, small_example_shape)
 {
-    std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> expected_hash_tables_shape{   // minimisers:
-                                                                                 {
-                                                                                  {0,3},  // AA
-                                                                                  {1,4},  // AC
-                                                                                  {2,4},  // AG
-                                                                                  {3,5},  // AT
-                                                                                  {4,5},  // CA
-                                                                                  {5,6},  // CC
-                                                                                  {9,1},  // GC
-                                                                                  {12,4}, // TA
-                                                                                         },
-                                                                                 {{2,1},  // AT
-                                                                                  {3,1},  // AG
-                                                                                  {4,1},  // CA
-                                                                                  {5,20}, // CC
-                                                                                  {6,3},  // CG
-                                                                                  {8,1},  // GA
-                                                                                  {9,4},  // GC
-                                                                                         },};
+    std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> expected_hash_tables_shape{
+        // minimisers:
+        {
+            {0, 3},  // AA
+            {1, 4},  // AC
+            {2, 4},  // AG
+            {3, 5},  // AT
+            {4, 5},  // CA
+            {5, 6},  // CC
+            {9, 1},  // GC
+            {12, 4}, // TA
+        },
+        {
+            {2, 1},  // AT
+            {3, 1},  // AG
+            {4, 1},  // CA
+            {5, 20}, // CC
+            {6, 3},  // CG
+            {8, 1},  // GA
+            {9, 4},  // GC
+        },
+    };
 
     estimate_ibf_arguments args{};
     minimiser_arguments minimiser_args{};
@@ -453,8 +469,7 @@ TEST_F(minimiser_test, small_example_shape)
     std::vector<uint8_t> cutoffs = {0, 0};
     args.expression_thresholds = {0};
     std::vector<double> fpr = {0.05};
-    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"),
-                                                         data("mini_example2.fasta")};
+    std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta"), data("mini_example2.fasta")};
     minimiser(sequence_files, args, minimiser_args, cutoffs);
     robin_hood::unordered_node_map<uint64_t, uint16_t> result_hash_table{};
     std::vector<std::filesystem::path> minimiser_files{};
@@ -465,7 +480,10 @@ TEST_F(minimiser_test, small_example_shape)
     {
         uint8_t cutoff{};
         // Test Header file
-        read_binary_start(args, ("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"), num_of_minimisers, cutoff);
+        read_binary_start(args,
+                          ("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"),
+                          num_of_minimisers,
+                          cutoff);
 
         EXPECT_EQ(4, args.k);
         EXPECT_EQ(4, args.w_size.get());
@@ -475,7 +493,8 @@ TEST_F(minimiser_test, small_example_shape)
         EXPECT_EQ(0, cutoff);
 
         // Test binary file
-        read_binary(("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
+        read_binary(("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"),
+                    result_hash_table);
         minimiser_files.push_back(("Minimiser_Test_Shape_" + std::string{sequence_files[i].stem()} + ".minimiser"));
         for (auto & hash : expected_hash_tables_shape[i])
             EXPECT_EQ(expected_hash_tables_shape[i][hash.first], result_hash_table[hash.first]);
@@ -490,12 +509,11 @@ TEST_F(minimiser_test, small_example_shape)
 
     std::vector<bool> expected_result(2, 0);
     auto & res = agent.bulk_contains(7);
-    EXPECT_RANGE_EQ(expected_result,  res);
+    EXPECT_RANGE_EQ(expected_result, res);
     expected_result[0] = 1;
     auto & res2 = agent.bulk_contains(12);
-    EXPECT_RANGE_EQ(expected_result,  res2);
+    EXPECT_RANGE_EQ(expected_result, res2);
     expected_result[1] = 1;
     auto & res3 = agent.bulk_contains(2);
-    EXPECT_RANGE_EQ(expected_result,  res3);
-
+    EXPECT_RANGE_EQ(expected_result, res3);
 }

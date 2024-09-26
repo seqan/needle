@@ -5,20 +5,19 @@
 // shipped with this file and also available at: https://github.com/seqan/needle/blob/master/LICENSE.md
 // -----------------------------------------------------------------------------------------------------
 
+#include <algorithm>
 #include <deque>
 #include <iostream>
 #include <math.h>
 #include <numeric>
 #include <omp.h>
+#include <ranges>
 #include <stdlib.h>
 #include <string>
 #include <vector>
-#include <algorithm>
-
-#include <ranges>
 
 #if SEQAN3_WITH_CEREAL
-#include <cereal/archives/binary.hpp>
+#    include <cereal/archives/binary.hpp>
 #endif // SEQAN3_WITH_CEREAL
 
 #include <seqan3/alphabet/container/concatenated_sequences.hpp>
@@ -30,9 +29,15 @@
 
 // Actual estimation
 template <class IBFType, bool last_exp, bool normalization, typename exp_t>
-void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint16_t> & estimations_i,
-               seqan3::dna4_vector const seq, std::vector<uint32_t> & prev_counts,
-               exp_t const & expressions, uint16_t const k, std::vector<double> const fprs, std::vector<int> & deleted)
+void check_ibf(min_arguments const & args,
+               IBFType const & ibf,
+               std::vector<uint16_t> & estimations_i,
+               seqan3::dna4_vector const seq,
+               std::vector<uint32_t> & prev_counts,
+               exp_t const & expressions,
+               uint16_t const k,
+               std::vector<double> const fprs,
+               std::vector<int> & deleted)
 {
     // Check, if one expression threshold for all or individual thresholds
     static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
@@ -44,28 +49,31 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
     for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
     {
         auto agent = ibf.membership_agent();
-        std::transform (counter.begin(), counter.end(), agent.bulk_contains(minHash).begin(), counter.begin(),
-                        std::plus<int>());
+        std::transform(counter.begin(),
+                       counter.end(),
+                       agent.bulk_contains(minHash).begin(),
+                       counter.begin(),
+                       std::plus<int>());
         ++minimiser_length;
     }
 
     // Defines, where the median should be
-    float minimiser_pos = minimiser_length/2.0;
+    float minimiser_pos = minimiser_length / 2.0;
 
     // Check every experiment by going over the number of bins in the ibf.
-    for(size_t j = 0; j < counter.size(); j++)
+    for (size_t j = 0; j < counter.size(); j++)
     {
         if (std::find(deleted.begin(), deleted.end(), j) != deleted.end())
             continue;
         // Correction by substracting the expected number of false positives
-        counter[j] = std::max((double) 0.0, (double) ((counter[j]-(minimiser_length*fprs[j]))/(1.0-fprs[j])));
+        counter[j] = std::max((double)0.0, (double)((counter[j] - (minimiser_length * fprs[j])) / (1.0 - fprs[j])));
         // Check, if considering previously seen minimisers and minimisers found ar current level equal to or are greater
         // than the minimiser_pow, which gives the median position.
         // If ań estimation took already place (estimations_i[j]!=0), a second estimation is not performed.
         if (((prev_counts[j] + counter[j]) >= minimiser_pos) && (estimations_i[j] == 0))
         {
             // If there was no previous level, because we are looking at the last level.
-            if constexpr(last_exp)
+            if constexpr (last_exp)
             {
                 if constexpr (multiple_expressions)
                     estimations_i[j] = expressions[k][j];
@@ -74,16 +82,21 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
             }
             else
             {
-               // Actually calculate estimation, in the else case k stands for the prev_expression
-               if constexpr (multiple_expressions)
-                   estimations_i[j] = std::max(expressions[k][j] * 1.0, expressions[k+1][j] - ((abs(minimiser_pos - prev_counts[j])/(counter[j] * 1.0)) * (expressions[k+1][j]-expressions[k][j])));
-               else
-                   estimations_i[j] = std::max(expressions * 1.0, k - ((abs(minimiser_pos - prev_counts[j])/(counter[j] * 1.0)) * (k-expressions)));
+                // Actually calculate estimation, in the else case k stands for the prev_expression
+                if constexpr (multiple_expressions)
+                    estimations_i[j] = std::max(expressions[k][j] * 1.0,
+                                                expressions[k + 1][j]
+                                                    - ((abs(minimiser_pos - prev_counts[j]) / (counter[j] * 1.0))
+                                                       * (expressions[k + 1][j] - expressions[k][j])));
+                else
+                    estimations_i[j] =
+                        std::max(expressions * 1.0,
+                                 k - ((abs(minimiser_pos - prev_counts[j]) / (counter[j] * 1.0)) * (k - expressions)));
             }
 
             // Perform normalization by dividing through the threshold of the first level. Only works, if multiple expressions were used.
             if constexpr (normalization && multiple_expressions)
-                estimations_i[j] = estimations_i[j]/expressions[1][j];
+                estimations_i[j] = estimations_i[j] / expressions[1][j];
         }
         else
         {
@@ -94,7 +107,7 @@ void check_ibf(min_arguments const & args, IBFType const & ibf, std::vector<uint
 }
 
 // Reads the level file ibf creates
-template<typename float_or_int>
+template <typename float_or_int>
 void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::filesystem::path filename)
 {
     std::ifstream fin;
@@ -112,13 +125,13 @@ void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::file
         if (j == expressions.size())
             expressions.push_back(empty_vector);
         std::ranges::copy(stream_view | seqan3::detail::take_until_or_throw(seqan3::is_char<' '>),
-                                        std::back_inserter(buffer));
-        if constexpr(std::same_as<uint16_t, float_or_int>)
-            expressions[j].push_back((uint16_t)  std::stoi(buffer));
+                          std::back_inserter(buffer));
+        if constexpr (std::same_as<uint16_t, float_or_int>)
+            expressions[j].push_back((uint16_t)std::stoi(buffer));
         else
-            expressions[j].push_back((double)  std::stod(buffer));
+            expressions[j].push_back((double)std::stod(buffer));
         buffer.clear();
-        if(*stream_it != '/')
+        if (*stream_it != '/')
             ++stream_it;
 
         if (*stream_it == '\n')
@@ -126,7 +139,8 @@ void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::file
             ++stream_it;
             j++;
         }
-    } while (*stream_it != '/');
+    }
+    while (*stream_it != '/');
     ++stream_it;
 
     fin.close();
@@ -139,7 +153,9 @@ void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::file
 *  \param estimate_args  The estimate arguments.
 */
 template <class IBFType, bool samplewise, bool normalization_method = false>
-void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::path file_out,
+void estimate(estimate_ibf_arguments & args,
+              IBFType & ibf,
+              std::filesystem::path file_out,
               estimate_arguments const & estimate_args)
 {
     std::vector<std::string> ids;
@@ -156,7 +172,8 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     omp_set_num_threads(args.threads);
     seqan3::contrib::bgzf_thread_count = args.threads;
 
-    seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin{estimate_args.search_file};
+    seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin{
+        estimate_args.search_file};
     for (auto & [id, seq] : fin)
     {
         ids.push_back(id);
@@ -189,9 +206,12 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
 
     // Initialse last expression.
     if constexpr (samplewise)
-        load_ibf(ibf, estimate_args.path_in.string() + "IBF_Level_" + std::to_string(args.number_expression_thresholds-1));
+        load_ibf(ibf,
+                 estimate_args.path_in.string() + "IBF_Level_" + std::to_string(args.number_expression_thresholds - 1));
     else
-        load_ibf(ibf, estimate_args.path_in.string() + "IBF_" + std::to_string(args.expression_thresholds[args.expression_thresholds.size()-1]));
+        load_ibf(ibf,
+                 estimate_args.path_in.string() + "IBF_"
+                     + std::to_string(args.expression_thresholds[args.expression_thresholds.size() - 1]));
     counter.assign(ibf.bin_count(), 0);
     counter_est.assign(ibf.bin_count(), 0);
 
@@ -203,22 +223,40 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     counter_est.clear();
     counter.clear();
 
-    // Go over the sequences
-    #pragma omp parallel for
+// Go over the sequences
+#pragma omp parallel for
     for (size_t i = 0; i < seqs.size(); ++i)
     {
         if constexpr (samplewise && normalization_method)
-            check_ibf<IBFType, true, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                           expressions,args.number_expression_thresholds - 1,
-                                           fprs[args.number_expression_thresholds - 1], deleted);
+            check_ibf<IBFType, true, true>(args,
+                                           ibf,
+                                           estimations[i],
+                                           seqs[i],
+                                           prev_counts[i],
+                                           expressions,
+                                           args.number_expression_thresholds - 1,
+                                           fprs[args.number_expression_thresholds - 1],
+                                           deleted);
         else if constexpr (samplewise)
-            check_ibf<IBFType, true, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                            expressions, args.number_expression_thresholds - 1,
-                                            fprs[args.number_expression_thresholds - 1], deleted);
+            check_ibf<IBFType, true, false>(args,
+                                            ibf,
+                                            estimations[i],
+                                            seqs[i],
+                                            prev_counts[i],
+                                            expressions,
+                                            args.number_expression_thresholds - 1,
+                                            fprs[args.number_expression_thresholds - 1],
+                                            deleted);
         else
-            check_ibf<IBFType, true, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                            args.expression_thresholds[args.expression_thresholds.size() - 1], prev_expression,
-                                            fprs[args.expression_thresholds.size() - 1], deleted);
+            check_ibf<IBFType, true, false>(args,
+                                            ibf,
+                                            estimations[i],
+                                            seqs[i],
+                                            prev_counts[i],
+                                            args.expression_thresholds[args.expression_thresholds.size() - 1],
+                                            prev_expression,
+                                            fprs[args.expression_thresholds.size() - 1],
+                                            deleted);
     }
 
     if constexpr (!samplewise)
@@ -232,19 +270,40 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
         else
             load_ibf(ibf, estimate_args.path_in.string() + "IBF_" + std::to_string(args.expression_thresholds[j]));
 
-        // Go over the sequences
-        #pragma omp parallel for
+// Go over the sequences
+#pragma omp parallel for
         for (size_t i = 0; i < seqs.size(); ++i)
         {
             if constexpr (samplewise && normalization_method)
-                check_ibf<IBFType, false, true>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                      expressions, j, fprs[j], deleted);
+                check_ibf<IBFType, false, true>(args,
+                                                ibf,
+                                                estimations[i],
+                                                seqs[i],
+                                                prev_counts[i],
+                                                expressions,
+                                                j,
+                                                fprs[j],
+                                                deleted);
             else if constexpr (samplewise)
-                check_ibf<IBFType, false, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                          expressions, j, fprs[j], deleted);
+                check_ibf<IBFType, false, false>(args,
+                                                 ibf,
+                                                 estimations[i],
+                                                 seqs[i],
+                                                 prev_counts[i],
+                                                 expressions,
+                                                 j,
+                                                 fprs[j],
+                                                 deleted);
             else
-                check_ibf<IBFType, false, false>(args, ibf, estimations[i], seqs[i], prev_counts[i],
-                                          args.expression_thresholds[j], prev_expression, fprs[j], deleted);
+                check_ibf<IBFType, false, false>(args,
+                                                 ibf,
+                                                 estimations[i],
+                                                 seqs[i],
+                                                 prev_counts[i],
+                                                 args.expression_thresholds[j],
+                                                 prev_expression,
+                                                 fprs[j],
+                                                 deleted);
         }
 
         if (!samplewise)
@@ -254,16 +313,15 @@ void estimate(estimate_ibf_arguments & args, IBFType & ibf, std::filesystem::pat
     // Write output file.
     std::ofstream outfile;
     outfile.open(std::string{file_out});
-    for (size_t i = 0; i <  seqs.size(); ++i)
+    for (size_t i = 0; i < seqs.size(); ++i)
     {
         outfile << ids[i] << "\t";
         for (size_t j = 0; j < ibf.bin_count(); ++j)
-             outfile << estimations[i][j] << "\t";
+            outfile << estimations[i][j] << "\t";
 
         outfile << "\n";
     }
     outfile.close();
-
 }
 
 // Calls the correct form of estimate
@@ -277,13 +335,22 @@ void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_
         if (args.samplewise)
         {
             if (estimate_args.normalization_method)
-                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, true, true>(args, ibf, args.path_out, estimate_args);
+                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, true, true>(args,
+                                                                                                        ibf,
+                                                                                                        args.path_out,
+                                                                                                        estimate_args);
             else
-                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, true>(args, ibf, args.path_out, estimate_args);
+                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, true>(args,
+                                                                                                  ibf,
+                                                                                                  args.path_out,
+                                                                                                  estimate_args);
         }
         else
         {
-            estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, false>(args, ibf, args.path_out, estimate_args);
+            estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, false>(args,
+                                                                                               ibf,
+                                                                                               args.path_out,
+                                                                                               estimate_args);
         }
     }
     else
@@ -292,13 +359,23 @@ void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_
         if (args.samplewise)
         {
             if (estimate_args.normalization_method)
-                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, true, true>(args, ibf, args.path_out, estimate_args);
+                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, true, true>(
+                    args,
+                    ibf,
+                    args.path_out,
+                    estimate_args);
             else
-                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, true>(args, ibf, args.path_out, estimate_args);
+                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, true>(args,
+                                                                                                    ibf,
+                                                                                                    args.path_out,
+                                                                                                    estimate_args);
         }
         else
         {
-            estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, false>(args, ibf, args.path_out, estimate_args);
+            estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, false>(args,
+                                                                                                 ibf,
+                                                                                                 args.path_out,
+                                                                                                 estimate_args);
         }
     }
 }

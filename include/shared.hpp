@@ -15,7 +15,8 @@
 #include <seqan3/search/kmer_index/shape.hpp>
 #include <seqan3/search/views/minimiser_hash.hpp>
 
-inline constexpr static uint64_t adjust_seed(uint8_t const kmer_size, uint64_t const seed = 0x8F3F73B5CF1C9ADEULL) noexcept
+static inline constexpr uint64_t adjust_seed(uint8_t const kmer_size,
+                                             uint64_t const seed = 0x8F'3F'73'B5'CF'1C'9A'DEULL) noexcept
 {
     return seed >> (64u - 2u * kmer_size);
 }
@@ -31,7 +32,7 @@ struct all_arguments
 struct min_arguments : all_arguments
 {
     uint8_t k{20};
-    seqan3::seed s{0x8F3F73B5CF1C9ADEULL};
+    seqan3::seed s{0x8F'3F'73'B5'CF'1C'9A'DEULL};
     seqan3::shape shape = seqan3::ungapped{k};
     seqan3::window_size w_size{60};
 };
@@ -41,10 +42,10 @@ struct estimate_ibf_arguments : min_arguments
 {
     bool compressed = false;
     std::vector<uint16_t> expression_thresholds{}; // Expression levels which should be created
-    uint8_t number_expression_thresholds{}; // If set, the expression levels are determined by the program.
+    uint8_t number_expression_thresholds{};        // If set, the expression levels are determined by the program.
     bool samplewise{false};
 
-    template<class Archive>
+    template <class Archive>
     void save(Archive & archive) const
     {
         archive(k);
@@ -57,7 +58,7 @@ struct estimate_ibf_arguments : min_arguments
         archive(samplewise);
     }
 
-    template<class Archive>
+    template <class Archive>
     void load(Archive & archive)
     {
         archive(k);
@@ -119,8 +120,7 @@ void load_ibf(IBFType & ibf, std::filesystem::path ipath)
  *  \param opath Path, where the IBF should be stored.
  */
 template <class IBFType>
-void store_ibf(IBFType const & ibf,
-               std::filesystem::path opath)
+void store_ibf(IBFType const & ibf, std::filesystem::path opath)
 {
     std::ofstream os{opath, std::ios::binary};
     cereal::BinaryOutputArchive oarchive{os};

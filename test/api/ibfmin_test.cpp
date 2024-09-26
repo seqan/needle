@@ -1,11 +1,12 @@
 #include <gtest/gtest.h>
+
 #include <iostream>
 
 #include <seqan3/test/expect_range_eq.hpp>
 
+#include "../app_test.hpp"
 #include "ibf.hpp"
 #include "shared.hpp"
-#include "../app_test.hpp"
 
 // To prevent issues when running multiple CLI tests in parallel, give each CLI test unique names:
 struct ibfmin_test : public app_test
@@ -44,12 +45,11 @@ TEST_F(ibfmin_test, given_expression_thresholds)
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(97);
-        EXPECT_RANGE_EQ(expected_result,  res);
+        EXPECT_RANGE_EQ(expected_result, res);
         expected_result[0] = 1;
         auto & res2 = agent.bulk_contains(24);
-        EXPECT_RANGE_EQ(expected_result,  res2);
+        EXPECT_RANGE_EQ(expected_result, res2);
     }
-
 }
 
 TEST_F(ibfmin_test, given_expression_thresholds_multiple_threads)
@@ -75,10 +75,10 @@ TEST_F(ibfmin_test, given_expression_thresholds_multiple_threads)
 
     std::vector<bool> expected_result(128, 0);
     auto & res = agent.bulk_contains(97);
-    EXPECT_RANGE_EQ(expected_result,  res);
+    EXPECT_RANGE_EQ(expected_result, res);
     std::vector<bool> expected_result2(128, 1);
     auto & res2 = agent.bulk_contains(24);
-    EXPECT_RANGE_EQ(expected_result2,  res2);
+    EXPECT_RANGE_EQ(expected_result2, res2);
 }
 
 TEST_F(ibfmin_test, no_given_expression_thresholds)
@@ -103,12 +103,11 @@ TEST_F(ibfmin_test, no_given_expression_thresholds)
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
-        EXPECT_RANGE_EQ(expected_result,  res);
+        EXPECT_RANGE_EQ(expected_result, res);
         expected_result[0] = 1;
         auto & res2 = agent.bulk_contains(24);
-        EXPECT_RANGE_EQ(expected_result,  res2);
+        EXPECT_RANGE_EQ(expected_result, res2);
     }
-
 }
 
 TEST_F(ibfmin_test, expression_thresholds_by_genome)
@@ -133,12 +132,11 @@ TEST_F(ibfmin_test, expression_thresholds_by_genome)
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
-        EXPECT_RANGE_EQ(expected_result,  res);
+        EXPECT_RANGE_EQ(expected_result, res);
         expected_result[0] = 1;
         auto & res2 = agent.bulk_contains(24);
-        EXPECT_RANGE_EQ(expected_result,  res2);
+        EXPECT_RANGE_EQ(expected_result, res2);
     }
-
 }
 
 TEST_F(ibfmin_test, no_given_expression_thresholds_multiple_threads)
@@ -164,10 +162,10 @@ TEST_F(ibfmin_test, no_given_expression_thresholds_multiple_threads)
 
     std::vector<bool> expected_result(128, 0);
     auto & res = agent.bulk_contains(2);
-    EXPECT_RANGE_EQ(expected_result,  res);
+    EXPECT_RANGE_EQ(expected_result, res);
     std::vector<bool> expected_result2(128, 1);
     auto & res2 = agent.bulk_contains(24);
-    EXPECT_RANGE_EQ(expected_result2,  res2);
+    EXPECT_RANGE_EQ(expected_result2, res2);
 }
 
 TEST_F(ibfmin_test, different_shape)
@@ -198,10 +196,9 @@ TEST_F(ibfmin_test, different_shape)
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(97);
-        EXPECT_RANGE_EQ(expected_result,  res);
+        EXPECT_RANGE_EQ(expected_result, res);
         expected_result[0] = 1;
         auto & res2 = agent.bulk_contains(4);
-        EXPECT_RANGE_EQ(expected_result,  res2);
+        EXPECT_RANGE_EQ(expected_result, res2);
     }
-
 }
