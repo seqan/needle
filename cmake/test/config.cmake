@@ -13,7 +13,7 @@ enable_testing ()
 file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/output)
 add_definitions (-DOUTPUTDIR=\"${CMAKE_CURRENT_BINARY_DIR}/output/\")
 add_definitions (-DDATADIR=\"${CMAKE_CURRENT_BINARY_DIR}/data/\")
-add_definitions (-DBINDIR=\"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/\")
+add_definitions (-DBINDIR=\"${CMAKE_BINARY_DIR}/bin/\")
 add_definitions (-DAPPNAME=\"${PROJECT_NAME}\")
 
 # Add the test interface library.
