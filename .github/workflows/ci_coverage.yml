@@ -1,0 +1,93 @@
+# SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin
+# SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
+# SPDX-License-Identifier: CC0-1.0
+
+name: Coverage
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    types:
+      - unlabeled
+  workflow_dispatch:
+
+concurrency:
+  group: coverage-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
+env:
+  SEQAN3_NO_VERSION_CHECK: 1
+  TZ: Europe/Berlin
+
+defaults:
+  run:
+    shell: bash -Eeuxo pipefail {0}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: ${{ matrix.compiler }}
+    if: github.repository_owner == 'seqan' || github.event_name == 'workflow_dispatch' || github.event.label.name == 'lint'
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: ["gcc-14"]
+    container:
+      image: ghcr.io/seqan/${{ matrix.compiler }}
+      volumes:
+        - /home/runner:/home/runner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Load ccache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.ccache
+          save-always: true
+          key: ccache-${{ runner.os }}-${{ github.workflow }}-${{ matrix.compiler }}-${{ github.ref }}
+
+      - name: Configure tests
+        run: |
+          mkdir build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Coverage
+          make gtest_main
+
+      - name: Build tests
+        working-directory: build
+        run: |
+          ccache -z
+          make -k tests
+          ccache -svvx
+
+      - name: Run tests
+        working-directory: build
+        run: ctest . -j --output-on-failure --test-dir test
+
+      - name: Generate coverage report
+        run: |
+          gcovr --root ${GITHUB_WORKSPACE} \
+                ${GITHUB_WORKSPACE}/build \
+                --filter ${GITHUB_WORKSPACE}/include \
+                --filter ${GITHUB_WORKSPACE}/src \
+                --exclude-lines-by-pattern '^\s*$' \
+                --exclude-lines-by-pattern '^\s*};$' \
+                --exclude-lines-by-pattern '^\s*\.[^\s]* = .*[\n,]$' \
+                --exclude-lines-by-pattern '^\s*\.[^\s]* = .*}\);$' \
+                --exclude-lines-by-pattern '^\s*\.[^\s]* =(\s+\".*\")+' \
+                --exclude-unreachable-branches \
+                --exclude-throw-branches \
+                --exclude-noncode-lines \
+                -j \
+                --cobertura \
+                --output ${GITHUB_WORKSPACE}/build/coverage_report.xml
+
+      - name: Submit coverage report
+        uses: codecov/codecov-action@v3.1.5
+        with:
+          files: build/coverage_report.xml
+          fail_ci_if_error: false

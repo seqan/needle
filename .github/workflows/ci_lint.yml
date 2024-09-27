@@ -34,12 +34,21 @@ jobs:
     steps:
       - name: "Cancel macOS"
         run: echo "Cancelling macOS"
+  cancel_coverage:
+    name: Cancel running Workflows
+    concurrency:
+      group: coverage-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Cancel Coverage"
+        run: echo "Cancelling Coverage"
   lint:
     name: Lint
     concurrency:
       group: lint-${{ github.event.pull_request.number }}
       cancel-in-progress: true
-    needs: [cancel_linux, cancel_macos]
+    needs: [cancel_linux, cancel_macos, cancel_coverage]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
