@@ -1,8 +1,13 @@
-## Needle
+## Needle [![build status][1]][2] [![codecov][3]][4] [![install with bioconda][5]][6]
+
+[1]: https://img.shields.io/github/actions/workflow/status/seqan/needle/ci_linux.yml?branch=main&style=flat&logo=github&label=CI "Open GitHub actions page"
+[2]: https://github.com/seqan/needle/actions?query=branch%3Amain
+[3]: https://codecov.io/gh/seqan/needle/graph/badge.svg?token=W109QS58E0 "Open Codecov page"
+[4]: https://codecov.io/gh/seqan/needle
+[5]: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat
+[6]: #install-with-bioconda-linux
 
 ### A fast and space-efficient pre-filter for estimating the quantification of very large collections of nucleotide sequences
-
-[![Build Status](https://github.com/seqan/app-template/workflows/App%20CI/badge.svg)](https://github.com/seqan/needle/actions?query=branch%3Amaster+workflow%3A%22App+CI%22) [![codecov](https://codecov.io/gh/seqan/needle/branch/master/graph/badge.svg?token=SJVMYRUKW2)](https://codecov.io/gh/seqan/needle)  [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](#install-with-bioconda-linux)
 
 Needle is a tool for semi-quantitative analysis of very large collections of nucleotide sequences.
 Needle stores its data in multiple interleaved Bloom filter, a fast and space efficient probabilistic data structure and uses a windowing scheme (also called minimisers) to reduce the amount of data to store. How many interleaved Bloom filter are used is defined by the user. Each interleaved Bloom filter has a so called expression threshold and stores minimisers with an occurrence greater than or equal to its own expression threshold and smaller than the next biggest expression threshold (if there is no bigger expression threshold, all greater than or equal to the threshold are stored). These expression thresholds are then used during the query (called estimate) to approximate the expression values of given transcripts.
