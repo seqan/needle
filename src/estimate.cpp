@@ -107,44 +107,9 @@ void check_ibf(min_arguments const & args,
 }
 
 // Reads the level file ibf creates
+// Defined in ibf.cpp
 template <typename float_or_int>
-void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::filesystem::path filename)
-{
-    std::ifstream fin;
-    fin.open(filename);
-    auto stream_view = seqan3::detail::istreambuf(fin);
-    auto stream_it = std::ranges::begin(stream_view);
-    size_t j{0};
-    std::vector<float_or_int> empty_vector{};
-
-    std::string buffer{};
-
-    // Read line = expression levels
-    do
-    {
-        if (j == expressions.size())
-            expressions.push_back(empty_vector);
-        std::ranges::copy(stream_view | seqan3::detail::take_until_or_throw(seqan3::is_char<' '>),
-                          std::back_inserter(buffer));
-        if constexpr (std::same_as<uint16_t, float_or_int>)
-            expressions[j].push_back((uint16_t)std::stoi(buffer));
-        else
-            expressions[j].push_back((double)std::stod(buffer));
-        buffer.clear();
-        if (*stream_it != '/')
-            ++stream_it;
-
-        if (*stream_it == '\n')
-        {
-            ++stream_it;
-            j++;
-        }
-    }
-    while (*stream_it != '/');
-    ++stream_it;
-
-    fin.close();
-}
+void read_levels(std::vector<std::vector<float_or_int>> &, std::filesystem::path);
 
 /*! \brief Function to estimate expression value.
 *  \param args        The arguments.
