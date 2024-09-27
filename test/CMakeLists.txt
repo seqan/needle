@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
 # SPDX-License-Identifier: CC0-1.0
 
-cmake_minimum_required (VERSION 3.25)
+cmake_minimum_required (VERSION 3.25...3.30)
 
 # This includes `cmake/test/config.cmake` which takes care of setting up the test infrastructure. It also provides
 # the `add_app_test` macro, which is used to add tests to the CMake test suite.

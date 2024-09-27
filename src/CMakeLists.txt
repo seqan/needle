@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.25)
+cmake_minimum_required (VERSION 3.25...3.30)
 
 find_package (OpenMP REQUIRED COMPONENTS CXX)
 add_library ("${PROJECT_NAME}_lib" STATIC estimate.cpp ibf.cpp)
