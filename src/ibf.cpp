@@ -862,13 +862,12 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 + std::to_string(ibf_args.expression_thresholds[j]) + std::string(" on.\n")};
         }
         // m = -hn/ln(1-p^(1/h))
-        size = static_cast<uint64_t>((-1.0 * num_hash * ((1.0 * size) / num_files))
-                                     / (std::log(1.0 - std::pow(fprs[j], 1.0 / num_hash))));
+        double const elements = static_cast<double>(size) / num_files;
+        double const numerator = -elements * num_hash;
+        double const denominator = std::log(1 - std::exp(std::log(fprs[j]) / num_hash));
+        size = std::ceil(numerator / denominator);
         sizes_ibf.push_back(size);
-        ibfs.push_back(
-            seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>(seqan3::bin_count{num_files},
-                                                                                seqan3::bin_size{size},
-                                                                                seqan3::hash_function_count{num_hash}));
+        ibfs.emplace_back(seqan3::bin_count{num_files}, seqan3::bin_size{size}, seqan3::hash_function_count{num_hash});
     }
 
 // Add minimisers to ibf
@@ -999,8 +998,9 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         for (unsigned i = 0; i < num_files; i++)
         {
             // m = -hn/ln(1-p^(1/h))
-            double fpr =
-                std::pow(1.0 - std::pow(1.0 - (1.0 / sizes_ibf[j]), num_hash * counts_per_level[i][j]), num_hash);
+            double const exp_arg = num_hash * counts_per_level[i][j] / static_cast<double>(sizes_ibf[j]);
+            double const log_arg = 1.0 - std::exp(-exp_arg);
+            double const fpr = std::exp(num_hash * std::log(log_arg));
             outfile_fpr << fpr << " ";
         }
         outfile_fpr << "\n";
@@ -1402,9 +1402,9 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
             if (std::find(pos_insert.begin(), pos_insert.end(), i) != pos_insert.end())
             {
                 // m = -hn/ln(1-p^(1/h))
-                double fpr =
-                    std::pow(1.0 - std::pow(1.0 - (1.0 / sizes[j]), num_hash_functions * counts_per_level[exp_i][j]),
-                             num_hash_functions);
+                double const exp_arg = num_hash_functions * counts_per_level[exp_i][j] / static_cast<double>(sizes[j]);
+                double const log_arg = 1.0 - std::exp(-exp_arg);
+                double const fpr = std::exp(num_hash_functions * std::log(log_arg));
                 outfile_fpr << fpr << " ";
                 exp_i++;
             }
