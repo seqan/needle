@@ -49,7 +49,7 @@ void check_ibf(min_arguments const & args,
         ++minimiser_count;
     }
 
-    // Defines, where the median should be
+    // Defines where the median should be
     double const minimiser_pos = minimiser_count / 2.0;
 
     // Check every experiment by going over the number of bins in the ibf.
@@ -57,12 +57,17 @@ void check_ibf(min_arguments const & args,
     {
         if (std::ranges::find(deleted, bin) != deleted.end())
             continue;
-        // Correction by substracting the expected number of false positives
-        auto const expected_false_positives = minimiser_count * fprs[bin];
-        auto const corrected_count = counter[bin] - expected_false_positives;
-        auto const normalized_count = corrected_count / (1.0 - fprs[bin]);
 
-        counter[bin] = std::max<double>(0.0, normalized_count);
+        // Correction by substracting the expected number of false positives
+        double const expected_false_positives = minimiser_count * fprs[bin];
+        double const corrected_count = counter[bin] - expected_false_positives;
+        double const normalized_count = corrected_count / (1.0 - fprs[bin]);
+
+        // TODO: Rounding?
+        // `normalized_count` could be ceiled
+        // `estimate` further down could be ceiled
+        counter[bin] = normalized_count < 0.0 ? 0u : normalized_count;
+
         // Check if considering previously seen minimisers and minimisers found at current level equal to or are greater
         // than the minimiser_pow, which gives the median position.
         // If an estimation took already place (estimations_i[bin]!=0), a second estimation is not performed.
@@ -78,24 +83,28 @@ void check_ibf(min_arguments const & args,
             }
             else
             {
-                auto const normalized_minimiser_pos = std::abs(minimiser_pos - prev_counts[bin]) / counter[bin];
+                assert(minimiser_pos > prev_counts[bin]);
+                // Should never fail. This would mean that prev_counts[bin] was enough by itself and we should already
+                // have estimated on the previous level.
+                assert(counter[bin] > 0u);
+                double const normalized_minimiser_pos = (minimiser_pos - prev_counts[bin]) / counter[bin];
 
                 // Actually calculate estimation, in the else case level stands for the prev_expression
                 if constexpr (multiple_expressions)
                 {
-                    auto const prev_level_expression = expressions[level + 1][bin];
-                    auto const expression_difference = prev_level_expression - expressions[level][bin];
-                    auto const estimate = prev_level_expression - (normalized_minimiser_pos * expression_difference);
+                    size_t const prev_level_expression = expressions[level + 1][bin];
+                    size_t const expression_difference = prev_level_expression - expressions[level][bin];
+                    size_t const estimate = prev_level_expression - (normalized_minimiser_pos * expression_difference);
 
-                    estimations_i[bin] = std::max<double>(expressions[level][bin], estimate);
+                    estimations_i[bin] = std::max<size_t>(expressions[level][bin], estimate);
                 }
                 else
                 {
-                    auto const prev_level_expression = level;
-                    auto const expression_difference = prev_level_expression - expressions;
-                    auto const estimate = prev_level_expression - (normalized_minimiser_pos * expression_difference);
+                    size_t const prev_level_expression = level;
+                    size_t const expression_difference = prev_level_expression - expressions;
+                    size_t const estimate = prev_level_expression - (normalized_minimiser_pos * expression_difference);
 
-                    estimations_i[bin] = std::max<double>(expressions, estimate);
+                    estimations_i[bin] = std::max<size_t>(expressions, estimate);
                 }
             }
 
