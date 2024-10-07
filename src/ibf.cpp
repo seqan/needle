@@ -116,31 +116,48 @@ void fill_hash_table(min_arguments const & args,
                      bool const only_include = false,
                      uint8_t cutoff = 0)
 {
+    // Would result in no minimisers being added to hash_table.
+    bool const containment_check_in_empty_include_set = only_include && include_set_table.empty();
+    if (containment_check_in_empty_include_set)
+        return;
+
+    // Would result in no filtering.
+    bool const exclusion_check_in_empty_exclude_set = !only_include && exclude_set_table.empty();
+
+    auto check_value_in_tables = [&](auto && minHash)
+    {
+        return (only_include && include_set_table.contains(minHash))
+            || (!only_include && !exclude_set_table.contains(minHash));
+    };
+
     for (auto & [seq] : fin)
     {
         for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
         {
-            if ((only_include && include_set_table.contains(minHash))
-                || (!only_include && !exclude_set_table.contains(minHash)))
+            if (exclusion_check_in_empty_exclude_set || check_value_in_tables(minHash))
             {
+                // Note that hash_table[minHash] would insert minHash into the map if it does not yet exist.
                 auto it = hash_table.find(minHash);
-                // If minHash is already in hash table, increase count in hash table
+
+                // If minHash is already in hash table, increase count in hash table.
                 if (it != hash_table.end())
                 {
-                    it->second = std::min<uint16_t>(65534u, hash_table[minHash] + 1);
+                    // Prevent overflow. 65535 is the maximum value for uint16_t.
+                    it->second = std::min<uint16_t>(65534u, it->second + 1);
                 }
-                // If minHash equals now the cutoff than add it to the hash table and add plus one for the current
-                // iteration.
-                else if (cutoff_table[minHash] == cutoff)
-                {
-                    hash_table[minHash] = cutoff_table[minHash] + 1;
-                    cutoff_table.erase(minHash);
-                }
+                // If there is no cutoff, add value to hash_table and set count to 1.
                 else if (cutoff == 0)
                 {
                     hash_table[minHash]++;
                 }
-                // If none of the above, increase count in cutoff table. Cutoff Table increases RAM usage by storing
+                // If minHash equals the cutoff, add it to the hash table and add plus one for the current
+                // iteration.
+                else if (uint8_t const value = cutoff_table[minHash]; value == cutoff)
+                {
+                    hash_table[minHash] = value + 1u;
+                    cutoff_table.erase(minHash);
+                }
+                // If none of the above, increase count in cutoff table. Cutoff Table reduces RAM usage by storing
                 // minimisers with a low occurence in a smaller hash table.
                 else
                 {
@@ -792,7 +809,8 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                                                                          minimiser_files[file_iterator].extension());
             filesize = std::filesystem::file_size(minimiser_files[file_iterator]) * minimiser_args.samples[i]
                      * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
-            filesize = filesize / ((cutoffs[i] + 1) * (is_fasta ? 1 : 2));
+            filesize /= ((cutoffs[i] + 1) * (is_fasta ? 1 : 2));
+            // ^^ why divide? --> estimate the number of minimisers
         }
         // If set_expression_thresholds_samplewise is not set the expressions as determined by the first file are used for
         // all files.
