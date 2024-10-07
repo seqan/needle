@@ -29,10 +29,10 @@ template <class IBFType, bool last_exp, bool normalization, typename exp_t>
 void check_ibf(min_arguments const & args,
                IBFType const & ibf,
                std::vector<uint16_t> & estimations_i,
-               seqan3::dna4_vector const seq,
+               seqan3::dna4_vector const & seq,
                std::vector<uint32_t> & prev_counts,
                exp_t const & expressions,
-               uint16_t const k,
+               uint16_t const level,
                std::vector<double> const fprs,
                std::vector<int> & deleted)
 {
@@ -40,65 +40,73 @@ void check_ibf(min_arguments const & args,
     static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
 
     // Count minimisers in ibf of current level
-    std::vector<uint32_t> counter;
-    counter.assign(ibf.bin_count(), 0);
-    uint64_t minimiser_length = 0;
+    std::vector<uint32_t> counter(ibf.bin_count());
+    uint64_t minimiser_count{};
+    auto agent = ibf.membership_agent();
     for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
     {
-        auto agent = ibf.membership_agent();
-        std::transform(counter.begin(),
-                       counter.end(),
-                       agent.bulk_contains(minHash).begin(),
-                       counter.begin(),
-                       std::plus<int>());
-        ++minimiser_length;
+        std::ranges::transform(counter, agent.bulk_contains(minHash), counter.begin(), std::plus<uint32_t>());
+        ++minimiser_count;
     }
 
     // Defines, where the median should be
-    float minimiser_pos = minimiser_length / 2.0;
+    double const minimiser_pos = minimiser_count / 2.0;
 
     // Check every experiment by going over the number of bins in the ibf.
-    for (size_t j = 0; j < counter.size(); j++)
+    for (size_t bin = 0; bin < counter.size(); ++bin)
     {
-        if (std::find(deleted.begin(), deleted.end(), j) != deleted.end())
+        if (std::ranges::find(deleted, bin) != deleted.end())
             continue;
         // Correction by substracting the expected number of false positives
-        counter[j] = std::max((double)0.0, (double)((counter[j] - (minimiser_length * fprs[j])) / (1.0 - fprs[j])));
-        // Check, if considering previously seen minimisers and minimisers found ar current level equal to or are greater
+        auto const expected_false_positives = minimiser_count * fprs[bin];
+        auto const corrected_count = counter[bin] - expected_false_positives;
+        auto const normalized_count = corrected_count / (1.0 - fprs[bin]);
+
+        counter[bin] = std::max<double>(0.0, normalized_count);
+        // Check if considering previously seen minimisers and minimisers found at current level equal to or are greater
         // than the minimiser_pow, which gives the median position.
-        // If ań estimation took already place (estimations_i[j]!=0), a second estimation is not performed.
-        if (((prev_counts[j] + counter[j]) >= minimiser_pos) && (estimations_i[j] == 0))
+        // If an estimation took already place (estimations_i[bin]!=0), a second estimation is not performed.
+        if (estimations_i[bin] == 0 && prev_counts[bin] + counter[bin] >= minimiser_pos)
         {
             // If there was no previous level, because we are looking at the last level.
             if constexpr (last_exp)
             {
                 if constexpr (multiple_expressions)
-                    estimations_i[j] = expressions[k][j];
+                    estimations_i[bin] = expressions[level][bin];
                 else
-                    estimations_i[j] = expressions;
+                    estimations_i[bin] = expressions;
             }
             else
             {
-                // Actually calculate estimation, in the else case k stands for the prev_expression
+                auto const normalized_minimiser_pos = std::abs(minimiser_pos - prev_counts[bin]) / counter[bin];
+
+                // Actually calculate estimation, in the else case level stands for the prev_expression
                 if constexpr (multiple_expressions)
-                    estimations_i[j] = std::max(expressions[k][j] * 1.0,
-                                                expressions[k + 1][j]
-                                                    - ((abs(minimiser_pos - prev_counts[j]) / (counter[j] * 1.0))
-                                                       * (expressions[k + 1][j] - expressions[k][j])));
+                {
+                    auto const prev_level_expression = expressions[level + 1][bin];
+                    auto const expression_difference = prev_level_expression - expressions[level][bin];
+                    auto const estimate = prev_level_expression - (normalized_minimiser_pos * expression_difference);
+
+                    estimations_i[bin] = std::max<double>(expressions[level][bin], estimate);
+                }
                 else
-                    estimations_i[j] =
-                        std::max(expressions * 1.0,
-                                 k - ((abs(minimiser_pos - prev_counts[j]) / (counter[j] * 1.0)) * (k - expressions)));
+                {
+                    auto const prev_level_expression = level;
+                    auto const expression_difference = prev_level_expression - expressions;
+                    auto const estimate = prev_level_expression - (normalized_minimiser_pos * expression_difference);
+
+                    estimations_i[bin] = std::max<double>(expressions, estimate);
+                }
             }
 
-            // Perform normalization by dividing through the threshold of the first level. Only works, if multiple expressions were used.
+            // Perform normalization by dividing through the threshold of the first level. Only works if multiple expressions were used.
             if constexpr (normalization && multiple_expressions)
-                estimations_i[j] = estimations_i[j] / expressions[1][j];
+                estimations_i[bin] /= expressions[1][bin];
         }
         else
         {
             // If not found at this level, add to previous count.
-            prev_counts[j] = prev_counts[j] + counter[j];
+            prev_counts[bin] += counter[bin];
         }
     }
 }

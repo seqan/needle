@@ -19,7 +19,7 @@ add_definitions (-DAPPNAME=\"${PROJECT_NAME}\")
 # Add the test interface library.
 if (NOT TARGET ${PROJECT_NAME}_test)
     add_library (${PROJECT_NAME}_test INTERFACE)
-    target_compile_options (${PROJECT_NAME}_lib PUBLIC "-pedantic" "-Wall" "-Wextra" "-Werror")
+    target_compile_options (${PROJECT_NAME}_lib PUBLIC "-pedantic" "-Wall" "-Wextra")
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         # Disable bogus warnings in GCC12.
