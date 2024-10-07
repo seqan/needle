@@ -617,59 +617,59 @@ void check_fpr(uint8_t const number_expression_thresholds, std::vector<double> &
 }
 
 // Calculate expression thresholds and sizes
+// Calculate expression thresholds by taking median recursively
 void get_expression_thresholds(uint8_t const number_expression_thresholds,
                                robin_hood::unordered_node_map<uint64_t, uint16_t> const & hash_table,
                                std::vector<uint16_t> & expression_thresholds,
                                std::vector<uint64_t> & sizes,
                                robin_hood::unordered_set<uint64_t> const & genome,
-                               uint8_t cutoff,
-                               bool all = true)
+                               uint8_t const cutoff,
+                               bool const all = true)
 {
-    // Calculate expression thresholds by taking median recursively
+    expression_thresholds.clear();
+    sizes.clear();
+
     std::vector<uint16_t> counts;
     for (auto && elem : hash_table)
     {
         if (all || genome.contains(elem.first))
             counts.push_back(elem.second);
     }
+    size_t const num_counts = counts.size();
 
-    std::size_t dev{2};
-    std::size_t prev_pos{0};
-    auto prev_exp{0};
-    auto exp{0};
-    auto max_elem = *std::max_element(counts.begin(), counts.end());
+    size_t median_fraction{2}; // First median at num_counts / 2, second one at num_counts / 2 + num_counts / 4, etc.
+    size_t prev_median_position{};
+    size_t median_position{};
+    uint16_t prev_expression{};
+    uint16_t expression{};
+    uint16_t const max_count = std::ranges::max(counts);
+
     // Zero Level = cutoff + 1
-    expression_thresholds.push_back(cutoff + 1);
-    // First Level
-    std::nth_element(counts.begin() + prev_pos, counts.begin() + prev_pos + counts.size() / dev, counts.end());
-    exp = counts[prev_pos + counts.size() / dev];
-    prev_pos = prev_pos + counts.size() / dev;
-    dev = dev * 2;
-    expression_thresholds.push_back(exp);
-    sizes.push_back(prev_pos);
+    expression_thresholds.push_back(cutoff + 1u);
 
-    while ((expression_thresholds.size() < number_expression_thresholds) && (prev_exp < max_elem)
-           && (dev < counts.size()))
+    while (expression_thresholds.size() < number_expression_thresholds && prev_expression < max_count
+           && median_fraction < num_counts)
     {
-        std::nth_element(counts.begin() + prev_pos, counts.begin() + prev_pos + counts.size() / dev, counts.end());
-        exp = counts[prev_pos + counts.size() / dev];
-        prev_pos = prev_pos + counts.size() / dev;
-        dev = dev * 2;
+        median_position = prev_median_position + num_counts / median_fraction;
+        std::nth_element(counts.begin() + prev_median_position, counts.begin() + median_position, counts.end());
+        expression = counts[median_position];
+        prev_median_position = median_position;
+        median_fraction = median_fraction * 2;
 
         // If expression does not change compared to previous one, do not store it again as an expression threshold.
-        if ((exp - prev_exp) > 1)
+        if (expression != prev_expression || expression_thresholds.empty())
         {
-            expression_thresholds.push_back(exp);
-            sizes.push_back(prev_pos);
+            expression_thresholds.push_back(expression);
+            sizes.push_back(prev_median_position);
         }
 
-        prev_exp = exp;
+        prev_expression = expression;
     }
-    sizes.push_back(prev_pos);
+    sizes.push_back(prev_expression);
     // In case not all levels have a threshold, give the last levels a maximal threshold, which can not be met by any minimiser.
-    while (expression_thresholds.size() < number_expression_thresholds)
-        expression_thresholds.push_back(max_elem + 1);
-    counts.clear();
+    expression_thresholds.resize(number_expression_thresholds, max_count + 1u);
+
+    assert(counts.size() == num_counts);
 }
 
 // Estimate the file size for every expression level, necessary when samplewise=false, because then it is completly
@@ -729,32 +729,28 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 minimiser_arguments const & minimiser_args = {})
 {
 
-    size_t num_files;
-    if constexpr (minimiser_files_given)
-        num_files = minimiser_files.size();
-    else
-        num_files = minimiser_args.samples.size();
+    size_t const num_files = [&]() constexpr
+    {
+        if constexpr (minimiser_files_given)
+            return minimiser_files.size();
+        else
+            return minimiser_args.samples.size();
+    }();
 
     std::vector<std::vector<uint16_t>> expressions{};
+    if constexpr (samplewise)
+        expressions.resize(num_files, std::vector<uint16_t>(ibf_args.number_expression_thresholds));
+
     std::vector<std::vector<uint64_t>> sizes{};
     sizes.assign(num_files, {});
     std::vector<uint64_t> sizes_ibf{};
-    std::vector<std::vector<uint64_t>> counts_per_level{};
+    std::vector<std::vector<uint64_t>> counts_per_level(num_files,
+                                                        std::vector<uint64_t>(ibf_args.number_expression_thresholds));
 
     bool const calculate_cutoffs = cutoffs.empty();
 
     robin_hood::unordered_set<uint64_t> include_set_table; // Storage for minimisers in include file
     robin_hood::unordered_set<uint64_t> exclude_set_table; // Storage for minimisers in exclude file
-    if constexpr (samplewise)
-    {
-        std::vector<uint16_t> zero_vector(ibf_args.number_expression_thresholds);
-        for (unsigned j = 0; j < num_files; j++)
-            expressions.push_back(zero_vector);
-    }
-
-    std::vector<uint64_t> zero_vector2(ibf_args.number_expression_thresholds);
-    for (unsigned j = 0; j < num_files; j++)
-        counts_per_level.push_back(zero_vector2);
 
     if constexpr (!minimiser_files_given)
     {
@@ -777,14 +773,18 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     if (expression_by_genome_file != "")
         get_include_set_table(ibf_args, expression_by_genome_file, genome);
     bool const expression_by_genome = (expression_by_genome_file == "");
+
     // Get expression levels and sizes
-    for (unsigned i = 0; i < num_files; i++)
+    for (size_t i = 0; i < num_files; ++i)
     {
-        uint64_t
-            filesize{}; // Store filesize(minimiser_files_given=false) or number of minimisers(minimiser_files_given=true)
+        // Content depends on `minimiser_files_given`:
+        // * `false`: filesize
+        // * `true` : number of minimisers
+        uint64_t filesize{};
 
         if constexpr (minimiser_files_given)
         {
+            // std::cerr << "1A\n";
             uint8_t cutoff;
             read_binary_start(ibf_args, minimiser_files[i], filesize, cutoff);
             cutoffs.push_back(cutoff);
@@ -812,6 +812,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             filesize /= ((cutoffs[i] + 1) * (is_fasta ? 1 : 2));
             // ^^ why divide? --> estimate the number of minimisers
         }
+
         // If set_expression_thresholds_samplewise is not set the expressions as determined by the first file are used for
         // all files.
         if constexpr (samplewise)
@@ -849,11 +850,14 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
     for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
     {
-        uint64_t size{0};
-        for (unsigned i = 0; i < num_files; i++)
-            size = size + sizes[i][j];
+        uint64_t size{};
+        for (size_t i = 0; i < num_files; i++)
+        {
+            // size = std::max<size_t>(size, sizes[i][j]);
+            size += sizes[i][j];
+        }
 
-        if (size < 1)
+        if (size == 0u)
         {
             throw std::invalid_argument{
                 std::string("[Error]. The chosen expression threshold is not well picked. If you use the automatic ")
@@ -862,6 +866,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 + std::to_string(ibf_args.expression_thresholds[j]) + std::string(" on.\n")};
         }
         // m = -hn/ln(1-p^(1/h))
+        // double const elements = size;
         double const elements = static_cast<double>(size) / num_files;
         double const numerator = -elements * num_hash;
         double const denominator = std::log(1 - std::exp(std::log(fprs[j]) / num_hash));
@@ -872,7 +877,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
 // Add minimisers to ibf
 #pragma omp parallel for schedule(dynamic, chunk_size)
-    for (unsigned i = 0; i < num_files; i++)
+    for (size_t i = 0; i < num_files; i++)
     {
         robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
         // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
@@ -930,24 +935,24 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         }
 
         // Every minimiser is stored in IBF, if it occurence is greater than or equal to the expression level
-        for (auto && elem : hash_table)
+        for (auto && [hash, occurence] : hash_table)
         {
             for (int j = ibf_args.number_expression_thresholds - 1; j >= 0; --j)
             {
                 if constexpr (samplewise)
                 {
-                    if (elem.second >= expressions[i][j])
+                    if (occurence >= expressions[i][j])
                     {
-                        ibfs[j].emplace(elem.first, seqan3::bin_index{i});
+                        ibfs[j].emplace(hash, seqan3::bin_index{i});
                         counts_per_level[i][j]++;
                         break;
                     }
                 }
                 else
                 {
-                    if (elem.second >= ibf_args.expression_thresholds[j])
+                    if (occurence >= ibf_args.expression_thresholds[j])
                     {
-                        ibfs[j].emplace(elem.first, seqan3::bin_index{i});
+                        ibfs[j].emplace(hash, seqan3::bin_index{i});
                         counts_per_level[i][j]++;
                         break;
                     }
