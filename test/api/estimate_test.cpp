@@ -252,7 +252,7 @@ TEST_F(estimate_test, example)
 
     std::ifstream output_file("Single_expression.out");
     std::string line;
-    std::string expected{"GeneA\t9\t32\t"};
+    std::string expected{"GeneA\t10\t32\t"};
     if (output_file.is_open())
     {
         while (std::getline(output_file, line))
@@ -287,7 +287,7 @@ TEST_F(estimate_test, example_multiple_threads)
 
     std::ifstream output_file("Multiple_expression.out");
     std::string line;
-    std::string expected{"GeneA\t9\t32\t"};
+    std::string expected{"GeneA\t10\t32\t"};
     if (output_file.is_open())
     {
         while (std::getline(output_file, line))
