@@ -813,6 +813,13 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             // ^^ why divide? --> estimate the number of minimisers
         }
 
+        auto divide_and_ceil = [](uint64_t const dividend, uint64_t const divisor) -> uint64_t
+        {
+            assert(dividend >= 1u || divisor >= 1u);
+            assert(divisor != 0u);
+            return (dividend + divisor - 1u) / divisor;
+        };
+
         // If set_expression_thresholds_samplewise is not set the expressions as determined by the first file are used for
         // all files.
         if constexpr (samplewise)
@@ -821,9 +828,9 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             for (int c = 0; c < ibf_args.number_expression_thresholds - 1; c++)
             {
                 diff = diff * 2;
-                sizes[i].push_back(filesize / diff);
+                sizes[i].push_back(divide_and_ceil(filesize, diff));
             }
-            sizes[i].push_back(filesize / diff);
+            sizes[i].push_back(divide_and_ceil(filesize, diff));
         }
         else if constexpr (minimiser_files_given)
         {
@@ -839,10 +846,10 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             float diff{1};
             for (int c = 0; c < ibf_args.number_expression_thresholds - 1; c++)
             {
-                diff = ibf_args.expression_thresholds[c + 1] / ibf_args.expression_thresholds[c];
-                sizes[i].push_back(filesize / diff);
+                diff = ibf_args.expression_thresholds[c + 1] / static_cast<float>(ibf_args.expression_thresholds[c]);
+                sizes[i].push_back(std::ceil(filesize / diff));
             }
-            sizes[i].push_back(filesize / diff);
+            sizes[i].push_back(std::ceil(filesize / diff));
         }
     }
 
@@ -857,7 +864,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             size += sizes[i][j];
         }
 
-        if (size == 0u)
+        if (size == num_files)
         {
             throw std::invalid_argument{
                 std::string("[Error]. The chosen expression threshold is not well picked. If you use the automatic ")
