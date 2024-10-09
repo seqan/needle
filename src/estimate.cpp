@@ -30,7 +30,7 @@ void check_ibf(min_arguments const & args,
                IBFType const & ibf,
                std::vector<uint16_t> & estimations_i,
                seqan3::dna4_vector const & seq,
-               std::vector<uint32_t> & prev_counts,
+               std::vector<float> & prev_counts,
                exp_t const & expressions,
                uint16_t const level,
                std::vector<double> const fprs,
@@ -40,7 +40,7 @@ void check_ibf(min_arguments const & args,
     static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
 
     // Count minimisers in ibf of current level
-    std::vector<uint32_t> counter(ibf.bin_count());
+    std::vector<float> counter(ibf.bin_count());
     uint64_t minimiser_count{};
     auto agent = ibf.membership_agent();
     for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
@@ -50,7 +50,7 @@ void check_ibf(min_arguments const & args,
     }
 
     // Defines where the median should be
-    double const minimiser_pos = minimiser_count / 2.0;
+    float const minimiser_pos = minimiser_count / 2.0;
 
     // Check every experiment by going over the number of bins in the ibf.
     for (size_t bin = 0; bin < counter.size(); ++bin)
@@ -59,14 +59,13 @@ void check_ibf(min_arguments const & args,
             continue;
 
         // Correction by substracting the expected number of false positives
-        double const expected_false_positives = minimiser_count * fprs[bin];
-        double const corrected_count = counter[bin] - expected_false_positives;
-        double const normalized_count = corrected_count / (1.0 - fprs[bin]);
-
-        // TODO: Rounding?
-        // `normalized_count` could be ceiled
-        // `estimate` further down could be ceiled
-        counter[bin] = normalized_count < 0.0 ? 0u : normalized_count;
+        counter[bin] = [&]()
+        {
+            float const expected_false_positives = minimiser_count * fprs[bin];
+            float const corrected_count = counter[bin] - expected_false_positives;
+            float const normalized_count = std::max(0.0, corrected_count / (1.0 - fprs[bin]));
+            return normalized_count;
+        }();
 
         // Check if considering previously seen minimisers and minimisers found at current level equal to or are greater
         // than the minimiser_pow, which gives the median position.
@@ -86,8 +85,8 @@ void check_ibf(min_arguments const & args,
                 assert(minimiser_pos > prev_counts[bin]);
                 // Should never fail. This would mean that prev_counts[bin] was enough by itself and we should already
                 // have estimated on the previous level.
-                assert(counter[bin] > 0u);
-                double const normalized_minimiser_pos = (minimiser_pos - prev_counts[bin]) / counter[bin];
+                assert(counter[bin] > 0.0);
+                float const normalized_minimiser_pos = (minimiser_pos - prev_counts[bin]) / counter[bin];
 
                 // Actually calculate estimation, in the else case level stands for the prev_expression
                 if constexpr (multiple_expressions)
@@ -139,9 +138,9 @@ void estimate(estimate_ibf_arguments & args,
 {
     std::vector<std::string> ids;
     std::vector<seqan3::dna4_vector> seqs;
-    std::vector<uint32_t> counter;
+    std::vector<float> counter;
     std::vector<uint16_t> counter_est;
-    std::vector<std::vector<uint32_t>> prev_counts;
+    std::vector<std::vector<float>> prev_counts;
     uint64_t prev_expression;
     std::vector<std::vector<uint16_t>> estimations;
     std::vector<std::vector<uint16_t>> expressions;
