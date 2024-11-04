@@ -6,10 +6,10 @@
 # This file should be committed to version control
 
 # seqan3
-set (NEEDLE_SEQAN3_VERSION f500cf7fbe128636c6e50a99519b5eb2532ab70e)
+set (NEEDLE_SEQAN3_VERSION 4d03890530089b040221876c9e368fc250c4583f)
 CPMDeclarePackage (seqan3
                    NAME seqan3
-                   GIT_TAG ${NEEDLE_SEQAN3_VERSION}
+                   GIT_TAG ${NEEDLE_SEQAN3_VERSION} # main
                    GITHUB_REPOSITORY seqan/seqan3
                    SYSTEM TRUE
                    EXCLUDE_FROM_ALL TRUE
@@ -31,7 +31,7 @@ CPMDeclarePackage (googletest
 set (NEEDLE_ROBIN_HOOD_VERSION 7697343363af4cc3f42cab17be49e6af9ab181e2)
 CPMDeclarePackage (robin-hood
                    NAME robin-hood
-                   GIT_TAG ${NEEDLE_ROBIN_HOOD_VERSION}
+                   GIT_TAG ${NEEDLE_ROBIN_HOOD_VERSION} # master
                    GITHUB_REPOSITORY martinus/robin-hood-hashing
                    SYSTEM TRUE
                    EXCLUDE_FROM_ALL TRUE
@@ -42,7 +42,7 @@ CPMDeclarePackage (robin-hood
 set (USE_CCACHE_VERSION d2a54ef555b6fc2d496a4c9506dbeb7cf899ce37)
 CPMDeclarePackage (use_ccache
                    NAME use_ccache
-                   GIT_TAG ${USE_CCACHE_VERSION}
+                   GIT_TAG ${USE_CCACHE_VERSION} # main
                    GITHUB_REPOSITORY seqan/cmake-scripts
                    SOURCE_SUBDIR ccache
                    SYSTEM TRUE
