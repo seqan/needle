@@ -47,16 +47,16 @@ jobs:
         with:
           doxygen: 1.9.4
 
-      - name: Configure tests
+      - name: Configure docs
         run: |
           mkdir build && cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release \
                    -Dneedle_TEST=OFF \
                    -Dneedle_DOC=ON
 
-      - name: Run tests
+      - name: Build docs
         working-directory: build
-        run: ctest . -j --output-on-failure
+        run: make doc
 
       - name: Deploy Preview
         if: github.event_name == 'pull_request_target'
