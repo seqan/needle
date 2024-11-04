@@ -1,0 +1,92 @@
+# SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin
+# SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
+# SPDX-License-Identifier: CC0-1.0
+
+name: Documentation
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request_target:
+    types:
+      - unlabeled
+      - closed
+  workflow_dispatch:
+
+concurrency:
+  group: documentation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
+env:
+  TZ: Europe/Berlin
+
+defaults:
+  run:
+    shell: bash -Eeuxo pipefail {0}
+
+jobs:
+  build:
+    name: Documentation
+    runs-on: ubuntu-latest
+    if: ( github.repository_owner == 'seqan' || github.event_name == 'workflow_dispatch' || github.event.label.name == 'lint' ) && github.event.action != 'closed'
+    steps:
+      - name: Checkout
+        if: github.event_name != 'pull_request_target'
+        uses: actions/checkout@v4
+
+      # pull_request_target does not checkout the merge commit by default
+      - name: Checkout
+        if: github.event_name == 'pull_request_target'
+        uses: actions/checkout@v4
+        with:
+          ref: "refs/pull/${{ github.event.number }}/merge"
+
+      - name: Install Doxygen
+        uses: seqan/actions/setup-doxygen@main
+        with:
+          doxygen: 1.9.4
+
+      - name: Configure tests
+        run: |
+          mkdir build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release \
+                   -Dneedle_TEST=OFF \
+                   -Dneedle_DOC=ON
+
+      - name: Run tests
+        working-directory: build
+        run: ctest . -j --output-on-failure
+
+      - name: Deploy Preview
+        if: github.event_name == 'pull_request_target'
+        uses: seqan/actions/documentation_deploy_preview@main
+        with:
+          deploy_host: ${{ secrets.DEPLOY_HOST }}
+          deploy_user: ${{ secrets.DEPLOY_USER }}
+          deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}
+          deploy_base_path: ${{ secrets.DEPLOY_PREVIEW_BASE_PATH }}
+          source_path_user_doc: build/html
+          token: ${{ secrets.SEQAN_ACTIONS_PAT }}
+
+      - name: Deploy Documentation
+        if: github.event_name == 'push'
+        uses: seqan/actions/documentation_deploy_production@main
+        with:
+          deploy_host: ${{ secrets.DEPLOY_HOST }}
+          deploy_user: ${{ secrets.DEPLOY_USER }}
+          deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source_path_user_doc: build/html/
+          deploy_path_user_doc: ${{ secrets.DEPLOY_PRODUCTION_BASE_PATH }}/main
+  delete:
+      name: Delete Preview
+      runs-on: ubuntu-latest
+      if: github.repository_owner == 'seqan' && github.event_name == 'pull_request_target' && github.event.action == 'closed'
+      steps:
+      - name: Delete Preview
+        uses: seqan/actions/documentation_delete_preview@main
+        with:
+          deploy_host: ${{ secrets.DEPLOY_HOST }}
+          deploy_user: ${{ secrets.DEPLOY_USER }}
+          deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}
+          deploy_base_path: ${{ secrets.DEPLOY_PREVIEW_BASE_PATH }}
