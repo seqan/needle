@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2006-2024, Knut Reinert & Freie Universität Berlin
+# SPDX-FileCopyrightText: 2016-2024, Knut Reinert & MPI für molekulare Genetik
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Only if creating the source package (`make package_source`).
+if (CPACK_SOURCE_INSTALLED_DIRECTORIES)
+    file (COPY "@CPM_SOURCE_CACHE@" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+endif ()

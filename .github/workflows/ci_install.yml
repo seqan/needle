@@ -1,0 +1,74 @@
+# SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin
+# SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
+# SPDX-License-Identifier: CC0-1.0
+
+name: Install
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    types:
+      - unlabeled
+  workflow_dispatch:
+
+concurrency:
+  group: install-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
+env:
+  TZ: Europe/Berlin
+
+defaults:
+  run:
+    shell: bash -Eexuo pipefail {0}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: ${{ matrix.compiler }}
+    if: github.repository_owner == 'seqan' || github.event_name == 'workflow_dispatch' || github.event.label.name == 'lint'
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: ["clang-18", "gcc-14"]
+    container:
+      image: ghcr.io/seqan/${{ matrix.compiler }}
+      volumes:
+        - /home/runner:/home/runner
+      options: --privileged
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create source package
+        run: |
+          mkdir package && cd package
+          cmake .. -DCMAKE_BUILD_TYPE=Release \
+                   -Dneedle_PACKAGE=ON \
+                   -Dneedle_TEST=OFF
+          make package_source
+          mkdir ../unpacked
+          tar xf needle-*.tar.xz -C ../unpacked --strip-components=1
+
+      - name: Install from source package
+        run: |
+          mkdir build && cd build
+          unshare -r -n cmake ../unpacked -DCMAKE_BUILD_TYPE=Release \
+                                          -DCMAKE_INSTALL_PREFIX=$(pwd)/install \
+                                          -Dneedle_TEST=OFF
+          make install
+
+      - name: Run tests
+        working-directory: build
+        run: ./install/bin/needle --help
+
+      - name: Upload source package
+        if: matrix.compiler == 'gcc-14'
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-package
+          path: package/needle-*.tar.xz*
+          retention-days: 1
+
