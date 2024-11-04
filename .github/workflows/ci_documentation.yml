@@ -52,7 +52,7 @@ jobs:
           mkdir build && cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release \
                    -Dneedle_TEST=OFF \
-                   -Dneedle_DOC=ON
+                   -Dneedle_DOCS=ON
 
       - name: Build docs
         working-directory: build
