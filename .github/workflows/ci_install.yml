@@ -41,13 +41,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          path: needle
 
       - name: Create source package
         run: |
           mkdir package && cd package
-          cmake .. -DCMAKE_BUILD_TYPE=Release \
-                   -Dneedle_PACKAGE=ON \
-                   -Dneedle_TEST=OFF
+          cmake ../needle -DCMAKE_BUILD_TYPE=Release \
+                          -Dneedle_PACKAGE=ON \
+                          -Dneedle_TEST=OFF
           make package_source
           mkdir ../unpacked
           tar xf needle-*.tar.xz -C ../unpacked --strip-components=1
