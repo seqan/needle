@@ -15,6 +15,9 @@ add_executable ("${PROJECT_NAME}" main.cpp)
 target_link_libraries ("${PROJECT_NAME}" PRIVATE "${PROJECT_NAME}_lib")
 set_target_properties ("${PROJECT_NAME}" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
+include (GNUInstallDirs)
+install (TARGETS ${PROJECT_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
 # https://cmake.org/cmake/help/latest/module/CMakeDependentOption.html
 # We usually want "-Werror" in the CI, but not when developing locally.
 # Virtually all CI providers set the environment variable `CI` to some value.
