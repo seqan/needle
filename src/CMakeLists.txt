@@ -18,16 +18,7 @@ set_target_properties ("${PROJECT_NAME}" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${
 include (GNUInstallDirs)
 install (TARGETS ${PROJECT_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
-# https://cmake.org/cmake/help/latest/module/CMakeDependentOption.html
-# We usually want "-Werror" in the CI, but not when developing locally.
-# Virtually all CI providers set the environment variable `CI` to some value.
-# If `CI` is defined in the environment, we use `-Werror`, otherwise not.
-# Caveat: If `CI` is not set, `-Dneedle_WITH_WERROR=ON` has no effect.
-#         The other way around works. If `CI` is set, `-Dneedle_WITH_WERROR=OFF` is honored.
-# Solutions: * `export CI=1` (any value after `=` works, the variable only needs to be not empty)
-#            * `-DCMAKE_CXX_FLAGS="-Werror"`
-include (CMakeDependentOption)
-cmake_dependent_option (${PROJECT_NAME}_WITH_WERROR "Report compiler warnings as errors." ON "DEFINED ENV{CI}" OFF)
+option (${PROJECT_NAME}_WITH_WERROR "Report compiler warnings as errors." ON)
 
 if (${PROJECT_NAME}_WITH_WERROR)
     target_compile_options (${PROJECT_NAME}_lib PUBLIC "-Werror")
