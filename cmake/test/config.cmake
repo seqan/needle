@@ -13,8 +13,20 @@ enable_testing ()
 file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/output)
 add_definitions (-DOUTPUTDIR=\"${CMAKE_CURRENT_BINARY_DIR}/output/\")
 add_definitions (-DDATADIR=\"${CMAKE_CURRENT_BINARY_DIR}/data/\")
-add_definitions (-DBINDIR=\"${CMAKE_BINARY_DIR}/bin/\")
 add_definitions (-DAPPNAME=\"${PROJECT_NAME}\")
+
+if (NEEDLE_TEST_BINARY_DIR)
+    if (NOT EXISTS "${NEEDLE_TEST_BINARY_DIR}")
+        message (FATAL_ERROR "The directory \"${NEEDLE_TEST_BINARY_DIR}\" (NEEDLE_TEST_BINARY_DIR) does not exist.")
+    endif ()
+    if (NOT EXISTS "${NEEDLE_TEST_BINARY_DIR}/${PROJECT_NAME}")
+        message (FATAL_ERROR "Executable \"${PROJECT_NAME}\" not found in \"${NEEDLE_TEST_BINARY_DIR}\" (NEEDLE_TEST_BINARY_DIR)."
+        )
+    endif ()
+else ()
+    set (NEEDLE_TEST_BINARY_DIR "${CMAKE_BINARY_DIR}/bin")
+endif ()
+add_definitions (-DBINDIR=\"${NEEDLE_TEST_BINARY_DIR}/\")
 
 # Add the test interface library.
 if (NOT TARGET ${PROJECT_NAME}_test)
