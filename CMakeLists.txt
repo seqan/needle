@@ -22,11 +22,11 @@ include (output_directories)
 # It can be used when calling CMake: `cmake .. -Dapp-template_TEST=OFF`.
 # It is good practice to allow disabling tests. If another project includes your application,
 # it might not want to build your tests.
-option (${PROJECT_NAME}_TEST "Enable testing for ${PROJECT_NAME}." ON)
-option (${PROJECT_NAME}_DOCS "Enable documentation for ${PROJECT_NAME}." OFF)
-option (${PROJECT_NAME}_PACKAGE "Enable packaging for ${PROJECT_NAME}." OFF)
+option (NEEDLE_TEST "Enable testing for NEEDLE." ON)
+option (NEEDLE_DOCS "Enable documentation for NEEDLE." OFF)
+option (NEEDLE_PACKAGE "Enable packaging for NEEDLE." OFF)
 
-if (${PROJECT_NAME}_PACKAGE)
+if (NEEDLE_PACKAGE)
     set (CPM_SOURCE_CACHE "${CMAKE_CURRENT_BINARY_DIR}/vendor")
     set (CPM_USE_LOCAL_PACKAGES OFF)
     include (package)
@@ -48,11 +48,11 @@ CPMGetPackage (robin-hood)
 # Add the application. This will include `src/CMakeLists.txt`.
 add_subdirectory (src)
 
-if (${PROJECT_NAME}_TEST)
+if (NEEDLE_TEST)
     # Add the tests. This will include `test/CMakeLists.txt`.
     add_subdirectory (test EXCLUDE_FROM_ALL)
 endif ()
 
-if (${PROJECT_NAME}_DOCS)
+if (NEEDLE_DOCS)
     add_subdirectory (doc EXCLUDE_FROM_ALL)
 endif ()

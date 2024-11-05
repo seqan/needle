@@ -51,8 +51,8 @@ jobs:
         run: |
           mkdir create_source_package && cd create_source_package
           cmake ../needle -DCMAKE_BUILD_TYPE=Release \
-                          -Dneedle_PACKAGE=ON \
-                          -Dneedle_TEST=OFF
+                          -DNEEDLE_PACKAGE=ON \
+                          -DNEEDLE_TEST=OFF
           make package_source
           mkdir ../source_package
           tar xf needle-*.tar.xz -C ../source_package --strip-components=1
@@ -62,7 +62,7 @@ jobs:
           mkdir build_from_source_package install && cd build_from_source_package
           unshare -r -n cmake ../source_package -DCMAKE_BUILD_TYPE=Release \
                                                 -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install \
-                                                -Dneedle_TEST=OFF
+                                                -DNEEDLE_TEST=OFF
           unshare -r -n make install
 
       - name: Check installed executable
@@ -80,7 +80,7 @@ jobs:
           unshare -r -n  cmake ../source_package -DCMAKE_BUILD_TYPE=Release \
                                                  -DCPM_USE_LOCAL_PACKAGES=ON \
                                                  -DNEEDLE_TEST_BINARY_DIR=${GITHUB_WORKSPACE}/install/bin \
-                                                 -Dneedle_TEST=ON
+                                                 -DNEEDLE_TEST=ON
           unshare -r -n make -k tests
           test -n $(find . -type f -executable -name "needle") # needle binary should exist
           rm bin/needle

@@ -18,8 +18,8 @@ set_target_properties ("${PROJECT_NAME}" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${
 include (GNUInstallDirs)
 install (TARGETS ${PROJECT_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
-option (${PROJECT_NAME}_WITH_WERROR "Report compiler warnings as errors." ON)
+option (NEEDLE_WITH_WERROR "Report compiler warnings as errors." ON)
 
-if (${PROJECT_NAME}_WITH_WERROR)
+if (NEEDLE_WITH_WERROR)
     target_compile_options (${PROJECT_NAME}_lib PUBLIC "-Werror")
 endif ()

@@ -51,8 +51,6 @@ jobs:
         run: |
           mkdir build && cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release \
-                   -Dneedle_TEST=OFF \
-                   -Dneedle_DOCS=ON \
                    -DNEEDLE_TEST=OFF \
                    -DNEEDLE_DOCS=ON
 
