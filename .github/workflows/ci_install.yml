@@ -44,33 +44,59 @@ jobs:
         with:
           path: needle
 
+      - name: Remove ccache
+        run: apt-get purge --yes ccache
+
       - name: Create source package
         run: |
-          mkdir package && cd package
+          mkdir create_source_package && cd create_source_package
           cmake ../needle -DCMAKE_BUILD_TYPE=Release \
                           -Dneedle_PACKAGE=ON \
                           -Dneedle_TEST=OFF
           make package_source
-          mkdir ../unpacked
-          tar xf needle-*.tar.xz -C ../unpacked --strip-components=1
+          mkdir ../source_package
+          tar xf needle-*.tar.xz -C ../source_package --strip-components=1
 
       - name: Install from source package
         run: |
+          mkdir build_from_source_package install && cd build_from_source_package
+          unshare -r -n cmake ../source_package -DCMAKE_BUILD_TYPE=Release \
+                                                -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install \
+                                                -Dneedle_TEST=OFF
+          unshare -r -n make install
+
+      - name: Check installed executable
+        run: ${GITHUB_WORKSPACE}/install/bin/needle --help
+
+      # Clang builds with libc++, but GTest is built with libstdc++
+      - name: Install GTest
+        if: contains(matrix.compiler, 'gcc')
+        run: apt-get update && apt-get install --yes libgtest-dev
+
+      - name: Build tests
+        if: contains(matrix.compiler, 'gcc')
+        run: |
           mkdir build && cd build
-          unshare -r -n cmake ../unpacked -DCMAKE_BUILD_TYPE=Release \
-                                          -DCMAKE_INSTALL_PREFIX=$(pwd)/install \
-                                          -Dneedle_TEST=OFF
-          make install
+          unshare -r -n  cmake ../source_package -DCMAKE_BUILD_TYPE=Release \
+                                                 -DCPM_USE_LOCAL_PACKAGES=ON \
+                                                 -DNEEDLE_TEST_BINARY_DIR=${GITHUB_WORKSPACE}/install/bin \
+                                                 -Dneedle_TEST=ON
+          unshare -r -n make -k tests
+          test -n $(find . -type f -executable -name "needle") # needle binary should exist
+          rm bin/needle
+          test -z $(find . -type f -executable -name "needle") # needle binary should not exist
 
       - name: Run tests
+        if: contains(matrix.compiler, 'gcc')
         working-directory: build
-        run: ./install/bin/needle --help
+        run: |
+          unshare -r -n ctest -j --output-on-failure --test-dir test
+          test -z $(find . -type f -executable -name "needle") # needle binary should not exist
 
       - name: Upload source package
-        if: matrix.compiler == 'gcc-14'
+        if: contains(matrix.compiler, 'gcc')
         uses: actions/upload-artifact@v4
         with:
-          name: source-package
-          path: package/needle-*.tar.xz*
+          name: needle-source-package
+          path: create_source_package/needle-*.tar.xz*
           retention-days: 1
-
