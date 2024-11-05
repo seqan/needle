@@ -2,7 +2,11 @@
 # SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
 # SPDX-License-Identifier: CC0-1.0
 
-include (FetchContent)
+if (CMAKE_VERSION VERSION_LESS 3.30)
+    include (ExternalProject)
+else ()
+    include (FetchContent)
+endif ()
 
 # Example call:
 #
@@ -38,6 +42,7 @@ include (FetchContent)
 # This uses under the hood ExternalProject's and you can pass any viable option of ExternalProject to this function and
 # overwrite the default behaviour. See https://cmake.org/cmake/help/latest/module/ExternalProject.html for more
 # information.
+
 function (declare_datasource)
     set (options "")
     set (one_value_args FILE URL_HASH)
@@ -50,15 +55,32 @@ function (declare_datasource)
     # create data folder
     file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/data)
 
-    FetchContent_Populate ("${datasource_name}"
-                           URL "${ARG_URL}"
-                           URL_HASH "${ARG_URL_HASH}"
-                           DOWNLOAD_NAME "${ARG_FILE}"
-                           DOWNLOAD_NO_EXTRACT TRUE # don't extract archive files like .tar.gz.
-                           SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/data/"
-                           BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/data/"
-                           EXCLUDE_FROM_ALL TRUE ${ARG_UNPARSED_ARGUMENTS}
-    )
+    if (CMAKE_VERSION VERSION_LESS 3.30)
+        ExternalProject_Add ("${datasource_name}"
+                             URL "${ARG_URL}"
+                             URL_HASH "${ARG_URL_HASH}"
+                             DOWNLOAD_NAME "${ARG_FILE}"
+                             CONFIGURE_COMMAND ""
+                             BUILD_COMMAND ""
+                             INSTALL_COMMAND ${CMAKE_COMMAND} -E create_symlink <DOWNLOADED_FILE>
+                                             ${CMAKE_CURRENT_BINARY_DIR}/data/${ARG_FILE}
+                             TEST_COMMAND ""
+                             PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_datasources"
+                             DOWNLOAD_NO_EXTRACT TRUE # don't extract archive files like .tar.gz.
+                             EXCLUDE_FROM_ALL TRUE
+                             ${ARG_UNPARSED_ARGUMENTS}
+        )
+    else ()
+        FetchContent_Populate ("${datasource_name}"
+                               URL "${ARG_URL}"
+                               URL_HASH "${ARG_URL_HASH}"
+                               DOWNLOAD_NAME "${ARG_FILE}"
+                               DOWNLOAD_NO_EXTRACT TRUE # don't extract archive files like .tar.gz.
+                               SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/data/"
+                               BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/data/"
+                               EXCLUDE_FROM_ALL TRUE ${ARG_UNPARSED_ARGUMENTS}
+        )
+    endif ()
 
     add_dependencies (${PROJECT_NAME}_test "${datasource_name}")
 endfunction ()

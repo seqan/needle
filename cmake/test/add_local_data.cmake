@@ -9,15 +9,12 @@ file (GLOB_RECURSE datasources
       RELATIVE ${DATASOURCES_DATA_DIR}
       CONFIGURE_DEPENDS ${DATASOURCES_DATA_DIR}/*
 )
-list (REMOVE_ITEM datasources datasources.cmake README.md)
-list (FILTER datasources EXCLUDE REGEX "\.license")
+list (REMOVE_ITEM datasources datasources.cmake README.md REUSE.toml)
 
 foreach (datasource IN LISTS datasources)
     get_filename_component (datasource_name "${datasource}" NAME)
-    file (SHA256 ${DATASOURCES_DATA_DIR}/${datasource} datasource_hash)
+    set (data_dir "${CMAKE_CURRENT_BINARY_DIR}/data")
+    file (MAKE_DIRECTORY "${data_dir}")
 
-    declare_datasource (FILE ${datasource_name}
-                        URL ${DATASOURCES_DATA_DIR}/${datasource}
-                        URL_HASH SHA256=${datasource_hash}
-    )
+    configure_file ("${DATASOURCES_DATA_DIR}/${datasource}" "${data_dir}/${datasource_name}" COPYONLY)
 endforeach ()
