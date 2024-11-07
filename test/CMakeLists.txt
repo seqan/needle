@@ -15,4 +15,5 @@ add_subdirectory (api)
 add_subdirectory (cli)
 
 message (STATUS "You can run `make tests` to build tests.")
+message (STATUS "You can run `make test` to run tests.")
 message (STATUS "You can run `make check` to build and run tests.")
