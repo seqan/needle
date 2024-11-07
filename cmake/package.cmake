@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 ## PACKAGE
-# Change version in this file: project (needle VERSION x.x.x)
-# Change version in src/main.cpp: parser.info.version = "x.x.x";
+# Change in top-level CMakeLists.txt:
+#   Version -> project (needle VERSION x.x.x)
+#   Date -> set (NEEDLE_ARGPARSE_DATE "YYYY-MM-DD")
 # No dependencies should be locally installed.
 # To package, create a clean directory:
 #
@@ -19,6 +20,8 @@
 # cmake --build . --target package_source
 #
 # Will create needle-[VERSION]-Source.tar.xz{,.sha256}.
+#
+# Alternatively, the ci_install workflow will export the source package as artifact.
 
 cmake_minimum_required (VERSION 3.7...3.30)
 

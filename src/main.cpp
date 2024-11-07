@@ -15,6 +15,25 @@ uint32_t w_size;
 uint64_t shape{};
 uint64_t se;
 
+void add_parser_meta(seqan3::argument_parser & parser)
+{
+    parser.info.author = "Mitra Darvish";
+    parser.info.citation = "Needle: a fast and space-efficient prefilter for estimating the quantification of very "
+                           "large collections of expression experiments; Mitra Darvish, Enrico Seiler, Svenja "
+                           "Mehringer, René Rahn, and Knut Reinert; Bioinformatics, Volume 38, Issue 17, 1 September "
+                           "2022, Pages 4100-4108. doi: https://doi.org/10.1093/bioinformatics/btac492";
+    parser.info.date = NEEDLE_DATE;
+    // REUSE-IgnoreStart
+    parser.info.long_copyright = "This application uses SPDX identifiers.\n"
+                                 "SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin\n"
+                                 "SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik\n"
+                                 "SPDX-License-Identifier: BSD-3-Clause";
+    // REUSE-IgnoreEnd
+    parser.info.short_copyright = "BSD 3-Clause License";
+    parser.info.url = "https://github.com/seqan/needle";
+    parser.info.version = NEEDLE_VERSION;
+}
+
 void initialise_min_arguments(seqan3::argument_parser & parser, min_arguments & args)
 {
     parser.add_option(args.k, 'k', "kmer", "Define k-mer size for the minimisers. Default: 20.");
@@ -190,8 +209,6 @@ int run_needle_estimate(seqan3::argument_parser & parser)
     estimate_ibf_arguments args{};
     estimate_arguments estimate_args{};
     parser.info.short_description = "Estimate expression value of transcript based on the Needle index.";
-    parser.info.version = "1.0.3";
-    parser.info.author = "Mitra Darvish";
 
     args.path_out = "expressions.out";
 
@@ -579,11 +596,10 @@ int main(int argc, char const ** argv)
         argv,
         seqan3::update_notifications::on,
         {"count", "delete", "estimate", "genome", "ibf", "ibfmin", "insert", "insertmin", "minimiser"}};
+    add_parser_meta(needle_parser);
     needle_parser.info.description.push_back("Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
                                              "command ibf or estimate the expression of transcripts with the command "
                                              "estimate.");
-    needle_parser.info.version = "1.0.3";
-    needle_parser.info.author = "Mitra Darvish";
 
     try
     {
@@ -595,6 +611,7 @@ int main(int argc, char const ** argv)
         return -1;
     }
     seqan3::argument_parser & sub_parser = needle_parser.get_sub_parser(); // hold a reference to the sub_parser
+    add_parser_meta(sub_parser);
     if (sub_parser.info.app_name == std::string_view{"needle-count"})
         run_needle_count(sub_parser);
     else if (sub_parser.info.app_name == std::string_view{"needle-delete"})
