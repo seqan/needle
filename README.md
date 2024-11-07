@@ -36,7 +36,7 @@ In your academic works (also comparisons and pipelines) please cite:
 * CMake >= 3.25
 * GCC >= 12
 * LLVM Clang >= 17
-* Intel oneAPI DPC++/C++ Compiler >= 2024.2 (older versions may work, but are not tested)
+* Intel oneAPI DPC++/C++ Compiler >= 2025.0 (older versions may work, but are not tested)
 * git
 
 Refer to the [Seqan3 Setup Tutorial](https://docs.seqan.de/seqan3/main_user/setup.html) for more in depth

@@ -34,6 +34,13 @@ elseif (EXISTS "${CMAKE_CURRENT_LIST_DIR}/vendor")
     set (CPM_SOURCE_CACHE "${CMAKE_CURRENT_LIST_DIR}/vendor")
 endif ()
 
+# Enable LTO if supported.
+include (CheckIPOSupported)
+check_ipo_supported (RESULT NEEDLE_HAS_LTO OUTPUT NEEDLE_HAS_LTO_OUTPUT)
+if (NEEDLE_HAS_LTO)
+    set (CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif ()
+
 # Add packages.
 # We use CPM for package management: https://github.com/cpm-cmake/CPM.cmake
 # The added packages (e.g., hibf, sharg, seqan3) are defined in the `cmake/package-lock.cmake` file.
