@@ -49,7 +49,8 @@ CPMGetPackage (robin-hood)
 add_subdirectory (src)
 
 if (NEEDLE_TEST)
-    # Add the tests. This will include `test/CMakeLists.txt`.
+    list (APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure;--no-tests=error") # Must be before `enable_testing ()`.
+    enable_testing ()
     add_subdirectory (test EXCLUDE_FROM_ALL)
 endif ()
 
