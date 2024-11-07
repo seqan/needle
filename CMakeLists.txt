@@ -9,6 +9,16 @@ project (needle
          LANGUAGES CXX
          VERSION 1.0.3
          DESCRIPTION "A fast and space-efficient pre-filter for estimating the quantification of very large collections of nucleotide sequences"
+         HOMEPAGE_URL "https://github.com/seqan/needle"
+)
+
+set (NEEDLE_ARGPARSE_VERSION
+     "${needle_VERSION}"
+     CACHE STRING "Needle version to display in the help message."
+)
+set (NEEDLE_ARGPARSE_DATE
+     "2024-11-07"
+     CACHE STRING "Needle's \"Last update:\" date to display in the help message."
 )
 
 # This allows including `*.cmake` files from the `cmake` directory without specifying the full path.
