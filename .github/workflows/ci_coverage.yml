@@ -66,7 +66,7 @@ jobs:
 
       - name: Run tests
         working-directory: build
-        run: ctest . -j --output-on-failure --test-dir test
+        run: ctest -j
 
       - name: Generate coverage report
         run: |

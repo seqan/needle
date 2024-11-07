@@ -6,9 +6,6 @@ include (test/coverage)
 
 CPMGetPackage (googletest)
 
-list (APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure") # Must be before `enable_testing ()`.
-enable_testing ()
-
 # Set directories for test output files, input data and binaries.
 file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/output)
 add_definitions (-DOUTPUTDIR=\"${CMAKE_CURRENT_BINARY_DIR}/output/\")

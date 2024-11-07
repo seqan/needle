@@ -90,7 +90,7 @@ jobs:
         if: contains(matrix.compiler, 'gcc')
         working-directory: build
         run: |
-          unshare -r -n ctest -j --output-on-failure --test-dir test
+          unshare -r -n ctest -j
           test -z $(find . -type f -executable -name "needle") # needle binary should not exist
 
       - name: Upload source package
