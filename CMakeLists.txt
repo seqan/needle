@@ -7,17 +7,17 @@ cmake_minimum_required (VERSION 3.25...3.30)
 # Define the application name and version.
 project (needle
          LANGUAGES CXX
-         VERSION 1.0.3
+         VERSION 1.0.4
          DESCRIPTION "A fast and space-efficient pre-filter for estimating the quantification of very large collections of nucleotide sequences"
          HOMEPAGE_URL "https://github.com/seqan/needle"
 )
 
 set (NEEDLE_ARGPARSE_VERSION
-     "${needle_VERSION}"
+     "${needle_VERSION}-rc.1"
      CACHE STRING "Needle version to display in the help message."
 )
 set (NEEDLE_ARGPARSE_DATE
-     "2024-11-07"
+     "2024-11-08"
      CACHE STRING "Needle's \"Last update:\" date to display in the help message."
 )
 
