@@ -5,6 +5,8 @@
 ## PACKAGE
 # Change in top-level CMakeLists.txt:
 #   Version -> project (needle VERSION x.x.x)
+#   Release Candiate -> set (NEEDLE_ARGPARSE_VERSION "${needle_VERSION}-rc.1")
+#                       set (NEEDLE_ARGPARSE_VERSION "${needle_VERSION}) for release
 #   Date -> set (NEEDLE_ARGPARSE_DATE "YYYY-MM-DD")
 # No dependencies should be locally installed.
 # To package, create a clean directory:
@@ -27,7 +29,7 @@ cmake_minimum_required (VERSION 3.7...3.30)
 
 set (CPACK_GENERATOR "TXZ")
 
-set (CPACK_PACKAGE_VERSION "${needle_VERSION}")
+set (CPACK_PACKAGE_VERSION "${NEEDLE_ARGPARSE_VERSION}")
 set (CPACK_PACKAGE_VENDOR "seqan")
 set (CPACK_PACKAGE_CHECKSUM "SHA256")
 set (CPACK_RESOURCE_FILE_LICENSE "${needle_SOURCE_DIR}/LICENSE.md")
