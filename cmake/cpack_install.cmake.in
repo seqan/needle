@@ -4,5 +4,5 @@
 
 # Only if creating the source package (`make package_source`).
 if (CPACK_SOURCE_INSTALLED_DIRECTORIES)
-    file (COPY "@CPM_SOURCE_CACHE@" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+    file (COPY "@CPM_SOURCE_CACHE@" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}" PATTERN ".git" EXCLUDE)
 endif ()

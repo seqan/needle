@@ -54,7 +54,7 @@ jobs:
         working-directory: build
         run: |
           ccache -z
-          make -k tests
+          make -k
           ccache -svvx
 
       - name: Run tests

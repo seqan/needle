@@ -35,11 +35,6 @@ set (CPACK_PACKAGE_CHECKSUM "SHA256")
 set (CPACK_RESOURCE_FILE_LICENSE "${needle_SOURCE_DIR}/LICENSE.md")
 set (CPACK_RESOURCE_FILE_README "${needle_SOURCE_DIR}/README.md")
 
-# Already being called on source package, i.e. CPM is already downloaded.
-if (NOT CPM_DOWNLOAD_LOCATION)
-    set (CPM_DOWNLOAD_LOCATION "${needle_SOURCE_DIR}/cmake/CPM.cmake")
-endif ()
-
 configure_file ("${needle_SOURCE_DIR}/cmake/cpack_install.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/cpack_install.cmake"
                 @ONLY
 )

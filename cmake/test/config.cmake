@@ -56,7 +56,6 @@ endif ()
 
 # Add the check target that builds and runs tests.
 add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} ${CMAKE_CTEST_ARGUMENTS})
-add_custom_target (tests)
 
 macro (add_app_test test_filename)
     file (RELATIVE_PATH source_file "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_LIST_DIR}/${test_filename}")
@@ -67,7 +66,6 @@ macro (add_app_test test_filename)
 
     add_dependencies (${target} ${PROJECT_NAME})
     add_dependencies (check ${target})
-    add_dependencies (tests ${target})
 
     add_test (NAME ${target} COMMAND ${target})
 

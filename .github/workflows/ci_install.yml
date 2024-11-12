@@ -82,7 +82,7 @@ jobs:
                                                  -DCPM_USE_LOCAL_PACKAGES=ON \
                                                  -DNEEDLE_TEST_BINARY_DIR=${GITHUB_WORKSPACE}/install/bin \
                                                  -DNEEDLE_TEST=ON
-          unshare -r -n make -k tests
+          unshare -r -n make -k
           test -n $(find . -type f -executable -name "needle") # needle binary should exist
           rm bin/needle
           test -z $(find . -type f -executable -name "needle") # needle binary should not exist
