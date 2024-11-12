@@ -93,7 +93,7 @@ jobs:
 
       - name: Build tests
         working-directory: build
-        run: make -k tests
+        run: make -k
 
       - name: Run tests
         working-directory: build
