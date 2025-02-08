@@ -6,7 +6,7 @@
 # This file should be committed to version control
 
 # seqan3
-set (NEEDLE_SEQAN3_VERSION 666b87694bef9411d995e4678a26e5e9a31ca255)
+set (NEEDLE_SEQAN3_VERSION ee18011f2f360850ced7337f5b0e170454e9398b)
 CPMDeclarePackage (seqan3
                    NAME seqan3
                    GIT_TAG ${NEEDLE_SEQAN3_VERSION} # main
@@ -17,7 +17,7 @@ CPMDeclarePackage (seqan3
 )
 
 # googletest
-set (NEEDLE_GOOGLETEST_VERSION 1.15.2)
+set (NEEDLE_GOOGLETEST_VERSION 1.16.0)
 CPMDeclarePackage (googletest
                    NAME GTest
                    VERSION ${NEEDLE_GOOGLETEST_VERSION}
