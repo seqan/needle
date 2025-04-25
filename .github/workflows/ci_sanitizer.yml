@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SEQAN3_NO_VERSION_CHECK: 1
+  SHARG_NO_VERSION_CHECK: 1
   TZ: Europe/Berlin
   TSAN_OPTIONS: ignore_noninstrumented_modules=1
   UBSAN_OPTIONS: print_stacktrace=1

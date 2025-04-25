@@ -25,9 +25,9 @@ TEST_F(insert_options_test, insert_no_options)
 TEST_F(insert_options_test, insert_fail_no_argument)
 {
     app_test_result result = execute_app("insert", "-c");
-    std::string expected{"Error. Incorrect command line input for insert. Not enough positional arguments provided "
-                         "(Need at least 1). See -h/--help for more information.\n"};
-    EXPECT_SUCCESS(result);
+    std::string expected{
+        "[Error] Not enough positional arguments provided (Need at least 1). See -h/--help for more information.\n"};
+    EXPECT_FAILURE(result);
     EXPECT_EQ(result.out, std::string{""});
     EXPECT_EQ(result.err, expected);
 }

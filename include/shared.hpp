@@ -22,7 +22,7 @@ static inline constexpr uint64_t adjust_seed(uint8_t const kmer_size,
 struct all_arguments
 {
     std::filesystem::path path_out{"./"};
-    uint8_t threads{1};
+    uint16_t threads{1u};
 };
 
 //!\brief arguments used for estimate, ibf, minimiser

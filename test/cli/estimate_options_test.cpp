@@ -25,9 +25,9 @@ TEST_F(estimate_options_test, no_options)
 TEST_F(estimate_options_test, fail_no_argument)
 {
     app_test_result result = execute_app("estimate", "-m");
-    std::string expected{"Error. Incorrect command line input for estimate. Not enough positional arguments provided "
-                         "(Need at least 1). See -h/--help for more information.\n"};
-    EXPECT_SUCCESS(result);
+    std::string expected{
+        "[Error] Not enough positional arguments provided (Need at least 1). See -h/--help for more information.\n"};
+    EXPECT_FAILURE(result);
     EXPECT_EQ(result.out, std::string{});
     EXPECT_EQ(result.err, expected);
 }

@@ -23,12 +23,9 @@ TEST_F(needle_options_test, no_options)
 TEST_F(needle_options_test, fail_no_argument)
 {
     app_test_result result = execute_app("-v");
-    std::string expected{
-        "Error. Incorrect command. See needle help for more information.You either forgot or misspelled the subcommand!"
-        " Please specify which sub-program you want to use: one of "
-        "[count,delete,estimate,genome,ibf,ibfmin,insert,insertmin,minimiser]. "
-        "Use -h/--help for more information.\n"};
-    EXPECT_NE(result.exit_code, 0);
+    std::string expected{"[Error] Unknown option -v. In case this is meant to be a non-option/argument/parameter, "
+                         "please specify the start of non-options with '--'. See -h/--help for program information.\n"};
+    EXPECT_FAILURE(result);
     EXPECT_EQ(result.out, std::string{});
-    EXPECT_TRUE(result.err == expected);
+    EXPECT_EQ(result.err, expected);
 }
