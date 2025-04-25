@@ -29,9 +29,7 @@ jobs:
     permissions:
       security-events: write
     container:
-      image: ghcr.io/seqan/gcc-14
-      volumes:
-        - /home/runner:/home/runner
+      image: ghcr.io/seqan/gcc-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v4

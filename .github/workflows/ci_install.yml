@@ -33,11 +33,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: ["clang-19", "gcc-14"]
+        compiler: ["clang-latest", "gcc-latest"]
     container:
       image: ghcr.io/seqan/${{ matrix.compiler }}
-      volumes:
-        - /home/runner:/home/runner
       options: --privileged
     steps:
       - name: Checkout
