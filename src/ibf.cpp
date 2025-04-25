@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin
-// SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
+// SPDX-FileCopyrightText: 2006-2025 Knut Reinert & Freie Universität Berlin
+// SPDX-FileCopyrightText: 2016-2025 Knut Reinert & MPI für molekulare Genetik
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <algorithm> //reorded because of this error:https://github.com/Homebrew/homebrew-core/issues/44579
@@ -561,10 +561,9 @@ void check_expression(std::vector<uint16_t> & expression_thresholds,
     }
     else if ((expression_by_genome_file != "") && (expression_thresholds.size() > 0))
     {
-        throw std::invalid_argument{
-            "The determination of expression levels can not be used with individual levels"
-            " already given. Please set the expression levels without the option "
-            "--level-by-genome OR use the number of expression levels with that option."};
+        throw std::invalid_argument{"The determination of expression levels can not be used with individual levels"
+                                    " already given. Please set the expression levels without the option "
+                                    "--level-by-genome OR use the number of expression levels with that option."};
     }
     else if (number_expression_thresholds == 0)
     {
@@ -610,9 +609,8 @@ void check_fpr(uint8_t const number_expression_thresholds, std::vector<double> &
     }
     else if (fprs.size() != number_expression_thresholds)
     {
-        throw std::invalid_argument{
-            "Length of false positive rates for IBFs is not equal to length of expression "
-            "thresholds."};
+        throw std::invalid_argument{"Length of false positive rates for IBFs is not equal to length of expression "
+                                    "thresholds."};
     }
 }
 

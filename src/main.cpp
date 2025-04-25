@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin
-// SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
+// SPDX-FileCopyrightText: 2006-2025 Knut Reinert & Freie Universität Berlin
+// SPDX-FileCopyrightText: 2016-2025 Knut Reinert & MPI für molekulare Genetik
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <filesystem>
@@ -26,8 +26,8 @@ void add_parser_meta(sharg::parser & parser)
     parser.info.date = NEEDLE_DATE;
     // REUSE-IgnoreStart
     parser.info.long_copyright = "This application uses SPDX identifiers.\n"
-                                 "SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin\n"
-                                 "SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik\n"
+                                 "SPDX-FileCopyrightText: 2006-2025 Knut Reinert & Freie Universität Berlin\n"
+                                 "SPDX-FileCopyrightText: 2016-2025 Knut Reinert & MPI für molekulare Genetik\n"
                                  "SPDX-License-Identifier: BSD-3-Clause";
     // REUSE-IgnoreEnd
     parser.info.short_copyright = "BSD 3-Clause License";
