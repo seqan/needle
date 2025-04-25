@@ -5,8 +5,10 @@
 # CPM Package Lock
 # This file should be committed to version control
 
+# cmake-format: off
+
 # seqan3
-set (NEEDLE_SEQAN3_VERSION 5d07997c4b117f9d5e157f150a26376d14585372)
+set (NEEDLE_SEQAN3_VERSION 5d07997c4b117f9d5e157f150a26376d14585372 CACHE STRING "")
 CPMDeclarePackage (seqan3
                    NAME seqan3
                    GIT_TAG ${NEEDLE_SEQAN3_VERSION} # main
@@ -16,19 +18,29 @@ CPMDeclarePackage (seqan3
                    OPTIONS "INSTALL_SEQAN3 OFF" "CMAKE_MESSAGE_LOG_LEVEL WARNING"
 )
 
+# sharg
+set (NEEDLE_SHARG_VERSION dfff01056dda9271b158d34427f2d28fad9f7440 CACHE STRING "")
+CPMDeclarePackage (sharg
+                   NAME sharg
+                   GIT_TAG ${NEEDLE_SHARG_VERSION} # main
+                   GITHUB_REPOSITORY seqan/sharg-parser
+                   SYSTEM TRUE
+                   EXCLUDE_FROM_ALL TRUE
+                   OPTIONS "INSTALL_SHARG OFF" "INSTALL_TDL OFF" "CMAKE_MESSAGE_LOG_LEVEL WARNING" "BUILD_TESTING OFF"
+)
+
 # googletest
-set (NEEDLE_GOOGLETEST_VERSION 1.16.0)
+set (NEEDLE_GOOGLETEST_VERSION 1.16.0 CACHE STRING "")
 CPMDeclarePackage (googletest
                    NAME GTest
                    VERSION ${NEEDLE_GOOGLETEST_VERSION}
                    GITHUB_REPOSITORY google/googletest
                    SYSTEM TRUE
                    OPTIONS "BUILD_GMOCK OFF" "INSTALL_GTEST OFF" "CMAKE_MESSAGE_LOG_LEVEL WARNING"
-                           "CMAKE_CXX_STANDARD 20"
 )
 
 # robin-hood-hashing
-set (NEEDLE_ROBIN_HOOD_VERSION 7697343363af4cc3f42cab17be49e6af9ab181e2)
+set (NEEDLE_ROBIN_HOOD_VERSION 7697343363af4cc3f42cab17be49e6af9ab181e2 CACHE STRING "")
 CPMDeclarePackage (robin-hood
                    NAME robin-hood
                    GIT_TAG ${NEEDLE_ROBIN_HOOD_VERSION} # master
@@ -39,7 +51,7 @@ CPMDeclarePackage (robin-hood
 )
 
 # use_ccache
-set (USE_CCACHE_VERSION d2a54ef555b6fc2d496a4c9506dbeb7cf899ce37)
+set (USE_CCACHE_VERSION d2a54ef555b6fc2d496a4c9506dbeb7cf899ce37 CACHE STRING "")
 CPMDeclarePackage (use_ccache
                    NAME use_ccache
                    GIT_TAG ${USE_CCACHE_VERSION} # main
@@ -48,3 +60,5 @@ CPMDeclarePackage (use_ccache
                    SYSTEM TRUE
                    EXCLUDE_FROM_ALL TRUE
 )
+
+# cmake-format: on
