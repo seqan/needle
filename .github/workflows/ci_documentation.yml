@@ -49,9 +49,6 @@ jobs:
           doxygen: 1.9.4
 
       - name: Configure docs
-        env:
-          CXX: g++-12
-          CC: gcc-12
         run: |
           mkdir build && cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release \
