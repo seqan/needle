@@ -578,7 +578,7 @@ void check_expression(std::vector<uint16_t> & expression_thresholds,
 // Check and set samples and cutoffs
 void check_cutoffs_samples(std::vector<std::filesystem::path> const & sequence_files,
                            bool const paired,
-                           std::vector<int> & samples,
+                           std::vector<size_t> & samples,
                            std::vector<uint8_t> & cutoffs)
 {
     if (paired) // If paired is true, a pair is seen as one sample
@@ -589,7 +589,7 @@ void check_cutoffs_samples(std::vector<std::filesystem::path> const & sequence_f
         cutoffs.assign(samples.size(), cutoffs[0]);
 
     // If sum of minimiser_args.samples is not equal to number of files, throw error
-    else if (std::accumulate(samples.rbegin(), samples.rend(), size_t{}) != sequence_files.size())
+    else if (std::reduce(samples.begin(), samples.end()) != sequence_files.size())
         throw std::invalid_argument{"Incorrect command line input for multiple-samples."};
 }
 
@@ -797,8 +797,8 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         {
             // Estimate sizes on filesize, assuming every byte translates to one letter (which is obiously not true,
             // because ids contain letters as well), so size might be overestimated. TODO: Find a better estimation!
-            unsigned file_iterator =
-                std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
+            size_t const file_iterator =
+                std::reduce(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i);
 
             // Determine cutoffs
             if (calculate_cutoffs)
@@ -903,9 +903,9 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         }
         else
         {
-            unsigned file_iterator =
-                std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
-            for (int f = 0; f < minimiser_args.samples[i]; f++)
+            size_t const file_iterator =
+                std::reduce(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i);
+            for (size_t f = 0; f < minimiser_args.samples[i]; f++)
             {
                 seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{
                     minimiser_files[file_iterator + f]};
@@ -1050,11 +1050,9 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     {
         std::ofstream outfile;
         outfile.open(std::string{ibf_args.path_out} + "Stored_Files.txt");
-        for (unsigned i = 0; i < minimiser_args.samples.size(); i++)
+        for (size_t i = 0; i < minimiser_args.samples.size(); i++)
         {
-            outfile << sequence_files[std::accumulate(minimiser_args.samples.begin(),
-                                                      minimiser_args.samples.begin() + i,
-                                                      0)]
+            outfile << sequence_files[std::reduce(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i)]
                     << "\n";
         }
         outfile.close();
@@ -1273,8 +1271,8 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
         {
             // Estimate sizes on filesize, assuming every byte translates to one letter (which is obiously not true,
             // because ids contain letters as well), so size might be overestimated. TODO: Find a better estimation!
-            unsigned file_iterator =
-                std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
+            size_t const file_iterator =
+                std::reduce(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i);
             uint64_t filesize{};
             // Determine cutoffs
             if (calculate_cutoffs)
@@ -1291,7 +1289,7 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
                      * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
             filesize = filesize / ((cutoffs[i] + 1) * (is_fasta ? 1 : 2));
 
-            for (int f = 0; f < minimiser_args.samples[i]; f++)
+            for (size_t f = 0; f < minimiser_args.samples[i]; f++)
             {
                 seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{
                     minimiser_files[file_iterator + f]};
@@ -1567,7 +1565,7 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
     // and afterwards discarded.
     robin_hood::unordered_node_map<uint64_t, uint8_t> cutoff_table;
     std::ofstream outfile;
-    unsigned file_iterator = std::accumulate(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i, 0);
+    size_t const file_iterator = std::reduce(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i);
 
     bool const calculate_cutoffs = cutoffs.empty();
 
@@ -1577,7 +1575,7 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
         cutoff = cutoffs[i];
 
     // Fill hash_table with minimisers.
-    for (int f = 0; f < minimiser_args.samples[i]; f++)
+    for (size_t f = 0; f < minimiser_args.samples[i]; f++)
     {
         seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{
             sequence_files[file_iterator + f]};
@@ -1654,7 +1652,7 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files,
     if (minimiser_args.ram_friendly)
     {
         seqan3::contrib::bgzf_thread_count = args.threads;
-        for (unsigned i = 0; i < minimiser_args.samples.size(); i++)
+        for (size_t i = 0; i < minimiser_args.samples.size(); i++)
         {
             calculate_minimiser<true>(sequence_files,
                                       include_set_table,
@@ -1672,7 +1670,7 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files,
         omp_set_num_threads(args.threads);
 
 #pragma omp parallel for schedule(dynamic, chunk_size)
-        for (unsigned i = 0; i < minimiser_args.samples.size(); i++)
+        for (size_t i = 0; i < minimiser_args.samples.size(); i++)
         {
             calculate_minimiser(sequence_files, include_set_table, exclude_set_table, args, minimiser_args, i, cutoffs);
         }
