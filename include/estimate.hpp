@@ -21,6 +21,7 @@ struct estimate_arguments
     std::filesystem::path path_in{"./"};
     // false: no normalization method, true: division by first expression value
     bool normalization_method{0};
+    size_t batch_size{1'000'000ULL};
 };
 
 /*! \brief Function, which calls the estimate function.
