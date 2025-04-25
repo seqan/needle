@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin
-// SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
+// SPDX-FileCopyrightText: 2006-2025 Knut Reinert & Freie Universität Berlin
+// SPDX-FileCopyrightText: 2016-2025 Knut Reinert & MPI für molekulare Genetik
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <string> // strings
@@ -32,9 +32,9 @@ TEST_F(count_options_test, fail_no_argument)
 {
     app_test_result result =
         execute_app("count", "--seed 0 --genome", data("mini_gen.genome"), " --include", data("mini_gen.fasta"));
-    std::string expected{"Error. Incorrect command line input for count. Not enough positional arguments provided "
-                         "(Need at least 1). See -h/--help for more information.\n"};
-    EXPECT_SUCCESS(result);
+    std::string expected{
+        "[Error] Not enough positional arguments provided (Need at least 1). See -h/--help for more information.\n"};
+    EXPECT_FAILURE(result);
     EXPECT_EQ(result.out, std::string{});
     EXPECT_EQ(result.err, expected);
 }
@@ -94,9 +94,9 @@ TEST_F(genome_options_test, no_options)
 TEST_F(genome_options_test, fail_no_argument)
 {
     app_test_result result = execute_app("genome", "--seed 0");
-    std::string expected{"Error. Incorrect command line input for count. Not enough positional arguments provided "
-                         "(Need at least 1). See -h/--help for more information.\n"};
-    EXPECT_SUCCESS(result);
+    std::string expected{
+        "[Error] Not enough positional arguments provided (Need at least 1). See -h/--help for more information.\n"};
+    EXPECT_FAILURE(result);
     EXPECT_EQ(result.out, std::string{});
     EXPECT_EQ(result.err, expected);
 }

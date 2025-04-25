@@ -1,5 +1,5 @@
-# SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin
-# SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
+# SPDX-FileCopyrightText: 2006-2025 Knut Reinert & Freie Universität Berlin
+# SPDX-FileCopyrightText: 2016-2025 Knut Reinert & MPI für molekulare Genetik
 # SPDX-License-Identifier: BSD-3-Clause
 
 cmake_minimum_required (VERSION 3.25...3.30)
@@ -17,9 +17,25 @@ set (NEEDLE_ARGPARSE_VERSION
      CACHE STRING "Needle version to display in the help message."
 )
 set (NEEDLE_ARGPARSE_DATE
-     "2024-11-08"
+     "2025-04-25"
      CACHE STRING "Needle's \"Last update:\" date to display in the help message."
 )
+
+# ----------------------------------------------------------------------------
+# C++ standard
+# ----------------------------------------------------------------------------
+
+if (NOT DEFINED CMAKE_CXX_STANDARD)
+    set (CMAKE_CXX_STANDARD 23)
+endif ()
+
+if (NOT DEFINED CMAKE_CXX_STANDARD_REQUIRED)
+    set (CMAKE_CXX_STANDARD_REQUIRED OFF)
+endif ()
+
+if (NOT DEFINED CMAKE_CXX_EXTENSIONS)
+    set (CMAKE_CXX_EXTENSIONS OFF)
+endif ()
 
 # This allows including `*.cmake` files from the `cmake` directory without specifying the full path.
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
@@ -56,7 +72,16 @@ CPMUsePackageLock (${CMAKE_CURRENT_LIST_DIR}/cmake/package-lock.cmake)
 # Use ccache if available. This speeds up the build process by caching files that have been compiled before.
 CPMGetPackage (use_ccache)
 CPMGetPackage (seqan3)
+CPMGetPackage (sharg)
+
+# Temporarily disable warnings for deprecated CMake minimum version in `robin-hood-hashing`.
+# cmake-format: off
+set (CMAKE_WARN_DEPRECATED_ORIGINAL ${CMAKE_WARN_DEPRECATED})
+set (CMAKE_WARN_DEPRECATED OFF CACHE INTERNAL "")
 CPMGetPackage (robin-hood)
+set (CMAKE_WARN_DEPRECATED ${CMAKE_WARN_DEPRECATED_ORIGINAL} CACHE INTERNAL "")
+unset (CMAKE_WARN_DEPRECATED_ORIGINAL)
+# cmake-format: on
 
 # Add the application. This will include `src/CMakeLists.txt`.
 add_subdirectory (src)

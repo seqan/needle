@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2006-2024 Knut Reinert & Freie Universität Berlin
-// SPDX-FileCopyrightText: 2016-2024 Knut Reinert & MPI für molekulare Genetik
+// SPDX-FileCopyrightText: 2006-2025 Knut Reinert & Freie Universität Berlin
+// SPDX-FileCopyrightText: 2016-2025 Knut Reinert & MPI für molekulare Genetik
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <algorithm> //reorded because of this error:https://github.com/Homebrew/homebrew-core/issues/44579
@@ -557,14 +557,13 @@ void check_expression(std::vector<uint16_t> & expression_thresholds,
     // If no expression levels are given and the no number of expression levels is specified, throw.
     if ((number_expression_thresholds == 0) && (expression_thresholds.size() == 0))
     {
-        throw std::invalid_argument{"Error. Please set the expression levels OR give the number of expression levels."};
+        throw std::invalid_argument{"Please set the expression levels OR give the number of expression levels."};
     }
     else if ((expression_by_genome_file != "") && (expression_thresholds.size() > 0))
     {
-        throw std::invalid_argument{
-            "Error. The determination of expression levels can not be used with individual levels"
-            " already given. Please set the expression levels without the option "
-            "--level-by-genome OR use the number of expression levels with that option."};
+        throw std::invalid_argument{"The determination of expression levels can not be used with individual levels"
+                                    " already given. Please set the expression levels without the option "
+                                    "--level-by-genome OR use the number of expression levels with that option."};
     }
     else if (number_expression_thresholds == 0)
     {
@@ -572,7 +571,7 @@ void check_expression(std::vector<uint16_t> & expression_thresholds,
     }
     else if ((number_expression_thresholds != expression_thresholds.size()) && (expression_thresholds.size() > 0))
     {
-        throw std::invalid_argument{"Error. Please set the expression levels OR give the number of expression levels."};
+        throw std::invalid_argument{"Please set the expression levels OR give the number of expression levels."};
     }
 }
 
@@ -591,7 +590,7 @@ void check_cutoffs_samples(std::vector<std::filesystem::path> const & sequence_f
 
     // If sum of minimiser_args.samples is not equal to number of files, throw error
     else if (std::accumulate(samples.rbegin(), samples.rend(), size_t{}) != sequence_files.size())
-        throw std::invalid_argument{"Error. Incorrect command line input for multiple-samples."};
+        throw std::invalid_argument{"Incorrect command line input for multiple-samples."};
 }
 
 // Check input of fpr
@@ -600,7 +599,7 @@ void check_fpr(uint8_t const number_expression_thresholds, std::vector<double> &
     // If no bin size is given or not the right amount, throw error.
     if (fprs.empty())
     {
-        throw std::invalid_argument{"Error. Please give a false positive rate for the IBFs."};
+        throw std::invalid_argument{"Please give a false positive rate for the IBFs."};
     }
     // If only one ibf size is given, set it for all thresholds.
     if (fprs.size() == 1)
@@ -610,9 +609,8 @@ void check_fpr(uint8_t const number_expression_thresholds, std::vector<double> &
     }
     else if (fprs.size() != number_expression_thresholds)
     {
-        throw std::invalid_argument{
-            "Error. Length of false positive rates for IBFs is not equal to length of expression "
-            "thresholds."};
+        throw std::invalid_argument{"Length of false positive rates for IBFs is not equal to length of expression "
+                                    "thresholds."};
     }
 }
 
@@ -867,7 +865,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         if (size == num_files)
         {
             throw std::invalid_argument{
-                std::string("[Error]. The chosen expression threshold is not well picked. If you use the automatic ")
+                std::string("The chosen expression threshold is not well picked. If you use the automatic ")
                 + std::string("expression threshold determination, please decrease the number of levels. If you use ")
                 + std::string("your own expression thresholds, decrease the thresholds from level ")
                 + std::to_string(ibf_args.expression_thresholds[j]) + std::string(" on.\n")};
