@@ -16,6 +16,22 @@ uint32_t w_size{60};
 uint64_t shape{};
 uint64_t se{0x8F'3F'73'B5'CF'1C'9A'DEULL};
 
+struct positive_integer_validator
+{
+    using option_value_type = size_t;
+
+    void operator()(option_value_type const & value) const
+    {
+        if (value < 1)
+            throw sharg::validation_error{"The value must greater than 0."};
+    }
+
+    std::string get_help_page_message() const
+    {
+        return "Value must be greater than 0.";
+    }
+};
+
 void add_parser_meta(sharg::parser & parser)
 {
     parser.info.author = "Mitra Darvish";
@@ -60,7 +76,10 @@ void initialise_min_arguments(sharg::parser & parser, min_arguments & args)
                                     .description = "Directory where output files should be saved.",
                                     .validator = sharg::output_directory_validator{}});
     parser.add_option(args.threads,
-                      sharg::config{.short_id = 't', .long_id = "threads", .description = "Number of threads to use."});
+                      sharg::config{.short_id = 't',
+                                    .long_id = "threads",
+                                    .description = "Number of threads to use.",
+                                    .validator = positive_integer_validator{}});
 }
 
 void initialise_arguments_ibf(sharg::parser & parser,
@@ -258,7 +277,21 @@ int run_needle_estimate(sharg::parser & parser)
                                     .validator = sharg::output_directory_validator{}});
 
     parser.add_option(args.threads,
-                      sharg::config{.short_id = 't', .long_id = "threads", .description = "Number of threads to use."});
+                      sharg::config{.short_id = 't',
+                                    .long_id = "threads",
+                                    .description = "Number of threads to use.",
+                                    .validator = positive_integer_validator{}});
+
+    parser.add_option(
+        estimate_args.batch_size,
+        sharg::config{
+            .short_id = 'b',
+            .long_id = "batch",
+            .description =
+                "Process at most this many queries at once. For example, if there are 100K queries to be estimated, "
+                "and the batch size is 10K, there will be 10 batches. More batches, i.e. a smaller batch size, will "
+                "reduce/cap the memory usage, but might result in slower performance due to repetitive index-IO.",
+            .validator = positive_integer_validator{}});
 
     parser.add_flag(estimate_args.normalization_method,
                     sharg::config{.short_id = 'm',
@@ -348,7 +381,10 @@ int run_needle_insert(sharg::parser & parser)
                     sharg::config{.short_id = 'c', .long_id = "compressed", .description = "Use compressed IBFS."});
 
     parser.add_option(ibf_args.threads,
-                      sharg::config{.short_id = 't', .long_id = "threads", .description = "Number of threads to use."});
+                      sharg::config{.short_id = 't',
+                                    .long_id = "threads",
+                                    .description = "Number of threads to use.",
+                                    .validator = positive_integer_validator{}});
 
     parser.add_option(
         path_in,
@@ -415,7 +451,10 @@ int run_needle_ibf_min(sharg::parser & parser)
                                     .validator = sharg::output_directory_validator{}});
 
     parser.add_option(ibf_args.threads,
-                      sharg::config{.short_id = 't', .long_id = "threads", .description = "Number of threads to use."});
+                      sharg::config{.short_id = 't',
+                                    .long_id = "threads",
+                                    .description = "Number of threads to use.",
+                                    .validator = positive_integer_validator{}});
 
     parser.add_option(expression_by_genome_file,
                       sharg::config{.short_id = '\0',
@@ -467,7 +506,10 @@ int run_needle_insert_min(sharg::parser & parser)
                     sharg::config{.short_id = 'c', .long_id = "compressed", .description = "Use compressed IBFS."});
 
     parser.add_option(ibf_args.threads,
-                      sharg::config{.short_id = 't', .long_id = "threads", .description = "Number of threads to use."});
+                      sharg::config{.short_id = 't',
+                                    .long_id = "threads",
+                                    .description = "Number of threads to use.",
+                                    .validator = positive_integer_validator{}});
 
     parser.add_option(
         path_in,
@@ -518,7 +560,10 @@ int run_needle_delete_bin(sharg::parser & parser)
                     sharg::config{.short_id = 'c', .long_id = "compressed", .description = "Use compressed IBFS."});
 
     parser.add_option(ibf_args.threads,
-                      sharg::config{.short_id = 't', .long_id = "threads", .description = "Number of threads to use."});
+                      sharg::config{.short_id = 't',
+                                    .long_id = "threads",
+                                    .description = "Number of threads to use.",
+                                    .validator = positive_integer_validator{}});
 
     parser.add_option(
         path_in,

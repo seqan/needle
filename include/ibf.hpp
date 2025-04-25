@@ -21,7 +21,7 @@ struct minimiser_arguments
         include_file; // Needs to be defined when only minimisers appearing in this file should be stored
     std::filesystem::path
         exclude_file;              // Needs to be defined when minimisers appearing in this file should NOT be stored
-    std::vector<int> samples{};    // Can be used to indicate that sequence files belong to the same experiment
+    std::vector<size_t> samples{}; // Can be used to indicate that sequence files belong to the same experiment
     bool paired = false;           // If true, than experiments are seen as paired-end experiments
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
     bool ram_friendly = false;

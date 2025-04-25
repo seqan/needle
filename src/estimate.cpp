@@ -19,6 +19,7 @@
 
 #include <seqan3/alphabet/container/concatenated_sequences.hpp>
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
+#include <seqan3/contrib/std/chunk_view.hpp>
 #include <seqan3/core/concept/cereal.hpp>
 #include <seqan3/io/sequence_file/all.hpp>
 
@@ -33,8 +34,8 @@ void check_ibf(min_arguments const & args,
                std::vector<float> & prev_counts,
                exp_t const & expressions,
                uint16_t const level,
-               std::vector<double> const fprs,
-               std::vector<int> & deleted)
+               std::vector<double> const & fprs,
+               std::vector<uint64_t> const & deleted)
 {
     // Check, if one expression threshold for all or individual thresholds
     static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
@@ -136,170 +137,174 @@ void estimate(estimate_ibf_arguments & args,
               std::filesystem::path file_out,
               estimate_arguments const & estimate_args)
 {
+    // ========================================================================
+    // const data
+    // ========================================================================
+    std::vector<std::vector<uint16_t>> const expressions = [&]()
+    {
+        std::vector<std::vector<uint16_t>> result;
+        if constexpr (samplewise)
+            read_levels<uint16_t>(result, estimate_args.path_in.string() + "IBF_Levels.levels");
+        return result;
+    }();
+
+    std::vector<std::vector<double>> const fprs = [&]()
+    {
+        std::vector<std::vector<double>> result;
+        read_levels<double>(result, estimate_args.path_in.string() + "IBF_FPRs.fprs");
+        return result;
+    }();
+
+    std::vector<uint64_t> const deleted = [&]()
+    {
+        std::vector<uint64_t> result;
+        if (std::filesystem::exists(estimate_args.path_in.string() + "IBF_Deleted"))
+        {
+            std::ifstream fin{estimate_args.path_in.string() + "IBF_Deleted"};
+            uint64_t number;
+
+            while (fin >> number)
+            {
+                result.push_back(number);
+            }
+        }
+        return result;
+    }();
+
+    // ========================================================================
+    // data used for the estimation
+    // ========================================================================
     std::vector<std::string> ids;
     std::vector<seqan3::dna4_vector> seqs;
-    std::vector<float> counter;
-    std::vector<uint16_t> counter_est;
     std::vector<std::vector<float>> prev_counts;
-    uint64_t prev_expression;
     std::vector<std::vector<uint16_t>> estimations;
-    std::vector<std::vector<uint16_t>> expressions;
-    std::vector<std::vector<double>> fprs;
-    std::vector<int> deleted{};
+    uint64_t prev_expression{};
+    bool counters_initialised = false;
 
-    omp_set_num_threads(args.threads);
-    seqan3::contrib::bgzf_thread_count = args.threads;
-
+    // ========================================================================
+    // I/O
+    // ========================================================================
+    std::ofstream outfile{file_out};
     seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin{
         estimate_args.search_file};
-    for (auto & [id, seq] : fin)
+
+    // ========================================================================
+    // Misc
+    // ========================================================================
+    omp_set_num_threads(args.threads);
+    seqan3::contrib::bgzf_thread_count = args.threads; // I/O and OpenMP are separate
+    std::ranges::sort(args.expression_thresholds);
+
+    // ========================================================================
+    // Helper functions
+    // ========================================================================
+    auto init_counter = [&](size_t const size)
     {
-        ids.push_back(id);
-        seqs.push_back(seq);
-    }
+        static_assert(std::same_as<std::ranges::range_value_t<decltype(prev_counts)>, std::vector<float>>);
+        prev_counts.resize(size, std::vector<float>(ibf.bin_count()));
 
-    if constexpr (samplewise)
-        read_levels<uint16_t>(expressions, estimate_args.path_in.string() + "IBF_Levels.levels");
-    else
-        prev_expression = 0;
+        static_assert(std::same_as<std::ranges::range_value_t<decltype(estimations)>, std::vector<uint16_t>>);
+        estimations.resize(size, std::vector<uint16_t>(ibf.bin_count()));
 
-    read_levels<double>(fprs, estimate_args.path_in.string() + "IBF_FPRs.fprs");
+        return true;
+    };
 
-    // Check, if bins have been deleted
-    if (std::filesystem::exists(estimate_args.path_in.string() + "IBF_Deleted"))
+    auto clear_data = [&]()
     {
-        std::ifstream fin;
-        fin.open(estimate_args.path_in.string() + "IBF_Deleted");
-        uint64_t number;
+        prev_expression = 0u;
+        ids.clear();
+        seqs.clear();
+        std::ranges::for_each(prev_counts,
+                              [](auto & v)
+                              {
+                                  std::ranges::fill(v, float{});
+                              });
+        std::ranges::for_each(estimations,
+                              [](auto & v)
+                              {
+                                  std::ranges::fill(v, uint16_t{});
+                              });
+    };
 
-        while (fin >> number)
-        {
-            deleted.push_back(number);
-        }
-        fin.close();
-    }
-
-    // Make sure expression levels are sorted.
-    sort(args.expression_thresholds.begin(), args.expression_thresholds.end());
-
-    // Initialse last expression.
-    if constexpr (samplewise)
-        load_ibf(ibf,
-                 estimate_args.path_in.string() + "IBF_Level_" + std::to_string(args.number_expression_thresholds - 1));
-    else
-        load_ibf(ibf,
-                 estimate_args.path_in.string() + "IBF_"
-                     + std::to_string(args.expression_thresholds[args.expression_thresholds.size() - 1]));
-    counter.assign(ibf.bin_count(), 0);
-    counter_est.assign(ibf.bin_count(), 0);
-
-    for (size_t i = 0; i < seqs.size(); ++i)
+    auto process_ibf = [&]<bool is_last_level>(size_t const i, size_t const level)
     {
-        estimations.push_back(counter_est);
-        prev_counts.push_back(counter);
-    }
-    counter_est.clear();
-    counter.clear();
-
-// Go over the sequences
-#pragma omp parallel for
-    for (size_t i = 0; i < seqs.size(); ++i)
-    {
-        if constexpr (samplewise && normalization_method)
-            check_ibf<IBFType, true, true>(args,
-                                           ibf,
-                                           estimations[i],
-                                           seqs[i],
-                                           prev_counts[i],
-                                           expressions,
-                                           args.number_expression_thresholds - 1,
-                                           fprs[args.number_expression_thresholds - 1],
-                                           deleted);
-        else if constexpr (samplewise)
-            check_ibf<IBFType, true, false>(args,
-                                            ibf,
-                                            estimations[i],
-                                            seqs[i],
-                                            prev_counts[i],
-                                            expressions,
-                                            args.number_expression_thresholds - 1,
-                                            fprs[args.number_expression_thresholds - 1],
-                                            deleted);
-        else
-            check_ibf<IBFType, true, false>(args,
-                                            ibf,
-                                            estimations[i],
-                                            seqs[i],
-                                            prev_counts[i],
-                                            args.expression_thresholds[args.expression_thresholds.size() - 1],
-                                            prev_expression,
-                                            fprs[args.expression_thresholds.size() - 1],
-                                            deleted);
-    }
-
-    if constexpr (!samplewise)
-        prev_expression = args.expression_thresholds[args.expression_thresholds.size() - 1];
-
-    for (int j = args.number_expression_thresholds - 2; j >= 0; j--)
-    {
-        // Loadthe next ibf that should be considered.
         if constexpr (samplewise)
-            load_ibf(ibf, estimate_args.path_in.string() + "IBF_Level_" + std::to_string(j));
+        {
+            check_ibf<IBFType, is_last_level, normalization_method>(args,
+                                                                    ibf,
+                                                                    estimations[i],
+                                                                    seqs[i],
+                                                                    prev_counts[i],
+                                                                    expressions,
+                                                                    level,
+                                                                    fprs[level],
+                                                                    deleted);
+        }
         else
-            load_ibf(ibf, estimate_args.path_in.string() + "IBF_" + std::to_string(args.expression_thresholds[j]));
+        {
+            check_ibf<IBFType, is_last_level, false>(args,
+                                                     ibf,
+                                                     estimations[i],
+                                                     seqs[i],
+                                                     prev_counts[i],
+                                                     args.expression_thresholds[level],
+                                                     prev_expression,
+                                                     fprs[level],
+                                                     deleted);
+        }
+    };
 
-// Go over the sequences
+    // ========================================================================
+    // Main algorithm
+    // ========================================================================
+    for (auto && chunked_records : fin | seqan::stl::views::chunk(estimate_args.batch_size))
+    {
+        clear_data();
+
+        // Process chunk records
+        for (auto & [id, seq] : chunked_records)
+        {
+            ids.push_back(id);
+            seqs.push_back(seq);
+        }
+
+        bool is_last_level = true;
+        for (size_t const level : std::views::iota(0u, args.number_expression_thresholds) | std::views::reverse)
+        {
+            if constexpr (samplewise)
+                load_ibf(ibf, estimate_args.path_in.string() + "IBF_Level_" + std::to_string(level));
+            else
+                load_ibf(ibf,
+                         estimate_args.path_in.string() + "IBF_" + std::to_string(args.expression_thresholds[level]));
+
+            // If there are less records than the batch size, only use as much as needed.
+            if (!counters_initialised)
+                counters_initialised = init_counter(seqs.size());
+
 #pragma omp parallel for
+            for (size_t i = 0; i < seqs.size(); ++i)
+            {
+                if (is_last_level)
+                    process_ibf.template operator()<true>(i, level);
+                else
+                    process_ibf.template operator()<false>(i, level);
+            }
+
+            if constexpr (!samplewise)
+                prev_expression = args.expression_thresholds[level];
+
+            is_last_level = false;
+        }
+
+        // Write results
         for (size_t i = 0; i < seqs.size(); ++i)
         {
-            if constexpr (samplewise && normalization_method)
-                check_ibf<IBFType, false, true>(args,
-                                                ibf,
-                                                estimations[i],
-                                                seqs[i],
-                                                prev_counts[i],
-                                                expressions,
-                                                j,
-                                                fprs[j],
-                                                deleted);
-            else if constexpr (samplewise)
-                check_ibf<IBFType, false, false>(args,
-                                                 ibf,
-                                                 estimations[i],
-                                                 seqs[i],
-                                                 prev_counts[i],
-                                                 expressions,
-                                                 j,
-                                                 fprs[j],
-                                                 deleted);
-            else
-                check_ibf<IBFType, false, false>(args,
-                                                 ibf,
-                                                 estimations[i],
-                                                 seqs[i],
-                                                 prev_counts[i],
-                                                 args.expression_thresholds[j],
-                                                 prev_expression,
-                                                 fprs[j],
-                                                 deleted);
+            outfile << ids[i] << '\t';
+            for (size_t j = 0; j < ibf.bin_count(); ++j)
+                outfile << estimations[i][j] << '\t';
+            outfile << '\n';
         }
-
-        if (!samplewise)
-            prev_expression = args.expression_thresholds[j];
     }
-
-    // Write output file.
-    std::ofstream outfile;
-    outfile.open(std::string{file_out});
-    for (size_t i = 0; i < seqs.size(); ++i)
-    {
-        outfile << ids[i] << "\t";
-        for (size_t j = 0; j < ibf.bin_count(); ++j)
-            outfile << estimations[i][j] << "\t";
-
-        outfile << "\n";
-    }
-    outfile.close();
 }
 
 // Calls the correct form of estimate
@@ -307,53 +312,23 @@ void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_
 {
     load_args(args, std::string{estimate_args.path_in} + "IBF_Data");
 
+    auto call = [&]<typename ibf_t>(ibf_t && ibf)
+    {
+        if (args.samplewise)
+        {
+            if (estimate_args.normalization_method)
+                estimate<ibf_t, true, true>(args, ibf, args.path_out, estimate_args);
+            else
+                estimate<ibf_t, true, false>(args, ibf, args.path_out, estimate_args);
+        }
+        else
+        {
+            estimate<ibf_t, false, false>(args, ibf, args.path_out, estimate_args);
+        }
+    };
+
     if (args.compressed)
-    {
-        seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
-        if (args.samplewise)
-        {
-            if (estimate_args.normalization_method)
-                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, true, true>(args,
-                                                                                                        ibf,
-                                                                                                        args.path_out,
-                                                                                                        estimate_args);
-            else
-                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, true>(args,
-                                                                                                  ibf,
-                                                                                                  args.path_out,
-                                                                                                  estimate_args);
-        }
-        else
-        {
-            estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>, false>(args,
-                                                                                               ibf,
-                                                                                               args.path_out,
-                                                                                               estimate_args);
-        }
-    }
+        call.template operator()<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>>({});
     else
-    {
-        seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
-        if (args.samplewise)
-        {
-            if (estimate_args.normalization_method)
-                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, true, true>(
-                    args,
-                    ibf,
-                    args.path_out,
-                    estimate_args);
-            else
-                estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, true>(args,
-                                                                                                    ibf,
-                                                                                                    args.path_out,
-                                                                                                    estimate_args);
-        }
-        else
-        {
-            estimate<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>, false>(args,
-                                                                                                 ibf,
-                                                                                                 args.path_out,
-                                                                                                 estimate_args);
-        }
-    }
+        call.template operator()<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>>({});
 }
