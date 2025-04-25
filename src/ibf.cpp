@@ -758,11 +758,17 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             get_include_set_table(ibf_args, minimiser_args.exclude_file, exclude_set_table);
     }
 
+    // I/O inside OpenMP region
     if (minimiser_args.ram_friendly)
+    {
+        seqan3::contrib::bgzf_thread_count = ibf_args.threads;
         omp_set_num_threads(1);
+    }
     else
+    {
+        seqan3::contrib::bgzf_thread_count = 1u;
         omp_set_num_threads(ibf_args.threads);
-    seqan3::contrib::bgzf_thread_count = ibf_args.threads;
+    }
 
     size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / ibf_args.threads), 8u, 64u);
 
@@ -1185,11 +1191,17 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
             get_include_set_table(ibf_args, minimiser_args.exclude_file, exclude_set_table);
     }
 
+    // I/O inside OpenMP region
     if (minimiser_args.ram_friendly)
+    {
+        seqan3::contrib::bgzf_thread_count = ibf_args.threads;
         omp_set_num_threads(1);
+    }
     else
+    {
+        seqan3::contrib::bgzf_thread_count = 1u;
         omp_set_num_threads(ibf_args.threads);
-    seqan3::contrib::bgzf_thread_count = ibf_args.threads;
+    }
 
     size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / ibf_args.threads), 8u, 64u);
 
@@ -1636,12 +1648,12 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files,
     if (minimiser_args.exclude_file != "")
         get_include_set_table(args, minimiser_args.exclude_file, exclude_set_table);
 
-    seqan3::contrib::bgzf_thread_count = args.threads;
     size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(minimiser_args.samples.size() / args.threads), 1u, 64u);
 
     // Add minimisers to ibf
     if (minimiser_args.ram_friendly)
     {
+        seqan3::contrib::bgzf_thread_count = args.threads;
         for (unsigned i = 0; i < minimiser_args.samples.size(); i++)
         {
             calculate_minimiser<true>(sequence_files,
@@ -1655,6 +1667,8 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files,
     }
     else
     {
+        // I/O inside OpenMP region
+        seqan3::contrib::bgzf_thread_count = 1u;
         omp_set_num_threads(args.threads);
 
 #pragma omp parallel for schedule(dynamic, chunk_size)

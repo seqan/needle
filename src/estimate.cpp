@@ -192,7 +192,7 @@ void estimate(estimate_ibf_arguments & args,
     // Misc
     // ========================================================================
     omp_set_num_threads(args.threads);
-    seqan3::contrib::bgzf_thread_count = args.threads;
+    seqan3::contrib::bgzf_thread_count = args.threads; // I/O and OpenMP are separate
     std::ranges::sort(args.expression_thresholds);
 
     // ========================================================================
