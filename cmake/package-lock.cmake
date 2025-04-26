@@ -8,7 +8,7 @@
 # cmake-format: off
 
 # seqan3
-set (NEEDLE_SEQAN3_VERSION 5d07997c4b117f9d5e157f150a26376d14585372 CACHE STRING "")
+set (NEEDLE_SEQAN3_VERSION a08b48c250dae1a360914d91f75a4447bccafcb0 CACHE STRING "")
 CPMDeclarePackage (seqan3
                    NAME seqan3
                    GIT_TAG ${NEEDLE_SEQAN3_VERSION} # main
