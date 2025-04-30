@@ -6,10 +6,12 @@
 
 #include <sharg/parser.hpp>
 
-#include <seqan3/core/debug_stream.hpp>
-
+#include "count.hpp"
+#include "delete.hpp"
 #include "estimate.hpp"
 #include "ibf.hpp"
+#include "insert.hpp"
+#include "minimiser.hpp"
 #include "shared.hpp"
 
 uint32_t w_size{60};
@@ -51,7 +53,7 @@ void add_parser_meta(sharg::parser & parser)
     parser.info.version = NEEDLE_VERSION;
 }
 
-void initialise_min_arguments(sharg::parser & parser, min_arguments & args)
+void initialise_minimiser_arguments(sharg::parser & parser, minimiser_arguments & args)
 {
     parser.add_option(
         args.k,
@@ -117,7 +119,7 @@ void initialise_arguments_ibf(sharg::parser & parser,
                                                    "one IBF."});
 }
 
-void parsing(sharg::parser & parser, min_arguments & args)
+void parsing(sharg::parser & parser, minimiser_arguments & args)
 {
     w_size = args.w_size.get();
     se = args.s.get();
@@ -132,7 +134,7 @@ void parsing(sharg::parser & parser, min_arguments & args)
 
 // Initialize arguments for ibf and minimiser
 void initialise_arguments_minimiser(sharg::parser & parser,
-                                    minimiser_arguments & minimiser_args,
+                                    minimiser_file_input_arguments & minimiser_args,
                                     std::vector<uint8_t> & cutoffs)
 {
     parser.add_option(minimiser_args.include_file,
@@ -189,8 +191,8 @@ void read_input_file_list(std::vector<std::filesystem::path> & sequence_files, s
 
 int run_needle_count(sharg::parser & parser)
 {
-    min_arguments args;
-    initialise_min_arguments(parser, args);
+    minimiser_arguments args;
+    initialise_minimiser_arguments(parser, args);
     std::vector<std::filesystem::path> sequence_files{};
     std::filesystem::path genome_file;
     std::filesystem::path include_file;
@@ -230,8 +232,8 @@ int run_needle_count(sharg::parser & parser)
 
 int run_needle_count_genome(sharg::parser & parser)
 {
-    min_arguments args;
-    initialise_min_arguments(parser, args);
+    minimiser_arguments args;
+    initialise_minimiser_arguments(parser, args);
     std::filesystem::path genome_file;
     std::filesystem::path exclude_file{""};
     std::filesystem::path out_path = "./";
@@ -313,7 +315,7 @@ int run_needle_estimate(sharg::parser & parser)
 int run_needle_ibf(sharg::parser & parser)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     std::filesystem::path input_file{};
     std::vector<std::filesystem::path> sequence_files{};
     size_t num_hash{1}; // Number of hash functions to use, default 1
@@ -321,7 +323,7 @@ int run_needle_ibf(sharg::parser & parser)
     std::vector<double> fpr{}; // The fpr of one IBF, can be different for different expression levels
     std::vector<uint8_t> cutoffs{};
 
-    initialise_min_arguments(parser, ibf_args);
+    initialise_minimiser_arguments(parser, ibf_args);
     initialise_arguments_ibf(parser, ibf_args, num_hash, fpr);
     initialise_arguments_minimiser(parser, minimiser_args, cutoffs);
 
@@ -365,7 +367,7 @@ int run_needle_ibf(sharg::parser & parser)
 int run_needle_insert(sharg::parser & parser)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     std::filesystem::path input_file{};
     std::filesystem::path path_in{};
     std::vector<std::filesystem::path> sequence_files{};
@@ -580,11 +582,11 @@ int run_needle_delete_bin(sharg::parser & parser)
 
 int run_needle_minimiser(sharg::parser & parser)
 {
-    min_arguments args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_arguments args{};
+    minimiser_file_input_arguments minimiser_args{};
     std::vector<std::filesystem::path> sequence_files{};
     std::vector<uint8_t> cutoffs{};
-    initialise_min_arguments(parser, args);
+    initialise_minimiser_arguments(parser, args);
     initialise_arguments_minimiser(parser, minimiser_args, cutoffs);
     std::filesystem::path input_file{};
 

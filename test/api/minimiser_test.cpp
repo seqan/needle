@@ -10,6 +10,8 @@
 
 #include "../app_test.hpp"
 #include "ibf.hpp"
+#include "minimiser.hpp"
+#include "misc/stream.hpp"
 #include "shared.hpp"
 
 // To prevent issues when running multiple CLI tests in parallel, give each CLI test unique names:
@@ -61,7 +63,7 @@ struct minimiser_test : public app_test
 TEST_F(minimiser_test, small_example)
 {
     estimate_ibf_arguments args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(args);
     std::vector<uint8_t> cutoffs = {0, 0};
     args.expression_thresholds = {0};
@@ -119,7 +121,7 @@ TEST_F(minimiser_test, small_example)
 TEST_F(minimiser_test, small_example_different_shape)
 {
     estimate_ibf_arguments args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(args);
     std::vector<uint8_t> cutoffs = {0, 0};
     args.shape = seqan3::bin_literal{0b1101};
@@ -151,7 +153,7 @@ TEST_F(minimiser_test, small_example_different_shape)
 TEST_F(minimiser_test, small_example_samplewise)
 {
     estimate_ibf_arguments args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(args);
 
     std::vector<uint8_t> cutoffs = {0, 0};
@@ -214,7 +216,7 @@ TEST_F(minimiser_test, small_example_samplewise)
 TEST_F(minimiser_test, cutoff_by_filesize)
 {
     estimate_ibf_arguments args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(args);
     args.expression_thresholds = {0};
     std::vector<double> fpr = {0.05};
@@ -266,7 +268,7 @@ TEST_F(minimiser_test, cutoff_by_filesize)
 TEST_F(minimiser_test, small_example_two_threads)
 {
     estimate_ibf_arguments args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(args);
     args.threads = 2;
     std::vector<uint8_t> cutoffs = {0, 0};
@@ -327,7 +329,7 @@ TEST_F(minimiser_test, small_example_two_threads)
 TEST_F(minimiser_test, small_example_include)
 {
     estimate_ibf_arguments args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(args);
     args.path_out = "Minimiser_Test_In_";
     std::vector<uint8_t> cutoffs = {0, 0};
@@ -378,7 +380,7 @@ TEST_F(minimiser_test, small_example_include)
 TEST_F(minimiser_test, small_example_exclude)
 {
     estimate_ibf_arguments args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(args);
     args.path_out = "Minimiser_Test_Ex_";
     std::vector<uint8_t> cutoffs = {0, 0};
@@ -465,7 +467,7 @@ TEST_F(minimiser_test, small_example_shape)
     };
 
     estimate_ibf_arguments args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(args);
     args.shape = seqan3::bin_literal{9};
     EXPECT_EQ(9, args.shape.to_ulong());

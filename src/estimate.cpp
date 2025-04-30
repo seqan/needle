@@ -2,32 +2,15 @@
 // SPDX-FileCopyrightText: 2016-2025 Knut Reinert & MPI für molekulare Genetik
 // SPDX-License-Identifier: BSD-3-Clause
 
-#include <algorithm>
-#include <deque>
-#include <iostream>
-#include <math.h>
-#include <numeric>
-#include <omp.h>
-#include <ranges>
-#include <stdlib.h>
-#include <string>
-#include <vector>
-
-#if SEQAN3_WITH_CEREAL
-#    include <cereal/archives/binary.hpp>
-#endif // SEQAN3_WITH_CEREAL
-
-#include <seqan3/alphabet/container/concatenated_sequences.hpp>
-#include <seqan3/alphabet/nucleotide/dna4.hpp>
-#include <seqan3/contrib/std/chunk_view.hpp>
-#include <seqan3/core/concept/cereal.hpp>
-#include <seqan3/io/sequence_file/all.hpp>
-
 #include "estimate.hpp"
+
+#include <cereal/archives/binary.hpp>
+
+#include "misc/read_levels.hpp"
 
 // Actual estimation
 template <class IBFType, bool last_exp, bool normalization, typename exp_t>
-void check_ibf(min_arguments const & args,
+void check_ibf(minimiser_arguments const & args,
                IBFType const & ibf,
                std::vector<uint16_t> & estimations_i,
                seqan3::dna4_vector const & seq,
@@ -120,11 +103,6 @@ void check_ibf(min_arguments const & args,
     }
 }
 
-// Reads the level file ibf creates
-// Defined in ibf.cpp
-template <typename float_or_int>
-void read_levels(std::vector<std::vector<float_or_int>> &, std::filesystem::path);
-
 /*! \brief Function to estimate expression value.
 *  \param args        The arguments.
 *  \param ibf         The ibf determing what kind ibf is used (compressed or uncompressed).
@@ -185,7 +163,7 @@ void estimate(estimate_ibf_arguments & args,
     // I/O
     // ========================================================================
     std::ofstream outfile{file_out};
-    seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin{
+    seqan3::sequence_file_input<dna4_traits, seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin{
         estimate_args.search_file};
 
     // ========================================================================

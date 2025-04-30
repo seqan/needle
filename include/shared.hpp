@@ -26,7 +26,7 @@ struct all_arguments
 };
 
 //!\brief arguments used for estimate, ibf, minimiser
-struct min_arguments : all_arguments
+struct minimiser_arguments : all_arguments
 {
     uint8_t k{20};
     seqan3::seed s{0x8F'3F'73'B5'CF'1C'9A'DEULL};
@@ -35,7 +35,7 @@ struct min_arguments : all_arguments
 };
 
 //!\brief arguments used for estimate, ibf, ibfmin
-struct estimate_ibf_arguments : min_arguments
+struct estimate_ibf_arguments : minimiser_arguments
 {
     bool compressed = false;
     std::vector<uint16_t> expression_thresholds{}; // Expression levels which should be created
@@ -69,6 +69,18 @@ struct estimate_ibf_arguments : min_arguments
     }
 };
 
+struct minimiser_file_input_arguments
+{
+    // Needs to be defined when only minimisers appearing in this file should be stored
+    std::filesystem::path include_file;
+    // Needs to be defined when minimisers appearing in this file should NOT be stored
+    std::filesystem::path exclude_file;
+    std::vector<size_t> samples{}; // Can be used to indicate that sequence files belong to the same experiment
+    bool paired = false;           // If true, than experiments are seen as paired-end experiments
+    bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
+    bool ram_friendly = false;
+};
+
 /*! \brief Function, loading arguments
  *  \param args   arguments to load
  *  \param ipath Path, where the arguments can be found.
@@ -92,13 +104,17 @@ struct estimate_ibf_arguments : min_arguments
 }
 
 //!\brief Use dna4 instead of default dna5
-struct my_traits : seqan3::sequence_file_input_default_traits_dna
+struct dna4_traits : seqan3::sequence_file_input_default_traits_dna
 {
     using sequence_alphabet = seqan3::dna4;
     //TODO: Should I use a bitcompressed_vector to save memory but with the disadvantage of losing speed?
     //template <typename alph>
     //using sequence_container = seqan3::bitcompressed_vector<alph>;
 };
+
+using sequence_file_t = seqan3::sequence_file_input<dna4_traits, seqan3::fields<seqan3::field::seq>>;
+using sequence_file_with_id_t =
+    seqan3::sequence_file_input<dna4_traits, seqan3::fields<seqan3::field::id, seqan3::field::seq>>;
 
 /*! \brief Function, loading compressed and uncompressed ibfs
  *  \param ibf   ibf to load
