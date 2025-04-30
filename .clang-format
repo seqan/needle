@@ -119,32 +119,36 @@ IfMacros:
   - KJ_IF_MAYBE
 IncludeBlocks:   Regroup
 IncludeCategories:
-  - Regex:           '(<gtest/.*|<benchmark/.*)'
+  - Regex:           '<gtest/'
     Priority:        1
     SortPriority:    0
     CaseSensitive:   false
-  - Regex:           '(<[[:alnum:]._]+>)'
+  - Regex:           '<benchmark/'
     Priority:        2
     SortPriority:    0
     CaseSensitive:   false
-  - Regex:           '<sharg/'
+  - Regex:           '<[[:alnum:]._]+>'
     Priority:        3
     SortPriority:    0
     CaseSensitive:   false
-  - Regex:           '<seqan3/'
+  - Regex:           '<cereal/'
     Priority:        4
     SortPriority:    0
     CaseSensitive:   false
-  - Regex:           '<hibf/'
-    Priority:        6
-    SortPriority:    0
-    CaseSensitive:   false
-  - Regex:           '<.*>'
+  - Regex:           '<sharg/'
     Priority:        5
     SortPriority:    0
     CaseSensitive:   false
-  - Regex:           '.*'
+  - Regex:           '<seqan3/'
+    Priority:        6
+    SortPriority:    0
+    CaseSensitive:   false
+  - Regex:           '<hibf/'
     Priority:        7
+    SortPriority:    0
+    CaseSensitive:   false
+  - Regex:           '.*'
+    Priority:        8
     SortPriority:    0
     CaseSensitive:   false
 IncludeIsMainRegex: '(Test)?$'

@@ -36,7 +36,7 @@ TEST_F(insert_options_test, with_argument)
 {
     std::filesystem::path tmp_dir = std::filesystem::temp_directory_path();
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     ibf_args.expression_thresholds = {1, 2};
     std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta")};

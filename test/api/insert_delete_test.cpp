@@ -9,7 +9,10 @@
 #include <seqan3/test/expect_range_eq.hpp>
 
 #include "../app_test.hpp"
+#include "delete.hpp"
 #include "ibf.hpp"
+#include "insert.hpp"
+#include "misc/read_levels.hpp"
 #include "shared.hpp"
 
 // To prevent issues when running multiple CLI tests in parallel, give each CLI test unique names:
@@ -26,54 +29,14 @@ struct delete_test : public app_test
 };
 
 struct insert_test : public delete_test
-{
-    // Reads the level file ibf creates
-    template <typename float_or_int>
-    void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::filesystem::path filename)
-    {
-        ASSERT_TRUE(std::filesystem::exists(filename)) << filename;
-        std::ifstream fin{filename};
-        auto stream_view = seqan3::detail::istreambuf(fin);
-        auto stream_it = std::ranges::begin(stream_view);
-        size_t j{0};
-        std::vector<float_or_int> empty_vector{};
-
-        std::string buffer{};
-
-        // Read line = expression levels
-        do
-        {
-            if (j == expressions.size())
-                expressions.push_back(empty_vector);
-            std::ranges::copy(stream_view | seqan3::detail::take_until_or_throw(seqan3::is_char<' '>),
-                              std::back_inserter(buffer));
-            if constexpr (std::same_as<uint16_t, float_or_int>)
-                expressions[j].push_back((uint16_t)std::stoi(buffer));
-            else
-                expressions[j].push_back((double)std::stod(buffer));
-            buffer.clear();
-            if (*stream_it != '/')
-                ++stream_it;
-
-            if (*stream_it == '\n')
-            {
-                ++stream_it;
-                j++;
-            }
-        }
-        while (*stream_it != '/');
-        ++stream_it;
-
-        fin.close();
-    }
-};
+{};
 
 TEST_F(delete_test, no_given_thresholds)
 {
     std::vector<double> fpr = {0.05};
     std::vector<uint8_t> cutoffs_delete{0, 0};
     estimate_ibf_arguments ibf_args_delete{};
-    minimiser_arguments minimiser_args_delete{};
+    minimiser_file_input_arguments minimiser_args_delete{};
     initialization_args(ibf_args_delete);
     ibf_args_delete.compressed = false;
     ibf_args_delete.number_expression_thresholds = 2;
@@ -105,7 +68,7 @@ TEST_F(delete_test, no_given_thresholds)
 TEST_F(insert_test, ibf)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.compressed = false;
     ibf_args.path_out = "IBF_True_Exp_";
@@ -119,7 +82,7 @@ TEST_F(insert_test, ibf)
 
     std::vector<uint8_t> cutoffs_insert{0};
     estimate_ibf_arguments ibf_args_insert{};
-    minimiser_arguments minimiser_args_insert{};
+    minimiser_file_input_arguments minimiser_args_insert{};
     initialization_args(ibf_args_insert);
     ibf_args_insert.compressed = false;
     ibf_args_insert.path_out = "IBF_True_Exp_";
@@ -152,7 +115,7 @@ TEST_F(insert_test, ibf)
 TEST_F(insert_test, ibf_no_given_thresholds)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.compressed = false;
     ibf_args.path_out = "IBF_True_Exp_";
@@ -168,7 +131,7 @@ TEST_F(insert_test, ibf_no_given_thresholds)
 
     std::vector<uint8_t> cutoffs_insert{0};
     estimate_ibf_arguments ibf_args_insert{};
-    minimiser_arguments minimiser_args_insert{};
+    minimiser_file_input_arguments minimiser_args_insert{};
     initialization_args(ibf_args_insert);
     ibf_args_insert.compressed = false;
     ibf_args_insert.number_expression_thresholds = 2;
@@ -205,7 +168,7 @@ TEST_F(insert_test, ibf_no_given_thresholds)
 TEST_F(insert_test, ibf_delete)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.compressed = false;
     ibf_args.path_out = "IBF_True_Exp_";
@@ -221,7 +184,7 @@ TEST_F(insert_test, ibf_delete)
 
     std::vector<uint8_t> cutoffs_insert{0};
     estimate_ibf_arguments ibf_args_insert{};
-    minimiser_arguments minimiser_args_insert{};
+    minimiser_file_input_arguments minimiser_args_insert{};
     initialization_args(ibf_args_insert);
     ibf_args_insert.compressed = false;
     ibf_args_insert.path_out = "IBF_Insert_Exp_";
@@ -257,7 +220,7 @@ TEST_F(insert_test, ibf_delete)
 TEST_F(insert_test, ibf_delete_no_given_threshold)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.compressed = false;
     ibf_args.path_out = "IBF_True_Exp_";
@@ -273,7 +236,7 @@ TEST_F(insert_test, ibf_delete_no_given_threshold)
 
     std::vector<uint8_t> cutoffs_insert{0};
     estimate_ibf_arguments ibf_args_insert{};
-    minimiser_arguments minimiser_args_insert{};
+    minimiser_file_input_arguments minimiser_args_insert{};
     initialization_args(ibf_args_insert);
     ibf_args_insert.compressed = false;
     ibf_args_insert.path_out = "IBF_Insert_Exp_";

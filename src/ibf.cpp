@@ -2,549 +2,17 @@
 // SPDX-FileCopyrightText: 2016-2025 Knut Reinert & MPI für molekulare Genetik
 // SPDX-License-Identifier: BSD-3-Clause
 
-#include <algorithm> //reorded because of this error:https://github.com/Homebrew/homebrew-core/issues/44579
-#include <chrono>
-#include <deque>
-#include <filesystem>
-#include <iostream>
-#include <math.h>
-#include <mutex>
-#include <numeric>
-#include <omp.h>
-#include <ranges>
-#include <string>
-#include <thread>
-
-#if SEQAN3_WITH_CEREAL
-#    include <cereal/archives/binary.hpp>
-#endif // SEQAN3_WITH_CEREAL
-
-#include <robin_hood.h>
-
-#include <seqan3/alphabet/container/concatenated_sequences.hpp>
-#include <seqan3/alphabet/nucleotide/dna4.hpp>
-#include <seqan3/contrib/parallel/buffer_queue.hpp>
-#include <seqan3/core/concept/cereal.hpp>
-#include <seqan3/io/sequence_file/all.hpp>
-#include <seqan3/io/stream/detail/fast_istreambuf_iterator.hpp>
-#include <seqan3/utility/container/dynamic_bitset.hpp>
-#include <seqan3/utility/parallel/detail/latch.hpp>
-
 #include "ibf.hpp"
-#include "shared.hpp"
 
-// Create set with hashes from the minimisers from an include or exclude file.
-void get_include_set_table(min_arguments const & args,
-                           std::filesystem::path const include_file,
-                           robin_hood::unordered_set<uint64_t> & include_table)
-{
-    seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin3{include_file};
-    for (auto & [seq] : fin3)
-    {
-        if (seq.size() >= args.w_size.get())
-        {
-            for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-                include_table.insert(minHash);
-        }
-    }
-}
+#include <cereal/archives/binary.hpp>
 
-// Chech if file has fasta format to estimate cutoffs.
-inline bool check_for_fasta_format(std::vector<std::string> const & valid_extensions, std::string const & file_path)
-{
-
-    auto case_insensitive_string_ends_with = [&](std::string_view str, std::string_view suffix)
-    {
-        size_t const suffix_length{suffix.size()};
-        size_t const str_length{str.size()};
-        return suffix_length > str_length ? false
-                                          : std::ranges::equal(str.substr(str_length - suffix_length),
-                                                               suffix,
-                                                               [](char const chr1, char const chr2)
-                                                               {
-                                                                   return std::tolower(chr1) == std::tolower(chr2);
-                                                               });
-    };
-
-    auto case_insensitive_ends_with = [&](std::string const & ext)
-    {
-        return case_insensitive_string_ends_with(file_path, ext);
-    };
-
-    return std::ranges::find_if(valid_extensions, case_insensitive_ends_with) != valid_extensions.end();
-}
-
-// Determine cutoff for one experiment
-uint8_t calculate_cutoff(std::filesystem::path sequence_file, int samples)
-{
-    // Cutoff according to Mantis paper -1 because we use "<" and not "<="
-    uint16_t const default_cutoff{49};
-    uint8_t cutoff{default_cutoff};
-    std::array<uint16_t, 4> const cutoffs{0, 2, 9, 19};
-    std::array<uint64_t, 4> const cutoff_bounds{314'572'800, 524'288'000, 1'073'741'824, 3'221'225'472};
-    cutoff = default_cutoff;
-
-    // Since the curoffs are based on the filesize of a gzipped fastq file, we try account for the other cases:
-    // We multiply by two if we have fasta input.
-    // We divide by 3 if the input is not compressed.
-    bool const is_compressed = sequence_file.extension() == ".gz" || sequence_file.extension() == ".bgzf"
-                            || sequence_file.extension() == ".bz2";
-    bool const is_fasta = is_compressed
-                            ? check_for_fasta_format(seqan3::format_fasta::file_extensions, sequence_file.stem())
-                            : check_for_fasta_format(seqan3::format_fasta::file_extensions, sequence_file.extension());
-    size_t const filesize =
-        std::filesystem::file_size(sequence_file) * samples * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
-
-    for (size_t k = 0; k < cutoff_bounds.size(); ++k)
-    {
-        if (filesize <= cutoff_bounds[k])
-        {
-            cutoff = cutoffs[k];
-            break;
-        }
-    }
-    return cutoff;
-}
-
-// Fill hash table with minimisers greater than the cutoff.
-void fill_hash_table(min_arguments const & args,
-                     seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> & fin,
-                     robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
-                     robin_hood::unordered_node_map<uint64_t, uint8_t> & cutoff_table,
-                     robin_hood::unordered_set<uint64_t> const & include_set_table,
-                     robin_hood::unordered_set<uint64_t> const & exclude_set_table,
-                     bool const only_include = false,
-                     uint8_t cutoff = 0)
-{
-    // Would result in no minimisers being added to hash_table.
-    bool const containment_check_in_empty_include_set = only_include && include_set_table.empty();
-    if (containment_check_in_empty_include_set)
-        return;
-
-    // Would result in no filtering.
-    bool const exclusion_check_in_empty_exclude_set = !only_include && exclude_set_table.empty();
-
-    auto check_value_in_tables = [&](auto && minHash)
-    {
-        return (only_include && include_set_table.contains(minHash))
-            || (!only_include && !exclude_set_table.contains(minHash));
-    };
-
-    for (auto & [seq] : fin)
-    {
-        for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-        {
-            if (exclusion_check_in_empty_exclude_set || check_value_in_tables(minHash))
-            {
-                // Note that hash_table[minHash] would insert minHash into the map if it does not yet exist.
-                auto it = hash_table.find(minHash);
-
-                // If minHash is already in hash table, increase count in hash table.
-                if (it != hash_table.end())
-                {
-                    // Prevent overflow. 65535 is the maximum value for uint16_t.
-                    it->second = std::min<uint16_t>(65534u, it->second + 1);
-                }
-                // If there is no cutoff, add value to hash_table and set count to 1.
-                else if (cutoff == 0)
-                {
-                    hash_table[minHash]++;
-                }
-                // If minHash equals the cutoff, add it to the hash table and add plus one for the current
-                // iteration.
-                else if (uint8_t const value = cutoff_table[minHash]; value == cutoff)
-                {
-                    hash_table[minHash] = value + 1u;
-                    cutoff_table.erase(minHash);
-                }
-                // If none of the above, increase count in cutoff table. Cutoff Table reduces RAM usage by storing
-                // minimisers with a low occurence in a smaller hash table.
-                else
-                {
-                    cutoff_table[minHash]++;
-                }
-            }
-        }
-    }
-}
-
-void fill_hash_table_parallel(min_arguments const & args,
-                              seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> & fin,
-                              robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table,
-                              robin_hood::unordered_node_map<uint64_t, uint8_t> & cutoff_table,
-                              robin_hood::unordered_set<uint64_t> const & include_set_table,
-                              robin_hood::unordered_set<uint64_t> const & exclude_set_table,
-                              bool const only_include = false,
-                              uint8_t cutoff = 0)
-{
-    using value_t = typename robin_hood::unordered_node_map<uint64_t, uint16_t>::value_type;
-    using local_hash_table_t = robin_hood::unordered_node_map<uint64_t, std::atomic<uint16_t>>;
-
-    // Step 1: load file in batches
-    // Step 2: construct minimiser hash values
-    // Step 3: Sort minimiser hash values but pertain their original positions
-    // Step 4: Provid simple table with minimiser value and count pair
-    // Step 5: Store all non-referenced minimiser values per batch
-
-    size_t thread_count = args.threads;
-    // Run thread: block execution and load next 10000 sequences.
-
-    auto seq_file_it = std::ranges::begin(fin);
-    using sequence_t = seqan3::dna4_vector;
-
-    auto load_next_chunk = [&]()
-    {
-        constexpr size_t batch_size = 100000;
-
-        std::vector<sequence_t> sequence_batch{};
-        sequence_batch.reserve(batch_size);
-
-        while (seq_file_it != std::ranges::end(fin) && sequence_batch.size() < batch_size)
-        {
-            sequence_batch.push_back((*seq_file_it).sequence());
-            ++seq_file_it;
-        }
-
-        return sequence_batch;
-    };
-
-    auto count_minimiser = [&](auto & local_hash_table, std::vector<uint64_t> minimisers)
-    {
-        // Sort the minimiser by their value.
-        std::ranges::sort(minimisers, std::less{});
-
-        // Fill the table with all minimiser counts.
-        auto minimiser_it = minimisers.begin();
-        auto minimiser_end = minimisers.end();
-
-        std::vector<uint64_t> orphaned_minimiser{};
-
-        while (minimiser_it != minimiser_end)
-        {
-            uint64_t current_minimiser = *minimiser_it;
-            auto predicate = [=](uint64_t const other_hash)
-            {
-                return other_hash == current_minimiser;
-            };
-            auto next_minimiser_it = std::ranges::find_if_not(minimiser_it, minimiser_end, predicate);
-            // minimiser_it now points to the first non equal position
-            size_t const minimiser_count = std::ranges::distance(minimiser_it, next_minimiser_it);
-
-            if ((only_include && (include_set_table.contains(current_minimiser)))
-                || (!only_include && !exclude_set_table.contains(current_minimiser)))
-            {
-                if (auto it = local_hash_table.find(current_minimiser); it != local_hash_table.end()) // update
-                {
-                    it->second = static_cast<uint16_t>(std::min(65534ul, it->second + minimiser_count));
-                }
-                else if (minimiser_count > cutoff)
-                {
-                    // insert first.
-                    local_hash_table[current_minimiser] = minimiser_count;
-                }
-                else // not above cutoff.
-                {
-                    orphaned_minimiser.insert(orphaned_minimiser.end(), minimiser_it, next_minimiser_it);
-                }
-            }
-            minimiser_it = next_minimiser_it;
-        }
-        return orphaned_minimiser;
-    };
-
-    // Block 1:
-    std::vector<std::vector<uint64_t>> thread_local_remaining_minimisers{};
-    thread_local_remaining_minimisers.resize(thread_count);
-    std::vector<local_hash_table_t> thread_local_hash_tables{};
-    thread_local_hash_tables.resize(thread_count);
-    bool is_merged{false};
-
-    seqan3::detail::latch sync_point{static_cast<std::ptrdiff_t>(thread_count)};
-    seqan3::detail::latch sync_point_2{static_cast<std::ptrdiff_t>(thread_count)};
-    std::mutex load_mutex{};
-    std::vector<std::pair<size_t, size_t>> intervals{};
-    std::optional<seqan3::contrib::fixed_buffer_queue<std::pair<size_t, size_t>>> queue;
-
-    auto job = [&](size_t const thread_id)
-    {
-        while (true)
-        {
-            std::vector<sequence_t> sequence_batch{};
-            { // critical region
-                std::scoped_lock load_lk{load_mutex};
-                sequence_batch = load_next_chunk();
-            }
-            if (sequence_batch.empty()) // Stop construction: no more elements are coming
-                break;
-
-            // Construct the set of all minimisers for all sequences.
-            std::vector<uint64_t> minimisers{};
-            minimisers.reserve(sequence_batch.size() * (sequence_batch[0].size() - args.w_size.get() + 1));
-            for (auto & sequence : sequence_batch)
-                std::ranges::move(sequence | seqan3::views::minimiser_hash(args.shape, args.w_size, args.s),
-                                  std::back_inserter(minimisers));
-
-            auto orphaned_minimiser = count_minimiser(thread_local_hash_tables[thread_id], std::move(minimisers));
-            thread_local_remaining_minimisers[thread_id].insert(thread_local_remaining_minimisers[thread_id].end(),
-                                                                orphaned_minimiser.begin(),
-                                                                orphaned_minimiser.end());
-        }
-
-        sync_point.arrive_and_wait();
-
-        { // sequential phase to merge sub tables.
-            std::scoped_lock lk{load_mutex};
-            if (!is_merged)
-            {
-                // Merge local hash_tables.
-                for (auto & local_hash_table : thread_local_hash_tables)
-                {
-                    for (auto && [key, counter] : local_hash_table)
-                    {
-                        if (auto it = hash_table.find(key); it != hash_table.end())
-                            it->second =
-                                static_cast<uint16_t>(std::min<uint32_t>(65534ul, it->second + counter.load()));
-                        else
-                            hash_table.insert(value_t{key, counter.load()});
-                    }
-
-                    local_hash_table.clear();
-                }
-
-                std::vector<uint64_t> remaining_minimisers{};
-                for (auto & local_remaining_minimisers : thread_local_remaining_minimisers)
-                {
-                    std::vector<uint64_t> local_remaining_minimisers2 =
-                        count_minimiser(hash_table, std::move(local_remaining_minimisers));
-                    remaining_minimisers.insert(remaining_minimisers.end(),
-                                                local_remaining_minimisers2.begin(),
-                                                local_remaining_minimisers2.end());
-                }
-
-                std::ranges::sort(remaining_minimisers, std::less{});
-                auto minimiser_it = remaining_minimisers.begin();
-                auto minimiser_end = remaining_minimisers.end();
-
-                while (minimiser_it != minimiser_end)
-                {
-                    uint64_t current_minimiser = *minimiser_it;
-                    auto predicate = [=](uint64_t const other_hash)
-                    {
-                        return other_hash == current_minimiser;
-                    };
-                    auto next_minimiser_it = std::ranges::find_if_not(minimiser_it, minimiser_end, predicate);
-                    // minimiser_it now points to the first non equal position
-                    size_t const minimiser_count = std::ranges::distance(minimiser_it, next_minimiser_it);
-
-                    if ((only_include && (include_set_table.contains(current_minimiser)))
-                        || (!only_include && !exclude_set_table.contains(current_minimiser)))
-                    {
-                        if (auto it = hash_table.find(current_minimiser); it != hash_table.end()) // update
-                        {
-                            it->second = static_cast<uint16_t>(std::min(65534ul, it->second + minimiser_count));
-                        }
-                        else if (minimiser_count > cutoff)
-                        {
-                            // insert first.
-                            hash_table[current_minimiser] = minimiser_count;
-                        }
-                        else if (auto it = cutoff_table.find(current_minimiser); it != cutoff_table.end())
-                        {
-                            if ((it->second + minimiser_count) > cutoff)
-                            {
-                                hash_table[current_minimiser] = cutoff_table[current_minimiser] + minimiser_count;
-                                cutoff_table.erase(current_minimiser);
-                            }
-                            else
-                            {
-                                it->second = it->second + minimiser_count;
-                            }
-                        }
-                        else
-                        {
-                            cutoff_table[current_minimiser] = minimiser_count;
-                        }
-                    }
-                    minimiser_it = next_minimiser_it;
-                }
-                is_merged = true;
-            }
-        }
-    };
-
-    std::vector<std::thread> thread_pool{};
-    for (size_t i = 0; i < thread_count; ++i)
-        thread_pool.emplace_back(job, i);
-
-    // Wait for all threads to finish.
-    for (auto & thread : thread_pool)
-        if (thread.joinable())
-            thread.join();
-}
-
-void count_genome(min_arguments const & args, std::filesystem::path include_file, std::filesystem::path exclude_file)
-{
-    robin_hood::unordered_set<uint64_t> include_set_table{};
-    robin_hood::unordered_set<uint64_t> exclude_set_table{};
-    std::ofstream outfile;
-
-    if (exclude_file != "")
-    {
-        seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{exclude_file};
-        for (auto & [seq] : fin)
-        {
-            if (seq.size() >= args.w_size.get())
-            {
-                for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-                    exclude_set_table.insert(minHash);
-            }
-        }
-    }
-
-    seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin2{include_file};
-    for (auto & [seq] : fin2)
-    {
-        if (seq.size() >= args.w_size.get())
-        {
-            for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-            {
-                if (!(exclude_set_table.contains(minHash)))
-                    include_set_table.insert(minHash);
-            }
-        }
-    }
-
-    // Write minimiser to binary
-    outfile.open(std::string{args.path_out} + std::string{include_file.stem()} + ".genome", std::ios::binary);
-
-    for (auto && hash : include_set_table)
-    {
-        outfile.write(reinterpret_cast<char const *>(&hash), sizeof(hash));
-    }
-    outfile.close();
-}
-
-void count(min_arguments const & args,
-           std::vector<std::filesystem::path> sequence_files,
-           std::filesystem::path include_file,
-           std::filesystem::path genome_file,
-           bool paired)
-{
-    robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{};
-    // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
-    // and afterwards discarded.
-    robin_hood::unordered_node_map<uint64_t, uint8_t> cutoff_table;
-    robin_hood::unordered_set<uint64_t> include_set_table{};
-    robin_hood::unordered_set<uint64_t> exclude_set_table{};
-    std::vector<uint64_t> counter{};
-    uint64_t expression{};
-    std::ifstream infile;
-    std::ofstream outfile;
-
-    // Read minimiser from binary
-    infile.open(genome_file, std::ios::binary);
-    uint64_t minimiser;
-    while (infile.read((char *)&minimiser, sizeof(minimiser)))
-    {
-        include_set_table.insert(minimiser);
-    }
-    infile.close();
-
-    for (unsigned i = 0; i < sequence_files.size(); i++)
-    {
-
-        if (paired)
-        {
-            seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{sequence_files[i]};
-            fill_hash_table(args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table, true);
-            i++;
-            fin = sequence_files[i];
-            fill_hash_table(args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table, true);
-        }
-        else
-        {
-            seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{sequence_files[i]};
-            fill_hash_table(args, fin, hash_table, cutoff_table, include_set_table, exclude_set_table, true);
-        }
-        cutoff_table.clear();
-
-        outfile.open(std::string{args.path_out} + std::string{sequence_files[i].stem()} + ".count.out");
-        seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::id, seqan3::field::seq>> fin2{
-            include_file};
-        for (auto & [id, seq] : fin2)
-        {
-            if (seq.size() >= args.w_size.get())
-            {
-                for (auto && minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-                    counter.push_back(hash_table[minHash]);
-                std::nth_element(counter.begin(), counter.begin() + counter.size() / 2, counter.end());
-                expression = counter[counter.size() / 2];
-                outfile << id << "\t" << expression << "\n";
-                counter.clear();
-            }
-        }
-        outfile.close();
-        hash_table.clear();
-    }
-}
-
-void read_binary(std::filesystem::path filename, robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table)
-{
-    std::ifstream fin{filename, std::ios::binary};
-
-    // Skip the first 22 bytes:
-    //   8 num_of_minimisers
-    //   1 cutoff
-    //   1 args.k
-    //   4 args.w_size
-    //   8 args.s
-    fin.ignore(22);
-
-    bool ungapped;
-    fin.read((char *)&ungapped, sizeof(ungapped));
-    if (!ungapped)
-    {
-        fin.ignore(8); // args.shape
-    }
-
-    uint64_t minimiser;
-    uint16_t minimiser_count;
-
-    while (fin.read((char *)&minimiser, sizeof(minimiser)))
-    {
-        fin.read((char *)&minimiser_count, sizeof(minimiser_count));
-        hash_table[minimiser] = minimiser_count;
-    }
-
-    fin.close();
-}
-
-void read_binary_start(min_arguments & args,
-                       std::filesystem::path filename,
-                       uint64_t & num_of_minimisers,
-                       uint8_t & cutoff)
-{
-    std::ifstream fin{filename, std::ios::binary};
-
-    fin.read((char *)&num_of_minimisers, sizeof(num_of_minimisers));
-    fin.read((char *)&cutoff, sizeof(cutoff));
-    fin.read((char *)&args.k, sizeof(args.k));
-    fin.read((char *)&args.w_size, sizeof(args.w_size));
-    fin.read((char *)&args.s, sizeof(args.s));
-
-    bool ungapped;
-    fin.read((char *)&ungapped, sizeof(ungapped));
-    if (ungapped)
-    {
-        args.shape = seqan3::ungapped{args.k};
-    }
-    else
-    {
-        fin.read((char *)&args.shape, sizeof(args.shape));
-    }
-
-    fin.close();
-}
+#include "misc/calculate_cutoff.hpp"
+#include "misc/check_cutoffs_samples.hpp"
+#include "misc/check_for_fasta_format.hpp"
+#include "misc/fill_hash_table.hpp"
+#include "misc/get_expression_thresholds.hpp"
+#include "misc/get_include_set_table.hpp"
+#include "misc/stream.hpp"
 
 // Check number of expression levels, sort expression levels
 void check_expression(std::vector<uint16_t> & expression_thresholds,
@@ -552,7 +20,7 @@ void check_expression(std::vector<uint16_t> & expression_thresholds,
                       std::filesystem::path const expression_by_genome_file)
 {
     // Sort given expression rates
-    sort(expression_thresholds.begin(), expression_thresholds.end());
+    std::ranges::sort(expression_thresholds);
 
     // If no expression levels are given and the no number of expression levels is specified, throw.
     if ((number_expression_thresholds == 0) && (expression_thresholds.size() == 0))
@@ -573,24 +41,6 @@ void check_expression(std::vector<uint16_t> & expression_thresholds,
     {
         throw std::invalid_argument{"Please set the expression levels OR give the number of expression levels."};
     }
-}
-
-// Check and set samples and cutoffs
-void check_cutoffs_samples(std::vector<std::filesystem::path> const & sequence_files,
-                           bool const paired,
-                           std::vector<size_t> & samples,
-                           std::vector<uint8_t> & cutoffs)
-{
-    if (paired) // If paired is true, a pair is seen as one sample
-        samples.assign(sequence_files.size() / 2, 2);
-    if (samples.empty()) // If no samples are given and not paired, every file is seen as one experiment
-        samples.assign(sequence_files.size(), 1);
-    if (cutoffs.size() == 1) // If one cutoff is given, every experiment gets this cutoff.
-        cutoffs.assign(samples.size(), cutoffs[0]);
-
-    // If sum of minimiser_args.samples is not equal to number of files, throw error
-    else if (std::reduce(samples.begin(), samples.end()) != sequence_files.size())
-        throw std::invalid_argument{"Incorrect command line input for multiple-samples."};
 }
 
 // Check input of fpr
@@ -614,62 +64,6 @@ void check_fpr(uint8_t const number_expression_thresholds, std::vector<double> &
     }
 }
 
-// Calculate expression thresholds and sizes
-// Calculate expression thresholds by taking median recursively
-void get_expression_thresholds(uint8_t const number_expression_thresholds,
-                               robin_hood::unordered_node_map<uint64_t, uint16_t> const & hash_table,
-                               std::vector<uint16_t> & expression_thresholds,
-                               std::vector<uint64_t> & sizes,
-                               robin_hood::unordered_set<uint64_t> const & genome,
-                               uint8_t const cutoff,
-                               bool const all = true)
-{
-    expression_thresholds.clear();
-    sizes.clear();
-
-    std::vector<uint16_t> counts;
-    for (auto && elem : hash_table)
-    {
-        if (all || genome.contains(elem.first))
-            counts.push_back(elem.second);
-    }
-    size_t const num_counts = counts.size();
-
-    size_t median_fraction{2}; // First median at num_counts / 2, second one at num_counts / 2 + num_counts / 4, etc.
-    size_t prev_median_position{};
-    size_t median_position{};
-    uint16_t prev_expression{};
-    uint16_t expression{};
-    uint16_t const max_count = std::ranges::max(counts);
-
-    // Zero Level = cutoff + 1
-    expression_thresholds.push_back(cutoff + 1u);
-
-    while (expression_thresholds.size() < number_expression_thresholds && prev_expression < max_count
-           && median_fraction < num_counts)
-    {
-        median_position = prev_median_position + num_counts / median_fraction;
-        std::nth_element(counts.begin() + prev_median_position, counts.begin() + median_position, counts.end());
-        expression = counts[median_position];
-        prev_median_position = median_position;
-        median_fraction = median_fraction * 2;
-
-        // If expression does not change compared to previous one, do not store it again as an expression threshold.
-        if (expression != prev_expression || expression_thresholds.empty())
-        {
-            expression_thresholds.push_back(expression);
-            sizes.push_back(prev_median_position);
-        }
-
-        prev_expression = expression;
-    }
-    sizes.push_back(prev_expression);
-    // In case not all levels have a threshold, give the last levels a maximal threshold, which can not be met by any minimiser.
-    expression_thresholds.resize(number_expression_thresholds, max_count + 1u);
-
-    assert(counts.size() == num_counts);
-}
-
 // Estimate the file size for every expression level, necessary when samplewise=false, because then it is completly
 // unclear how many minimisers are to store per file.
 void get_filsize_per_expression_level(std::filesystem::path filename,
@@ -679,30 +73,29 @@ void get_filsize_per_expression_level(std::filesystem::path filename,
                                       robin_hood::unordered_set<uint64_t> const & genome,
                                       bool all = true)
 {
-    std::ifstream fin;
+    std::ifstream fin{filename, std::ios::binary};
     uint8_t small_buffer;
     uint32_t window;
     uint64_t buffer;
-    fin.open(filename, std::ios::binary);
-    fin.read((char *)&buffer, sizeof(buffer));
-    fin.read((char *)&small_buffer, sizeof(small_buffer));
-    fin.read((char *)&small_buffer, sizeof(small_buffer));
-    fin.read((char *)&window, sizeof(window));
-    fin.read((char *)&buffer, sizeof(buffer));
+    read_stream(fin, buffer);
+    read_stream(fin, small_buffer);
+    read_stream(fin, small_buffer);
+    read_stream(fin, window);
+    read_stream(fin, buffer);
     bool ungapped;
-    fin.read((char *)&ungapped, sizeof(ungapped));
+    read_stream(fin, ungapped);
     if (!ungapped)
     {
-        fin.read((char *)&buffer, sizeof(buffer));
+        read_stream(fin, buffer);
     }
 
     uint64_t minimiser;
     uint16_t minimiser_count;
     sizes.assign(number_expression_thresholds, 0);
 
-    while (fin.read((char *)&minimiser, sizeof(minimiser)))
+    while (read_stream(fin, minimiser))
     {
-        fin.read((char *)&minimiser_count, sizeof(minimiser_count));
+        read_stream(fin, minimiser_count);
         if (all || genome.contains(minimiser))
         {
             // Find the level with the smallest greater value than the minimiser occurrence, in the level before that the
@@ -712,8 +105,6 @@ void get_filsize_per_expression_level(std::filesystem::path filename,
                 sizes[(p - expression_thresholds.begin()) - 1]++;
         }
     }
-
-    fin.close();
 }
 
 // Actual ibf construction
@@ -724,7 +115,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 std::vector<uint8_t> & cutoffs,
                 size_t num_hash = 1,
                 std::filesystem::path expression_by_genome_file = "",
-                minimiser_arguments const & minimiser_args = {})
+                minimiser_file_input_arguments const & minimiser_args = {})
 {
 
     size_t const num_files = [&]() constexpr
@@ -877,10 +268,9 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 + std::to_string(ibf_args.expression_thresholds[j]) + std::string(" on.\n")};
         }
         // m = -hn/ln(1-p^(1/h))
-        // double const elements = size;
-        double const elements = static_cast<double>(size) / num_files;
-        double const numerator = -elements * num_hash;
-        double const denominator = std::log(1 - std::exp(std::log(fprs[j]) / num_hash));
+        size = (size + num_files - 1u) / num_files;
+        double const numerator{-static_cast<double>(size * num_hash)};
+        double const denominator{std::log(1 - std::exp(std::log(fprs[j]) / num_hash))};
         size = std::ceil(numerator / denominator);
         sizes_ibf.push_back(size);
         ibfs.emplace_back(seqan3::bin_count{num_files}, seqan3::bin_size{size}, seqan3::hash_function_count{num_hash});
@@ -907,8 +297,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 std::reduce(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i);
             for (size_t f = 0; f < minimiser_args.samples[i]; f++)
             {
-                seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{
-                    minimiser_files[file_iterator + f]};
+                sequence_file_t fin{minimiser_files[file_iterator + f]};
                 if (minimiser_args.ram_friendly)
                     fill_hash_table_parallel(ibf_args,
                                              fin,
@@ -948,25 +337,21 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         // Every minimiser is stored in IBF, if it occurence is greater than or equal to the expression level
         for (auto && [hash, occurence] : hash_table)
         {
-            for (int j = ibf_args.number_expression_thresholds - 1; j >= 0; --j)
+            for (size_t const j : std::views::iota(0u, ibf_args.number_expression_thresholds) | std::views::reverse)
             {
-                if constexpr (samplewise)
+                uint16_t const threshold = [&]()
                 {
-                    if (occurence >= expressions[i][j])
-                    {
-                        ibfs[j].emplace(hash, seqan3::bin_index{i});
-                        counts_per_level[i][j]++;
-                        break;
-                    }
-                }
-                else
+                    if constexpr (samplewise)
+                        return expressions[i][j];
+                    else
+                        return ibf_args.expression_thresholds[j];
+                }();
+
+                if (occurence >= threshold)
                 {
-                    if (occurence >= ibf_args.expression_thresholds[j])
-                    {
-                        ibfs[j].emplace(hash, seqan3::bin_index{i});
-                        counts_per_level[i][j]++;
-                        break;
-                    }
+                    ibfs[j].emplace(hash, seqan3::bin_index{i});
+                    counts_per_level[i][j]++;
+                    break;
                 }
             }
         }
@@ -995,40 +380,36 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     // Store all expression thresholds per level.
     if constexpr (samplewise)
     {
-        std::ofstream outfile;
-        outfile.open(std::string{ibf_args.path_out} + "IBF_Levels.levels");
+        std::ofstream outfile{std::string{ibf_args.path_out} + "IBF_Levels.levels"};
         for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
         {
-            for (unsigned i = 0; i < num_files; i++)
+            for (size_t i = 0; i < num_files; i++)
                 outfile << expressions[i][j] << " ";
             outfile << "\n";
         }
         outfile << "/\n";
-        outfile.close();
     }
 
-    std::ofstream outfile_fpr;
-    outfile_fpr.open(std::string{ibf_args.path_out} + "IBF_FPRs.fprs");
+    std::ofstream outfile{std::string{ibf_args.path_out} + "IBF_FPRs.fprs"};
     for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
     {
-        for (unsigned i = 0; i < num_files; i++)
+        for (size_t i = 0; i < num_files; i++)
         {
             // m = -hn/ln(1-p^(1/h))
-            double const exp_arg = num_hash * counts_per_level[i][j] / static_cast<double>(sizes_ibf[j]);
+            double const exp_arg = (num_hash * counts_per_level[i][j]) / static_cast<double>(sizes_ibf[j]);
             double const log_arg = 1.0 - std::exp(-exp_arg);
             double const fpr = std::exp(num_hash * std::log(log_arg));
-            outfile_fpr << fpr << " ";
+            outfile << fpr << " ";
         }
-        outfile_fpr << "\n";
+        outfile << "\n";
     }
-    outfile_fpr << "/\n";
-    outfile_fpr.close();
+    outfile << "/\n";
 }
 
 // Create ibfs
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_files,
                           estimate_ibf_arguments & ibf_args,
-                          minimiser_arguments & minimiser_args,
+                          minimiser_file_input_arguments & minimiser_args,
                           std::vector<double> & fpr,
                           std::vector<uint8_t> & cutoffs,
                           std::filesystem::path const expression_by_genome_file,
@@ -1036,7 +417,6 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
 {
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
-    seqan3::concatenated_sequences<seqan3::dna4_vector> sequences;   // Storage for sequences in experiment files
 
     check_cutoffs_samples(sequence_files, minimiser_args.paired, minimiser_args.samples, cutoffs);
 
@@ -1048,14 +428,12 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     // Store experiment names
     if (minimiser_args.experiment_names)
     {
-        std::ofstream outfile;
-        outfile.open(std::string{ibf_args.path_out} + "Stored_Files.txt");
+        std::ofstream outfile{std::string{ibf_args.path_out} + "Stored_Files.txt"};
         for (size_t i = 0; i < minimiser_args.samples.size(); i++)
         {
             outfile << sequence_files[std::reduce(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i)]
                     << "\n";
         }
-        outfile.close();
     }
 
     if (ibf_args.samplewise)
@@ -1101,578 +479,4 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
     store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
 
     return ibf_args.expression_thresholds;
-}
-
-// Reads the level file ibf creates
-template <typename float_or_int>
-void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::filesystem::path filename)
-{
-    std::ifstream fin;
-    fin.open(filename);
-    auto stream_view = seqan3::detail::istreambuf(fin);
-    auto stream_it = std::ranges::begin(stream_view);
-    size_t j{0};
-    std::vector<float_or_int> empty_vector{};
-
-    std::string buffer{};
-
-    // Read line = expression levels
-    do
-    {
-        if (j == expressions.size())
-            expressions.push_back(empty_vector);
-        std::ranges::copy(stream_view | seqan3::detail::take_until_or_throw(seqan3::is_char<' '>),
-                          std::back_inserter(buffer));
-        if constexpr (std::same_as<uint16_t, float_or_int>)
-            expressions[j].push_back((uint16_t)std::stoi(buffer));
-        else
-            expressions[j].push_back((double)std::stod(buffer));
-        buffer.clear();
-        if (*stream_it != '/')
-            ++stream_it;
-
-        if (*stream_it == '\n')
-        {
-            ++stream_it;
-            j++;
-        }
-    }
-    while (*stream_it != '/');
-    ++stream_it;
-
-    fin.close();
-}
-
-// Actual insertion
-template <bool samplewise, bool minimiser_files_given = true>
-void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
-                   estimate_ibf_arguments & ibf_args,
-                   std::filesystem::path path_in,
-                   std::vector<uint8_t> & cutoffs,
-                   std::filesystem::path expression_by_genome_file = "",
-                   minimiser_arguments const & minimiser_args = {})
-{
-    size_t old_bin_number{};
-    size_t new_bin_number{};
-    size_t num_files;
-    int num_hash_functions{};
-
-    if constexpr (minimiser_files_given)
-        num_files = minimiser_files.size();
-    else
-        num_files = minimiser_args.samples.size();
-
-    std::vector<std::vector<uint16_t>> expressions{};
-    std::vector<std::vector<uint64_t>> counts_per_level{};
-    std::vector<uint64_t> sizes{};
-
-    bool const calculate_cutoffs = cutoffs.empty();
-
-    robin_hood::unordered_set<uint64_t> include_set_table; // Storage for minimisers in include file
-    robin_hood::unordered_set<uint64_t> exclude_set_table; // Storage for minimisers in exclude file
-    if constexpr (samplewise)
-    {
-        std::vector<uint16_t> zero_vector(ibf_args.number_expression_thresholds);
-        for (unsigned j = 0; j < num_files; j++)
-            expressions.push_back(zero_vector);
-    }
-
-    std::vector<uint64_t> zero_vector2(ibf_args.number_expression_thresholds);
-    for (unsigned j = 0; j < num_files; j++)
-        counts_per_level.push_back(zero_vector2);
-
-    if constexpr (!minimiser_files_given)
-    {
-        if (minimiser_args.include_file != "")
-            get_include_set_table(ibf_args, minimiser_args.include_file, include_set_table);
-        if (minimiser_args.exclude_file != "")
-            get_include_set_table(ibf_args, minimiser_args.exclude_file, exclude_set_table);
-    }
-
-    // I/O inside OpenMP region
-    if (minimiser_args.ram_friendly)
-    {
-        seqan3::contrib::bgzf_thread_count = ibf_args.threads;
-        omp_set_num_threads(1);
-    }
-    else
-    {
-        seqan3::contrib::bgzf_thread_count = 1u;
-        omp_set_num_threads(ibf_args.threads);
-    }
-
-    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / ibf_args.threads), 8u, 64u);
-
-    // If expression_thresholds should only be depending on minimsers in a certain genome file, genome is created.
-    robin_hood::unordered_set<uint64_t> genome{};
-    if (expression_by_genome_file != "")
-        get_include_set_table(ibf_args, expression_by_genome_file, genome);
-    bool const expression_by_genome = (expression_by_genome_file == "");
-
-    // Check, if there are deleted bins
-    std::vector<uint64_t> pos_insert{};
-    if (std::filesystem::exists(path_in.string() + "IBF_Deleted"))
-    {
-        std::ifstream fin;
-        fin.open(path_in.string() + "IBF_Deleted");
-        uint64_t number;
-
-        while (fin >> number)
-        {
-            pos_insert.push_back(number);
-        }
-        fin.close();
-    }
-    int num_deleted = pos_insert.size();
-
-    // Adjust IBFs
-    std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
-    for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
-    {
-        seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf_load{};
-        if constexpr (samplewise)
-            load_ibf(ibf_load, path_in.string() + "IBF_Level_" + std::to_string(j));
-        else
-            load_ibf(ibf_load, path_in.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[j]));
-
-        old_bin_number = ibf_load.bin_count();
-        new_bin_number = old_bin_number + num_files - num_deleted;
-        if (new_bin_number > old_bin_number)
-            ibf_load.increase_bin_number_to(seqan3::bin_count{new_bin_number});
-        ibfs.push_back(ibf_load);
-
-        num_hash_functions = ibf_load.hash_function_count();
-        sizes.push_back(ibf_load.bin_size());
-    }
-
-    for (unsigned j = old_bin_number; j < new_bin_number; j++)
-        pos_insert.push_back(j);
-
-// Add minimisers to ibf
-#pragma omp parallel for schedule(dynamic, chunk_size)
-    for (unsigned i = 0; i < num_files; i++)
-    {
-        robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
-        // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
-        // and afterwards discarded.
-        robin_hood::unordered_node_map<uint64_t, uint8_t> cutoff_table;
-        std::vector<uint16_t> expression_thresholds;
-
-        // Fill hash table with minimisers.
-        if constexpr (minimiser_files_given)
-        {
-            read_binary(minimiser_files[i], hash_table);
-            uint8_t cutoff;
-            uint64_t tmp_var{};
-            read_binary_start(ibf_args, minimiser_files[i], tmp_var, cutoff);
-            cutoffs.push_back(cutoff);
-        }
-        else
-        {
-            // Estimate sizes on filesize, assuming every byte translates to one letter (which is obiously not true,
-            // because ids contain letters as well), so size might be overestimated. TODO: Find a better estimation!
-            size_t const file_iterator =
-                std::reduce(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i);
-            uint64_t filesize{};
-            // Determine cutoffs
-            if (calculate_cutoffs)
-                cutoffs.push_back(calculate_cutoff(minimiser_files[file_iterator], minimiser_args.samples[i]));
-
-            bool const is_compressed = minimiser_files[file_iterator].extension() == ".gz"
-                                    || minimiser_files[file_iterator].extension() == ".bgzf"
-                                    || minimiser_files[file_iterator].extension() == ".bz2";
-            bool const is_fasta = is_compressed ? check_for_fasta_format(seqan3::format_fasta::file_extensions,
-                                                                         minimiser_files[file_iterator].stem())
-                                                : check_for_fasta_format(seqan3::format_fasta::file_extensions,
-                                                                         minimiser_files[file_iterator].extension());
-            filesize = std::filesystem::file_size(minimiser_files[file_iterator]) * minimiser_args.samples[i]
-                     * (is_fasta ? 2 : 1) / (is_compressed ? 1 : 3);
-            filesize = filesize / ((cutoffs[i] + 1) * (is_fasta ? 1 : 2));
-
-            for (size_t f = 0; f < minimiser_args.samples[i]; f++)
-            {
-                seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{
-                    minimiser_files[file_iterator + f]};
-                if (minimiser_args.ram_friendly)
-                    fill_hash_table_parallel(ibf_args,
-                                             fin,
-                                             hash_table,
-                                             cutoff_table,
-                                             include_set_table,
-                                             exclude_set_table,
-                                             (minimiser_args.include_file != ""),
-                                             cutoffs[i]);
-                else
-                    fill_hash_table(ibf_args,
-                                    fin,
-                                    hash_table,
-                                    cutoff_table,
-                                    include_set_table,
-                                    exclude_set_table,
-                                    (minimiser_args.include_file != ""),
-                                    cutoffs[i]);
-            }
-            cutoff_table.clear();
-        }
-
-        // If set_expression_thresholds_samplewise is not set the expressions as determined by the first file are used for
-        // all files.
-        if constexpr (samplewise)
-        {
-            std::vector<uint64_t> sizes_tmp{};
-            get_expression_thresholds(ibf_args.number_expression_thresholds,
-                                      hash_table,
-                                      expression_thresholds,
-                                      sizes_tmp,
-                                      genome,
-                                      cutoffs[i],
-                                      expression_by_genome);
-            expressions[i] = expression_thresholds;
-            sizes_tmp.clear();
-        }
-
-        // Every minimiser is stored in IBF, if it occurence is greater than or equal to the expression level
-        for (auto && elem : hash_table)
-        {
-            for (int j = ibf_args.number_expression_thresholds - 1; j >= 0; --j)
-            {
-                if constexpr (samplewise)
-                {
-                    if (elem.second >= expressions[i][j])
-                    {
-                        ibfs[j].emplace(elem.first, seqan3::bin_index{pos_insert[i]});
-                        counts_per_level[i][j]++;
-                        break;
-                    }
-                }
-                else
-                {
-                    if (elem.second >= ibf_args.expression_thresholds[j])
-                    {
-                        ibfs[j].emplace(elem.first, seqan3::bin_index{pos_insert[i]});
-                        counts_per_level[i][j]++;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    // Store IBFs
-    for (unsigned i = 0; i < ibf_args.number_expression_thresholds; i++)
-    {
-        std::filesystem::path filename;
-        if constexpr (samplewise)
-            filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(i);
-        else
-            filename = ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[i]);
-
-        if (ibf_args.compressed)
-        {
-            seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf{ibfs[i]};
-            store_ibf(ibf, filename);
-        }
-        else
-        {
-            store_ibf(ibfs[i], filename);
-        }
-    }
-
-    // Store all expression thresholds per level.
-    if constexpr (samplewise)
-    {
-        std::vector<std::vector<uint16_t>> expressions_prev{};
-        read_levels<uint16_t>(expressions_prev, path_in.string() + "IBF_Levels.levels");
-
-        std::ofstream outfile;
-        outfile.open(std::string{ibf_args.path_out} + "IBF_Levels.levels");
-        for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
-        {
-            int exp_i = 0;
-            for (unsigned i = 0; i < new_bin_number; i++)
-            {
-
-                if (std::find(pos_insert.begin(), pos_insert.end(), i) != pos_insert.end())
-                {
-                    outfile << expressions[exp_i][j] << " ";
-                    exp_i++;
-                }
-                else
-                {
-                    outfile << expressions_prev[j][i] << " ";
-                }
-            }
-            outfile << "\n";
-        }
-        outfile << "/\n";
-        outfile.close();
-    }
-
-    // Store all fprs per level.
-    std::vector<std::vector<double>> fprs_prev{};
-    read_levels<double>(fprs_prev, path_in.string() + "IBF_FPRs.fprs");
-
-    std::ofstream outfile_fpr;
-    outfile_fpr.open(std::string{ibf_args.path_out} + "IBF_FPRs.fprs");
-    for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
-    {
-        int exp_i = 0;
-        for (unsigned i = 0; i < new_bin_number; i++)
-        {
-            if (std::find(pos_insert.begin(), pos_insert.end(), i) != pos_insert.end())
-            {
-                // m = -hn/ln(1-p^(1/h))
-                double const exp_arg = num_hash_functions * counts_per_level[exp_i][j] / static_cast<double>(sizes[j]);
-                double const log_arg = 1.0 - std::exp(-exp_arg);
-                double const fpr = std::exp(num_hash_functions * std::log(log_arg));
-                outfile_fpr << fpr << " ";
-                exp_i++;
-            }
-            else
-            {
-                outfile_fpr << fprs_prev[j][i] << " ";
-            }
-        }
-        outfile_fpr << "\n";
-    }
-    outfile_fpr << "/\n";
-    outfile_fpr.close();
-}
-
-// Insert into ibfs
-std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & sequence_files,
-                             estimate_ibf_arguments & ibf_args,
-                             minimiser_arguments & minimiser_args,
-                             std::vector<uint8_t> & cutoffs,
-                             std::filesystem::path const expression_by_genome_file,
-                             std::filesystem::path path_in,
-                             bool samplewise)
-{
-    // Declarations
-    robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
-    seqan3::concatenated_sequences<seqan3::dna4_vector> sequences;   // Storage for sequences in experiment files
-
-    check_cutoffs_samples(sequence_files, minimiser_args.paired, minimiser_args.samples, cutoffs);
-    load_args(ibf_args, std::string{path_in} + "IBF_Data");
-
-    if (samplewise)
-        insert_helper<true, false>(sequence_files,
-                                   ibf_args,
-                                   path_in,
-                                   cutoffs,
-                                   expression_by_genome_file,
-                                   minimiser_args);
-    else
-        insert_helper<false, false>(sequence_files,
-                                    ibf_args,
-                                    path_in,
-                                    cutoffs,
-                                    expression_by_genome_file,
-                                    minimiser_args);
-
-    store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
-    return ibf_args.expression_thresholds;
-}
-
-// Insert into ibfs based on the minimiser file
-std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & minimiser_files,
-                             estimate_ibf_arguments & ibf_args,
-                             std::filesystem::path const expression_by_genome_file,
-                             std::filesystem::path path_in,
-                             bool samplewise)
-{
-    std::vector<uint8_t> cutoffs{};
-    load_args(ibf_args, std::string{path_in} + "IBF_Data");
-    if (samplewise)
-        insert_helper<true>(minimiser_files, ibf_args, path_in, cutoffs, expression_by_genome_file);
-    else
-        insert_helper<false>(minimiser_files, ibf_args, path_in, cutoffs, expression_by_genome_file);
-
-    store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
-
-    return ibf_args.expression_thresholds;
-}
-
-// Delete from ibfs
-void delete_bin(std::vector<uint64_t> const & delete_files,
-                estimate_ibf_arguments & ibf_args,
-                std::filesystem::path path_in,
-                bool samplewise)
-{
-    load_args(ibf_args, std::string{path_in} + "IBF_Data");
-
-    std::vector<seqan3::bin_index> bins_to_delete{};
-    for (size_t i = 0; i < delete_files.size(); i++)
-        bins_to_delete.push_back(seqan3::bin_index{delete_files[i]});
-
-    omp_set_num_threads(ibf_args.threads);
-
-// Delete bins from ibfs
-#pragma omp parallel
-    for (unsigned i = 0; i < ibf_args.number_expression_thresholds; i++)
-    {
-        std::filesystem::path filename;
-        if (samplewise)
-            filename = path_in.string() + "IBF_Level_" + std::to_string(i);
-        else
-            filename = path_in.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[i]);
-
-        seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
-        load_ibf(ibf, filename);
-        ibf.clear(bins_to_delete);
-
-        if (samplewise)
-            filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(i);
-        else
-            filename = ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[i]);
-
-        if (ibf_args.compressed)
-        {
-            seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibfc{std::move(ibf)};
-            store_ibf(ibfc, filename);
-        }
-        else
-        {
-            store_ibf(ibf, filename);
-        }
-    }
-
-    // Store deleted bins
-    std::ofstream outfile;
-    outfile.open(std::string{ibf_args.path_out} + "IBF_Deleted");
-    for (auto & deleted : delete_files)
-    {
-        outfile << deleted << ",";
-    }
-    outfile << "\n";
-    outfile.close();
-}
-
-// Actuall minimiser calculation
-template <bool parallel = false>
-void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_files,
-                         robin_hood::unordered_set<uint64_t> const & include_set_table,
-                         robin_hood::unordered_set<uint64_t> const & exclude_set_table,
-                         min_arguments const & args,
-                         minimiser_arguments const & minimiser_args,
-                         unsigned const i,
-                         std::vector<uint8_t> & cutoffs)
-{
-    robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
-    uint8_t cutoff{0};
-
-    // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
-    // and afterwards discarded.
-    robin_hood::unordered_node_map<uint64_t, uint8_t> cutoff_table;
-    std::ofstream outfile;
-    size_t const file_iterator = std::reduce(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i);
-
-    bool const calculate_cutoffs = cutoffs.empty();
-
-    if (calculate_cutoffs)
-        cutoff = calculate_cutoff(sequence_files[file_iterator], minimiser_args.samples[i]);
-    else
-        cutoff = cutoffs[i];
-
-    // Fill hash_table with minimisers.
-    for (size_t f = 0; f < minimiser_args.samples[i]; f++)
-    {
-        seqan3::sequence_file_input<my_traits, seqan3::fields<seqan3::field::seq>> fin{
-            sequence_files[file_iterator + f]};
-        if constexpr (parallel)
-        {
-            fill_hash_table_parallel(args,
-                                     fin,
-                                     hash_table,
-                                     cutoff_table,
-                                     include_set_table,
-                                     exclude_set_table,
-                                     (minimiser_args.include_file != ""),
-                                     cutoff);
-        }
-        else
-        {
-            fill_hash_table(args,
-                            fin,
-                            hash_table,
-                            cutoff_table,
-                            include_set_table,
-                            exclude_set_table,
-                            (minimiser_args.include_file != ""),
-                            cutoff);
-        }
-    }
-    cutoff_table.clear();
-
-    // Write minimiser and their counts to binary
-    outfile.open(std::string{args.path_out} + std::string{sequence_files[file_iterator].stem()} + ".minimiser",
-                 std::ios::binary);
-    auto hash_size = hash_table.size();
-
-    outfile.write(reinterpret_cast<char const *>(&hash_size), sizeof(hash_size));
-    outfile.write(reinterpret_cast<char const *>(&cutoff), sizeof(cutoff));
-    outfile.write(reinterpret_cast<char const *>(&args.k), sizeof(args.k));
-    outfile.write(reinterpret_cast<char const *>(&args.w_size), sizeof(args.w_size));
-    outfile.write(reinterpret_cast<char const *>(&args.s), sizeof(args.s));
-    bool ungapped = args.shape.all();
-    outfile.write(reinterpret_cast<char const *>(&ungapped), sizeof(ungapped));
-
-    if (!ungapped)
-    {
-        outfile.write(reinterpret_cast<char const *>(&args.shape), sizeof(args.shape));
-    }
-
-    for (auto && hash : hash_table)
-    {
-        outfile.write(reinterpret_cast<char const *>(&hash.first), sizeof(hash.first));
-        outfile.write(reinterpret_cast<char const *>(&hash.second), sizeof(hash.second));
-    }
-    outfile.close();
-}
-
-void minimiser(std::vector<std::filesystem::path> const & sequence_files,
-               min_arguments const & args,
-               minimiser_arguments & minimiser_args,
-               std::vector<uint8_t> & cutoffs)
-{
-    // Declarations
-    robin_hood::unordered_set<uint64_t> include_set_table{}; // Storage for minimisers in include file
-    robin_hood::unordered_set<uint64_t> exclude_set_table{}; // Storage for minimisers in exclude file
-
-    check_cutoffs_samples(sequence_files, minimiser_args.paired, minimiser_args.samples, cutoffs);
-
-    if (minimiser_args.include_file != "")
-        get_include_set_table(args, minimiser_args.include_file, include_set_table);
-    if (minimiser_args.exclude_file != "")
-        get_include_set_table(args, minimiser_args.exclude_file, exclude_set_table);
-
-    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(minimiser_args.samples.size() / args.threads), 1u, 64u);
-
-    // Add minimisers to ibf
-    if (minimiser_args.ram_friendly)
-    {
-        seqan3::contrib::bgzf_thread_count = args.threads;
-        for (size_t i = 0; i < minimiser_args.samples.size(); i++)
-        {
-            calculate_minimiser<true>(sequence_files,
-                                      include_set_table,
-                                      exclude_set_table,
-                                      args,
-                                      minimiser_args,
-                                      i,
-                                      cutoffs);
-        }
-    }
-    else
-    {
-        // I/O inside OpenMP region
-        seqan3::contrib::bgzf_thread_count = 1u;
-        omp_set_num_threads(args.threads);
-
-#pragma omp parallel for schedule(dynamic, chunk_size)
-        for (size_t i = 0; i < minimiser_args.samples.size(); i++)
-        {
-            calculate_minimiser(sequence_files, include_set_table, exclude_set_table, args, minimiser_args, i, cutoffs);
-        }
-    }
 }

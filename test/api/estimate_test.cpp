@@ -11,6 +11,7 @@
 #include "../app_test.hpp"
 #include "estimate.hpp"
 #include "ibf.hpp"
+#include "minimiser.hpp"
 #include "shared.hpp"
 
 // To prevent issues when running multiple CLI tests in parallel, give each CLI test unique names:
@@ -30,7 +31,7 @@ struct estimate_test : public app_test
 TEST_F(estimate_test, small_example)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     initialization_args(ibf_args);
     ibf_args.expression_thresholds = {1, 2, 4};
@@ -52,7 +53,7 @@ TEST_F(estimate_test, small_example)
 TEST_F(estimate_test, small_example_uncompressed)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     initialization_args(ibf_args);
     ibf_args.compressed = false;
@@ -75,7 +76,7 @@ TEST_F(estimate_test, small_example_uncompressed)
 TEST_F(estimate_test, small_example_gene_not_found)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     initialization_args(ibf_args);
     ibf_args.expression_thresholds = {2, 4};
@@ -106,7 +107,7 @@ TEST_F(estimate_test, small_example_gene_not_found)
 TEST_F(estimate_test, small_example_different_expressions_per_level)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     initialization_args(ibf_args);
     ibf_args.number_expression_thresholds = 2;
@@ -134,7 +135,7 @@ TEST_F(estimate_test, small_example_different_expressions_per_level)
 TEST_F(estimate_test, small_example_different_expressions_per_level_normalization_1)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     estimate_args.normalization_method = 1;
     estimate_args.batch_size = 1;
@@ -164,7 +165,7 @@ TEST_F(estimate_test, small_example_different_expressions_per_level_normalizatio
 TEST_F(estimate_test, small_example_different_expressions_per_level_normalization_1_uncompressed)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     estimate_args.normalization_method = 1;
     initialization_args(ibf_args);
@@ -194,7 +195,7 @@ TEST_F(estimate_test, small_example_different_expressions_per_level_normalizatio
 TEST_F(estimate_test, example)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta"),
@@ -229,7 +230,7 @@ TEST_F(estimate_test, example)
 TEST_F(estimate_test, example_multiple_threads)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta"),
                                                          data("exp_02.fasta"),
@@ -265,7 +266,7 @@ TEST_F(estimate_test, example_multiple_threads)
 TEST_F(estimate_test, example_different_expressions_per_level)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta"),
                                                          data("exp_02.fasta"),
@@ -307,7 +308,7 @@ TEST_F(estimate_test, example_different_expressions_per_level)
 TEST_F(estimate_test, example_different_expressions_per_level_multiple_threads)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     std::vector<std::filesystem::path> sequence_files = {data("exp_01.fasta"),
                                                          data("exp_02.fasta"),

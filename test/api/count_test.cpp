@@ -9,6 +9,7 @@
 #include <seqan3/test/expect_range_eq.hpp>
 
 #include "../app_test.hpp"
+#include "count.hpp"
 #include "ibf.hpp"
 #include "shared.hpp"
 

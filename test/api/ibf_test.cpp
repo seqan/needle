@@ -28,7 +28,7 @@ struct ibf_test : public app_test
 TEST_F(ibf_test, given_expression_thresholds)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.path_out = "IBF_Test_Exp_";
     ibf_args.expression_thresholds = {1, 2};
@@ -75,7 +75,7 @@ TEST_F(ibf_test, given_expression_thresholds)
 TEST_F(ibf_test, given_expression_thresholds_include_file)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.path_out = "IBF_Test_Include_";
     ibf_args.expression_thresholds = {1, 2};
@@ -108,7 +108,7 @@ TEST_F(ibf_test, given_expression_thresholds_include_file)
 TEST_F(ibf_test, given_expression_thresholds_exclude_file)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.path_out = "IBF_Test_Exclude_";
     ibf_args.expression_thresholds = {1, 2};
@@ -141,7 +141,7 @@ TEST_F(ibf_test, given_expression_thresholds_exclude_file)
 TEST_F(ibf_test, no_given_expression_thresholds)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.path_out = "IBF_Test_";
     ibf_args.number_expression_thresholds = 2;
@@ -174,7 +174,7 @@ TEST_F(ibf_test, no_given_expression_thresholds)
 TEST_F(ibf_test, expression_thresholds_by_genome)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.path_out = "IBF_Test_";
     ibf_args.number_expression_thresholds = 1;
@@ -207,7 +207,7 @@ TEST_F(ibf_test, expression_thresholds_by_genome)
 TEST_F(ibf_test, throws)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     std::vector<uint8_t> cutoffs{};
     initialization_args(ibf_args);
     ibf_args.path_out = "IBF_Test_";
@@ -230,7 +230,7 @@ TEST_F(ibf_test, throws)
 TEST_F(ibf_test, given_cutoffs)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.path_out = "IBF_Test_Cut_";
     ibf_args.expression_thresholds = {1, 2};
@@ -276,7 +276,7 @@ TEST_F(ibf_test, given_cutoffs)
 TEST_F(ibf_test, different_file_sizes)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(ibf_args);
     ibf_args.path_out = "IBF_Test_Diff_";
     ibf_args.number_expression_thresholds = 4;

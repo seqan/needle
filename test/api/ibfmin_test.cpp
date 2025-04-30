@@ -10,6 +10,7 @@
 
 #include "../app_test.hpp"
 #include "ibf.hpp"
+#include "minimiser.hpp"
 #include "shared.hpp"
 
 // To prevent issues when running multiple CLI tests in parallel, give each CLI test unique names:
@@ -175,7 +176,7 @@ TEST_F(ibfmin_test, no_given_expression_thresholds_multiple_threads)
 TEST_F(ibfmin_test, different_shape)
 {
     estimate_ibf_arguments ibf_args{};
-    minimiser_arguments minimiser_args{};
+    minimiser_file_input_arguments minimiser_args{};
     initialization_args(ibf_args);
     std::vector<uint8_t> cutoffs = {0};
     ibf_args.shape = seqan3::bin_literal{11};
