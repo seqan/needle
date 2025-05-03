@@ -30,7 +30,7 @@ CPMDeclarePackage (sharg
 )
 
 # googletest
-set (NEEDLE_GOOGLETEST_VERSION 1.16.0 CACHE STRING "")
+set (NEEDLE_GOOGLETEST_VERSION 1.17.0 CACHE STRING "")
 CPMDeclarePackage (googletest
                    NAME GTest
                    VERSION ${NEEDLE_GOOGLETEST_VERSION}
