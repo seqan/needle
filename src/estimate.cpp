@@ -10,9 +10,9 @@
 #include "misc/read_levels.hpp"
 
 // Actual estimation
-template <class IBFType, bool last_exp, bool normalization, typename exp_t>
+template <typename ibf_t, bool last_exp, bool normalization, typename exp_t>
 void check_ibf(minimiser_arguments const & args,
-               IBFType const & ibf,
+               ibf_t const & ibf,
                std::vector<uint16_t> & estimations_i,
                seqan3::dna4_vector const & seq,
                std::vector<float> & prev_counts,
@@ -110,9 +110,9 @@ void check_ibf(minimiser_arguments const & args,
 *  \param file_out    The output file.
 *  \param estimate_args  The estimate arguments.
 */
-template <class IBFType, bool samplewise, bool normalization_method = false>
+template <typename ibf_t, bool samplewise, bool normalization_method = false>
 void estimate(estimate_ibf_arguments & args,
-              IBFType & ibf,
+              ibf_t & ibf,
               std::filesystem::path file_out,
               estimate_arguments const & estimate_args)
 {
@@ -137,9 +137,10 @@ void estimate(estimate_ibf_arguments & args,
     std::vector<uint64_t> const deleted = [&]()
     {
         std::vector<uint64_t> result;
-        if (std::filesystem::exists(filenames::deleted(estimate_args.path_in)))
+        if (std::filesystem::path const deleted_files_path = filenames::deleted(estimate_args.path_in);
+            std::filesystem::exists(deleted_files_path))
         {
-            std::ifstream fin{filenames::deleted(estimate_args.path_in)};
+            std::ifstream fin{deleted_files_path};
             uint64_t number;
 
             while (fin >> number)
@@ -209,27 +210,27 @@ void estimate(estimate_ibf_arguments & args,
     {
         if constexpr (samplewise)
         {
-            check_ibf<IBFType, is_last_level, normalization_method>(args,
-                                                                    ibf,
-                                                                    estimations[i],
-                                                                    seqs[i],
-                                                                    prev_counts[i],
-                                                                    expressions,
-                                                                    level,
-                                                                    fprs[level],
-                                                                    deleted);
+            check_ibf<ibf_t, is_last_level, normalization_method>(args,
+                                                                  ibf,
+                                                                  estimations[i],
+                                                                  seqs[i],
+                                                                  prev_counts[i],
+                                                                  expressions,
+                                                                  level,
+                                                                  fprs[level],
+                                                                  deleted);
         }
         else
         {
-            check_ibf<IBFType, is_last_level, false>(args,
-                                                     ibf,
-                                                     estimations[i],
-                                                     seqs[i],
-                                                     prev_counts[i],
-                                                     args.expression_thresholds[level],
-                                                     prev_expression,
-                                                     fprs[level],
-                                                     deleted);
+            check_ibf<ibf_t, is_last_level, false>(args,
+                                                   ibf,
+                                                   estimations[i],
+                                                   seqs[i],
+                                                   prev_counts[i],
+                                                   args.expression_thresholds[level],
+                                                   prev_expression,
+                                                   fprs[level],
+                                                   deleted);
         }
     };
 

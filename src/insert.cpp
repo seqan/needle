@@ -82,9 +82,10 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
     // Check, if there are deleted bins
     std::vector<uint64_t> pos_insert{};
-    if (std::filesystem::exists(filenames::deleted(path_in)))
+    if (std::filesystem::path const deleted_files_path = filenames::deleted(path_in);
+        std::filesystem::exists(deleted_files_path))
     {
-        std::ifstream fin{filenames::deleted(path_in)};
+        std::ifstream fin{deleted_files_path};
         uint64_t number;
 
         while (fin >> number)
