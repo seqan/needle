@@ -7,6 +7,7 @@
 #include "misc/calculate_cutoff.hpp"
 #include "misc/check_cutoffs_samples.hpp"
 #include "misc/check_for_fasta_format.hpp"
+#include "misc/filenames.hpp"
 #include "misc/fill_hash_table.hpp"
 #include "misc/get_expression_thresholds.hpp"
 #include "misc/get_include_set_table.hpp"
@@ -81,9 +82,9 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
     // Check, if there are deleted bins
     std::vector<uint64_t> pos_insert{};
-    if (std::filesystem::exists(path_in.string() + "IBF_Deleted"))
+    if (std::filesystem::exists(filenames::deleted(path_in)))
     {
-        std::ifstream fin{path_in.string() + "IBF_Deleted"};
+        std::ifstream fin{filenames::deleted(path_in)};
         uint64_t number;
 
         while (fin >> number)
@@ -98,10 +99,7 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
     for (size_t j = 0; j < ibf_args.number_expression_thresholds; j++)
     {
         seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf_load{};
-        if constexpr (samplewise)
-            load_ibf(ibf_load, path_in.string() + "IBF_Level_" + std::to_string(j));
-        else
-            load_ibf(ibf_load, path_in.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[j]));
+        load_ibf(ibf_load, filenames::ibf(path_in, samplewise, j, ibf_args));
 
         old_bin_number = ibf_load.bin_count();
         new_bin_number = old_bin_number + num_files - num_deleted;
@@ -224,11 +222,7 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
     // Store IBFs
     for (unsigned i = 0; i < ibf_args.number_expression_thresholds; i++)
     {
-        std::filesystem::path filename;
-        if constexpr (samplewise)
-            filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(i);
-        else
-            filename = ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[i]);
+        std::filesystem::path const filename = filenames::ibf(ibf_args.path_out, samplewise, i, ibf_args);
 
         if (ibf_args.compressed)
         {
@@ -245,9 +239,9 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
     if constexpr (samplewise)
     {
         std::vector<std::vector<uint16_t>> expressions_prev{};
-        read_levels<uint16_t>(expressions_prev, path_in.string() + "IBF_Levels.levels");
+        read_levels<uint16_t>(expressions_prev, filenames::levels(path_in));
 
-        std::ofstream outfile{std::string{ibf_args.path_out} + "IBF_Levels.levels"};
+        std::ofstream outfile{filenames::levels(ibf_args.path_out)};
         for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
         {
             int exp_i = 0;
@@ -270,9 +264,9 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
     // Store all fprs per level.
     std::vector<std::vector<double>> fprs_prev{};
-    read_levels<double>(fprs_prev, path_in.string() + "IBF_FPRs.fprs");
+    read_levels<double>(fprs_prev, filenames::fprs(path_in));
 
-    std::ofstream outfile{std::string{ibf_args.path_out} + "IBF_FPRs.fprs"};
+    std::ofstream outfile{filenames::fprs(ibf_args.path_out)};
     for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
     {
         size_t exp_i = 0;
@@ -311,7 +305,7 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & sequence
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
 
     check_cutoffs_samples(sequence_files, minimiser_args.paired, minimiser_args.samples, cutoffs);
-    load_args(ibf_args, std::string{path_in} + "IBF_Data");
+    load_args(ibf_args, filenames::data(path_in));
 
     if (samplewise)
         insert_helper<true, false>(sequence_files,
@@ -328,7 +322,7 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & sequence
                                     expression_by_genome_file,
                                     minimiser_args);
 
-    store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
+    store_args(ibf_args, filenames::data(ibf_args.path_out));
     return ibf_args.expression_thresholds;
 }
 
@@ -340,13 +334,13 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & minimise
                              bool samplewise)
 {
     std::vector<uint8_t> cutoffs{};
-    load_args(ibf_args, std::string{path_in} + "IBF_Data");
+    load_args(ibf_args, filenames::data(path_in));
     if (samplewise)
         insert_helper<true>(minimiser_files, ibf_args, path_in, cutoffs, expression_by_genome_file);
     else
         insert_helper<false>(minimiser_files, ibf_args, path_in, cutoffs, expression_by_genome_file);
 
-    store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
+    store_args(ibf_args, filenames::data(ibf_args.path_out));
 
     return ibf_args.expression_thresholds;
 }

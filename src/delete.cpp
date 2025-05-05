@@ -4,13 +4,15 @@
 
 #include "delete.hpp"
 
+#include "misc/filenames.hpp"
+
 // Delete from ibfs
 void delete_bin(std::vector<uint64_t> const & delete_files,
                 estimate_ibf_arguments & ibf_args,
                 std::filesystem::path path_in,
                 bool samplewise)
 {
-    load_args(ibf_args, std::string{path_in} + "IBF_Data");
+    load_args(ibf_args, filenames::data(path_in));
 
     std::vector<seqan3::bin_index> bins_to_delete{};
     for (size_t i = 0; i < delete_files.size(); i++)
@@ -22,20 +24,13 @@ void delete_bin(std::vector<uint64_t> const & delete_files,
 #pragma omp parallel
     for (unsigned i = 0; i < ibf_args.number_expression_thresholds; i++)
     {
-        std::filesystem::path filename;
-        if (samplewise)
-            filename = path_in.string() + "IBF_Level_" + std::to_string(i);
-        else
-            filename = path_in.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[i]);
+        std::filesystem::path filename = filenames::ibf(path_in, samplewise, i, ibf_args);
 
         seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed> ibf;
         load_ibf(ibf, filename);
         ibf.clear(bins_to_delete);
 
-        if (samplewise)
-            filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(i);
-        else
-            filename = ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[i]);
+        filename = filenames::ibf(ibf_args.path_out, samplewise, i, ibf_args);
 
         if (ibf_args.compressed)
         {
@@ -49,7 +44,7 @@ void delete_bin(std::vector<uint64_t> const & delete_files,
     }
 
     // Store deleted bins
-    std::ofstream outfile{std::string{ibf_args.path_out} + "IBF_Deleted"};
+    std::ofstream outfile{filenames::deleted(ibf_args.path_out)};
     for (auto & deleted : delete_files)
     {
         outfile << deleted << ",";

@@ -6,6 +6,7 @@
 
 #include <cereal/archives/binary.hpp>
 
+#include "misc/filenames.hpp"
 #include "misc/read_levels.hpp"
 
 // Actual estimation
@@ -122,23 +123,23 @@ void estimate(estimate_ibf_arguments & args,
     {
         std::vector<std::vector<uint16_t>> result;
         if constexpr (samplewise)
-            read_levels<uint16_t>(result, estimate_args.path_in.string() + "IBF_Levels.levels");
+            read_levels<uint16_t>(result, filenames::levels(estimate_args.path_in));
         return result;
     }();
 
     std::vector<std::vector<double>> const fprs = [&]()
     {
         std::vector<std::vector<double>> result;
-        read_levels<double>(result, estimate_args.path_in.string() + "IBF_FPRs.fprs");
+        read_levels<double>(result, filenames::fprs(estimate_args.path_in));
         return result;
     }();
 
     std::vector<uint64_t> const deleted = [&]()
     {
         std::vector<uint64_t> result;
-        if (std::filesystem::exists(estimate_args.path_in.string() + "IBF_Deleted"))
+        if (std::filesystem::exists(filenames::deleted(estimate_args.path_in)))
         {
-            std::ifstream fin{estimate_args.path_in.string() + "IBF_Deleted"};
+            std::ifstream fin{filenames::deleted(estimate_args.path_in)};
             uint64_t number;
 
             while (fin >> number)
@@ -249,11 +250,7 @@ void estimate(estimate_ibf_arguments & args,
         bool is_last_level = true;
         for (size_t const level : std::views::iota(0u, args.number_expression_thresholds) | std::views::reverse)
         {
-            if constexpr (samplewise)
-                load_ibf(ibf, estimate_args.path_in.string() + "IBF_Level_" + std::to_string(level));
-            else
-                load_ibf(ibf,
-                         estimate_args.path_in.string() + "IBF_" + std::to_string(args.expression_thresholds[level]));
+            load_ibf(ibf, filenames::ibf(estimate_args.path_in, samplewise, level, args));
 
             // If there are less records than the batch size, only use as much as needed.
             if (!counters_initialised)
@@ -288,7 +285,7 @@ void estimate(estimate_ibf_arguments & args,
 // Calls the correct form of estimate
 void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_args)
 {
-    load_args(args, std::string{estimate_args.path_in} + "IBF_Data");
+    load_args(args, filenames::data(estimate_args.path_in));
 
     auto call = [&]<typename ibf_t>(ibf_t && ibf)
     {

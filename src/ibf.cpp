@@ -9,6 +9,7 @@
 #include "misc/calculate_cutoff.hpp"
 #include "misc/check_cutoffs_samples.hpp"
 #include "misc/check_for_fasta_format.hpp"
+#include "misc/filenames.hpp"
 #include "misc/fill_hash_table.hpp"
 #include "misc/get_expression_thresholds.hpp"
 #include "misc/get_include_set_table.hpp"
@@ -363,11 +364,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     // Store IBFs
     for (unsigned i = 0; i < ibf_args.number_expression_thresholds; i++)
     {
-        std::filesystem::path filename;
-        if constexpr (samplewise)
-            filename = ibf_args.path_out.string() + "IBF_Level_" + std::to_string(i);
-        else
-            filename = ibf_args.path_out.string() + "IBF_" + std::to_string(ibf_args.expression_thresholds[i]);
+        std::filesystem::path const filename = filenames::ibf(ibf_args.path_out, samplewise, i, ibf_args);
 
         if (ibf_args.compressed)
         {
@@ -383,7 +380,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     // Store all expression thresholds per level.
     if constexpr (samplewise)
     {
-        std::ofstream outfile{std::string{ibf_args.path_out} + "IBF_Levels.levels"};
+        std::ofstream outfile{filenames::levels(ibf_args.path_out)};
         for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
         {
             for (size_t i = 0; i < num_files; i++)
@@ -393,7 +390,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         outfile << "/\n";
     }
 
-    std::ofstream outfile{std::string{ibf_args.path_out} + "IBF_FPRs.fprs"};
+    std::ofstream outfile{filenames::fprs(ibf_args.path_out)};
     for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
     {
         for (size_t i = 0; i < num_files; i++)
@@ -431,7 +428,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
     // Store experiment names
     if (minimiser_args.experiment_names)
     {
-        std::ofstream outfile{std::string{ibf_args.path_out} + "Stored_Files.txt"};
+        std::ofstream outfile{filenames::stored(ibf_args.path_out)};
         for (size_t i = 0; i < minimiser_args.samples.size(); i++)
         {
             outfile << sequence_files[std::reduce(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i)]
@@ -456,7 +453,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
                                  expression_by_genome_file,
                                  minimiser_args);
 
-    store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
+    store_args(ibf_args, filenames::data(ibf_args.path_out));
 
     return ibf_args.expression_thresholds;
 }
@@ -479,7 +476,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
     else
         ibf_helper<false>(minimiser_files, fpr, ibf_args, cutoffs, num_hash, expression_by_genome_file);
 
-    store_args(ibf_args, std::string{ibf_args.path_out} + "IBF_Data");
+    store_args(ibf_args, filenames::data(ibf_args.path_out));
 
     return ibf_args.expression_thresholds;
 }
