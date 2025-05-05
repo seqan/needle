@@ -42,21 +42,8 @@ struct estimate_ibf_arguments : minimiser_arguments
     uint8_t number_expression_thresholds{};        // If set, the expression levels are determined by the program.
     bool samplewise{false};
 
-    template <class Archive>
-    void save(Archive & archive) const
-    {
-        archive(k);
-        archive(w_size.get());
-        archive(s.get());
-        archive(shape);
-        archive(compressed);
-        archive(number_expression_thresholds);
-        archive(expression_thresholds);
-        archive(samplewise);
-    }
-
-    template <class Archive>
-    void load(Archive & archive)
+    template <typename archive_t>
+    void serialize(archive_t & archive)
     {
         archive(k);
         archive(w_size.get());
@@ -85,7 +72,7 @@ struct minimiser_file_input_arguments
  *  \param args   arguments to load
  *  \param ipath Path, where the arguments can be found.
  */
-[[maybe_unused]] static void load_args(estimate_ibf_arguments & args, std::filesystem::path ipath)
+inline void load_args(estimate_ibf_arguments & args, std::filesystem::path const & ipath)
 {
     std::ifstream is{ipath, std::ios::binary};
     cereal::BinaryInputArchive iarchive{is};
@@ -96,7 +83,7 @@ struct minimiser_file_input_arguments
  *  \param args  arguments to store
  *  \param opath Path, where the arguments should be stored.
  */
-[[maybe_unused]] static void store_args(estimate_ibf_arguments const & args, std::filesystem::path opath)
+inline void store_args(estimate_ibf_arguments const & args, std::filesystem::path const & opath)
 {
     std::ofstream os{opath, std::ios::binary};
     cereal::BinaryOutputArchive oarchive{os};
@@ -120,8 +107,8 @@ using sequence_file_with_id_t =
  *  \param ibf   ibf to load
  *  \param ipath Path, where the ibf can be found.
  */
-template <class IBFType>
-void load_ibf(IBFType & ibf, std::filesystem::path ipath)
+template <typename ibf_t>
+void load_ibf(ibf_t & ibf, std::filesystem::path const & ipath)
 {
     std::ifstream is{ipath, std::ios::binary};
     cereal::BinaryInputArchive iarchive{is};
@@ -132,8 +119,8 @@ void load_ibf(IBFType & ibf, std::filesystem::path ipath)
  *  \param ibf   The IBF to store.
  *  \param opath Path, where the IBF should be stored.
  */
-template <class IBFType>
-void store_ibf(IBFType const & ibf, std::filesystem::path opath)
+template <typename ibf_t>
+void store_ibf(ibf_t const & ibf, std::filesystem::path const & opath)
 {
     std::ofstream os{opath, std::ios::binary};
     cereal::BinaryOutputArchive oarchive{os};

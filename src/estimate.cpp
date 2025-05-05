@@ -6,12 +6,13 @@
 
 #include <cereal/archives/binary.hpp>
 
+#include "misc/filenames.hpp"
 #include "misc/read_levels.hpp"
 
 // Actual estimation
-template <class IBFType, bool last_exp, bool normalization, typename exp_t>
+template <typename ibf_t, bool last_exp, bool normalization, typename exp_t>
 void check_ibf(minimiser_arguments const & args,
-               IBFType const & ibf,
+               ibf_t const & ibf,
                std::vector<uint16_t> & estimations_i,
                seqan3::dna4_vector const & seq,
                std::vector<float> & prev_counts,
@@ -109,9 +110,9 @@ void check_ibf(minimiser_arguments const & args,
 *  \param file_out    The output file.
 *  \param estimate_args  The estimate arguments.
 */
-template <class IBFType, bool samplewise, bool normalization_method = false>
+template <typename ibf_t, bool samplewise, bool normalization_method = false>
 void estimate(estimate_ibf_arguments & args,
-              IBFType & ibf,
+              ibf_t & ibf,
               std::filesystem::path file_out,
               estimate_arguments const & estimate_args)
 {
@@ -122,23 +123,24 @@ void estimate(estimate_ibf_arguments & args,
     {
         std::vector<std::vector<uint16_t>> result;
         if constexpr (samplewise)
-            read_levels<uint16_t>(result, estimate_args.path_in.string() + "IBF_Levels.levels");
+            read_levels<uint16_t>(result, filenames::levels(estimate_args.path_in));
         return result;
     }();
 
     std::vector<std::vector<double>> const fprs = [&]()
     {
         std::vector<std::vector<double>> result;
-        read_levels<double>(result, estimate_args.path_in.string() + "IBF_FPRs.fprs");
+        read_levels<double>(result, filenames::fprs(estimate_args.path_in));
         return result;
     }();
 
     std::vector<uint64_t> const deleted = [&]()
     {
         std::vector<uint64_t> result;
-        if (std::filesystem::exists(estimate_args.path_in.string() + "IBF_Deleted"))
+        if (std::filesystem::path const deleted_files_path = filenames::deleted(estimate_args.path_in);
+            std::filesystem::exists(deleted_files_path))
         {
-            std::ifstream fin{estimate_args.path_in.string() + "IBF_Deleted"};
+            std::ifstream fin{deleted_files_path};
             uint64_t number;
 
             while (fin >> number)
@@ -208,27 +210,27 @@ void estimate(estimate_ibf_arguments & args,
     {
         if constexpr (samplewise)
         {
-            check_ibf<IBFType, is_last_level, normalization_method>(args,
-                                                                    ibf,
-                                                                    estimations[i],
-                                                                    seqs[i],
-                                                                    prev_counts[i],
-                                                                    expressions,
-                                                                    level,
-                                                                    fprs[level],
-                                                                    deleted);
+            check_ibf<ibf_t, is_last_level, normalization_method>(args,
+                                                                  ibf,
+                                                                  estimations[i],
+                                                                  seqs[i],
+                                                                  prev_counts[i],
+                                                                  expressions,
+                                                                  level,
+                                                                  fprs[level],
+                                                                  deleted);
         }
         else
         {
-            check_ibf<IBFType, is_last_level, false>(args,
-                                                     ibf,
-                                                     estimations[i],
-                                                     seqs[i],
-                                                     prev_counts[i],
-                                                     args.expression_thresholds[level],
-                                                     prev_expression,
-                                                     fprs[level],
-                                                     deleted);
+            check_ibf<ibf_t, is_last_level, false>(args,
+                                                   ibf,
+                                                   estimations[i],
+                                                   seqs[i],
+                                                   prev_counts[i],
+                                                   args.expression_thresholds[level],
+                                                   prev_expression,
+                                                   fprs[level],
+                                                   deleted);
         }
     };
 
@@ -249,11 +251,7 @@ void estimate(estimate_ibf_arguments & args,
         bool is_last_level = true;
         for (size_t const level : std::views::iota(0u, args.number_expression_thresholds) | std::views::reverse)
         {
-            if constexpr (samplewise)
-                load_ibf(ibf, estimate_args.path_in.string() + "IBF_Level_" + std::to_string(level));
-            else
-                load_ibf(ibf,
-                         estimate_args.path_in.string() + "IBF_" + std::to_string(args.expression_thresholds[level]));
+            load_ibf(ibf, filenames::ibf(estimate_args.path_in, samplewise, level, args));
 
             // If there are less records than the batch size, only use as much as needed.
             if (!counters_initialised)
@@ -288,7 +286,7 @@ void estimate(estimate_ibf_arguments & args,
 // Calls the correct form of estimate
 void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_args)
 {
-    load_args(args, std::string{estimate_args.path_in} + "IBF_Data");
+    load_args(args, filenames::data(estimate_args.path_in));
 
     auto call = [&]<typename ibf_t>(ibf_t && ibf)
     {
