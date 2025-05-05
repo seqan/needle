@@ -74,24 +74,26 @@ void get_filsize_per_expression_level(std::filesystem::path filename,
                                       bool all = true)
 {
     std::ifstream fin{filename, std::ios::binary};
-    uint8_t small_buffer;
-    uint32_t window;
-    uint64_t buffer;
-    read_stream(fin, buffer);
-    read_stream(fin, small_buffer);
-    read_stream(fin, small_buffer);
-    read_stream(fin, window);
-    read_stream(fin, buffer);
+
+    // Skip the first 22 bytes:
+    //   8 num_of_minimisers
+    //   1 cutoff
+    //   1 args.k
+    //   4 args.w_size
+    //   8 args.s
+    fin.ignore(22);
+
     bool ungapped;
     read_stream(fin, ungapped);
     if (!ungapped)
     {
-        read_stream(fin, buffer);
+        fin.ignore(8); // args.shape
     }
 
     uint64_t minimiser;
     uint16_t minimiser_count;
     sizes.assign(number_expression_thresholds, 0);
+    auto const expression_begin_it = expression_thresholds.begin();
 
     while (read_stream(fin, minimiser))
     {
@@ -100,9 +102,9 @@ void get_filsize_per_expression_level(std::filesystem::path filename,
         {
             // Find the level with the smallest greater value than the minimiser occurrence, in the level before that the
             // minimiser is going to be stored.
-            auto p = std::upper_bound(expression_thresholds.begin(), expression_thresholds.end(), minimiser_count);
-            if (p != expression_thresholds.begin())
-                sizes[(p - expression_thresholds.begin()) - 1]++;
+            auto p = std::ranges::upper_bound(expression_thresholds, minimiser_count);
+            if (p != expression_begin_it)
+                ++sizes[std::ranges::distance(expression_begin_it, p) - 1];
         }
     }
 }
@@ -117,7 +119,6 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 std::filesystem::path expression_by_genome_file = "",
                 minimiser_file_input_arguments const & minimiser_args = {})
 {
-
     size_t const num_files = [&]() constexpr
     {
         if constexpr (minimiser_files_given)
@@ -126,12 +127,15 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             return minimiser_args.samples.size();
     }();
 
-    std::vector<std::vector<uint16_t>> expressions{};
-    if constexpr (samplewise)
-        expressions.resize(num_files, std::vector<uint16_t>(ibf_args.number_expression_thresholds));
+    std::vector<std::vector<uint16_t>> expressions = [&]()
+    {
+        std::vector<std::vector<uint16_t>> result;
+        if constexpr (samplewise)
+            result.resize(num_files, std::vector<uint16_t>(ibf_args.number_expression_thresholds));
+        return result;
+    }();
 
-    std::vector<std::vector<uint64_t>> sizes{};
-    sizes.assign(num_files, {});
+    std::vector<std::vector<uint64_t>> sizes(num_files);
     std::vector<uint64_t> sizes_ibf{};
     std::vector<std::vector<uint64_t>> counts_per_level(num_files,
                                                         std::vector<uint64_t>(ibf_args.number_expression_thresholds));
@@ -179,7 +183,6 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
         if constexpr (minimiser_files_given)
         {
-            // std::cerr << "1A\n";
             uint8_t cutoff;
             read_binary_start(ibf_args, minimiser_files[i], filesize, cutoff);
             cutoffs.push_back(cutoff);
