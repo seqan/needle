@@ -7,7 +7,8 @@
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
-#include <robin_hood.h>
+
+#include <hibf/contrib/robin_hood.hpp>
 
 #include "shared.hpp"
 

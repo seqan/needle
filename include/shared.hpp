@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <robin_hood.h>
-
 #include <seqan3/alphabet/nucleotide/dna4.hpp>
 #include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/search/dream_index/interleaved_bloom_filter.hpp>
 #include <seqan3/search/kmer_index/shape.hpp>
 #include <seqan3/search/views/minimiser_hash.hpp>
+
+#include <hibf/contrib/robin_hood.hpp>
 
 static inline constexpr uint64_t adjust_seed(uint8_t const kmer_size,
                                              uint64_t const seed = 0x8F'3F'73'B5'CF'1C'9A'DEULL) noexcept
