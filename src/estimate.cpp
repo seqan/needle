@@ -6,8 +6,18 @@
 
 #include <cereal/archives/binary.hpp>
 
+#include "misc/debug.hpp"
 #include "misc/filenames.hpp"
 #include "misc/read_levels.hpp"
+
+inline std::vector<uint64_t> get_minimiser(seqan3::dna4_vector const & seq, minimiser_arguments const & args)
+{
+    std::vector<uint64_t> minimiser;
+    auto view = seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s) | std::views::common;
+    // Or `return std::ranges::to<std::vector<uint64_t>>(view);`
+    minimiser.assign(view.begin(), view.end());
+    return minimiser;
+}
 
 // Actual estimation
 template <typename ibf_t, bool last_exp, bool normalization, typename exp_t>
@@ -24,15 +34,18 @@ void check_ibf(minimiser_arguments const & args,
     // Check, if one expression threshold for all or individual thresholds
     static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
 
+    std::vector<uint64_t> const minimiser = get_minimiser(seq, args);
+    uint64_t const minimiser_count = minimiser.size();
+
+#ifndef NDEBUG
+    if (minimiser_count > std::numeric_limits<uint16_t>::max())
+        log("Warning: 16-bit counter might overflow.");
+#endif
+
     // Count minimisers in ibf of current level
     std::vector<float> counter(ibf.bin_count());
-    uint64_t minimiser_count{};
-    auto agent = ibf.membership_agent();
-    for (auto minHash : seqan3::views::minimiser_hash(seq, args.shape, args.w_size, args.s))
-    {
-        std::ranges::transform(counter, agent.bulk_contains(minHash), counter.begin(), std::plus<uint32_t>());
-        ++minimiser_count;
-    }
+    auto agent = ibf.counting_agent();
+    std::ranges::copy(agent.bulk_count(minimiser), counter.begin());
 
     // Defines where the median should be
     float const minimiser_pos = minimiser_count / 2.0;

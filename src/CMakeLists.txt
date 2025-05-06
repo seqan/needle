@@ -16,6 +16,7 @@ set (NEEDLE_SOURCE_FILES
      misc/calculate_cutoff.cpp
      misc/check_cutoffs_samples.cpp
      misc/check_for_fasta_format.cpp
+     misc/debug.cpp
      misc/fill_hash_table.cpp
      misc/get_expression_thresholds.cpp
      misc/get_include_set_table.cpp
