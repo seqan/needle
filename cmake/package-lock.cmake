@@ -50,17 +50,6 @@ CPMDeclarePackage (googletest
                    OPTIONS "BUILD_GMOCK OFF" "INSTALL_GTEST OFF" "CMAKE_MESSAGE_LOG_LEVEL WARNING"
 )
 
-# robin-hood-hashing
-set (NEEDLE_ROBIN_HOOD_VERSION 7697343363af4cc3f42cab17be49e6af9ab181e2 CACHE STRING "")
-CPMDeclarePackage (robin-hood
-                   NAME robin-hood
-                   GIT_TAG ${NEEDLE_ROBIN_HOOD_VERSION} # master
-                   GITHUB_REPOSITORY martinus/robin-hood-hashing
-                   SYSTEM TRUE
-                   EXCLUDE_FROM_ALL TRUE
-                   OPTIONS "CMAKE_MESSAGE_LOG_LEVEL WARNING"
-)
-
 # use_ccache
 set (USE_CCACHE_VERSION d2a54ef555b6fc2d496a4c9506dbeb7cf899ce37 CACHE STRING "")
 CPMDeclarePackage (use_ccache

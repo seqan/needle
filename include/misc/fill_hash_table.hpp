@@ -5,7 +5,8 @@
 #pragma once
 
 #include <cstdint>
-#include <robin_hood.h>
+
+#include <hibf/contrib/robin_hood.hpp>
 
 #include "shared.hpp"
 

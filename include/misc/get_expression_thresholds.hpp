@@ -5,8 +5,9 @@
 #pragma once
 
 #include <cstdint>
-#include <robin_hood.h>
 #include <vector>
+
+#include <hibf/contrib/robin_hood.hpp>
 
 // Calculate expression thresholds and sizes
 // Calculate expression thresholds by taking median recursively
