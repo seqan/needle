@@ -27,6 +27,7 @@ set (NEEDLE_SOURCE_FILES
 add_library ("${PROJECT_NAME}_lib" STATIC ${NEEDLE_SOURCE_FILES})
 target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC seqan3::seqan3)
 target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC sharg::sharg)
+# target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC seqan::hibf)
 target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC robin_hood::robin_hood)
 target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC OpenMP::OpenMP_CXX)
 target_include_directories ("${PROJECT_NAME}_lib" PUBLIC ../include)

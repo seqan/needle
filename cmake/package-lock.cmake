@@ -7,6 +7,17 @@
 
 # cmake-format: off
 
+# hibf
+set (NEEDLE_HIBF_VERSION ae49609709deb12fea168a1988b3eb8edc1a31ce CACHE STRING "")
+CPMDeclarePackage (hibf
+                   NAME hibf
+                   GIT_TAG ${NEEDLE_HIBF_VERSION} # main
+                   GITHUB_REPOSITORY seqan/hibf
+                   SYSTEM TRUE
+                   EXCLUDE_FROM_ALL TRUE
+                   OPTIONS "INSTALL_HIBF OFF"
+)
+
 # seqan3
 set (NEEDLE_SEQAN3_VERSION a08b48c250dae1a360914d91f75a4447bccafcb0 CACHE STRING "")
 CPMDeclarePackage (seqan3
