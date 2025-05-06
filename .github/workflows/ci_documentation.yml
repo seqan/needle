@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'hibf'
   pull_request_target:
     types:
       - unlabeled
@@ -78,7 +79,7 @@ jobs:
           deploy_user: ${{ secrets.DEPLOY_USER }}
           deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}
           source_path_user_doc: build/html/
-          deploy_path_user_doc: ${{ secrets.DEPLOY_PRODUCTION_BASE_PATH }}/main
+          deploy_path_user_doc: ${{ secrets.DEPLOY_PRODUCTION_BASE_PATH }}/${{ github.ref_name}}
   delete:
       name: Delete Preview
       runs-on: ubuntu-latest
