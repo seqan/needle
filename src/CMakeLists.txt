@@ -16,6 +16,7 @@ set (NEEDLE_SOURCE_FILES
      misc/calculate_cutoff.cpp
      misc/check_cutoffs_samples.cpp
      misc/check_for_fasta_format.cpp
+     misc/debug.cpp
      misc/fill_hash_table.cpp
      misc/get_expression_thresholds.cpp
      misc/get_include_set_table.cpp
@@ -26,6 +27,7 @@ set (NEEDLE_SOURCE_FILES
 add_library ("${PROJECT_NAME}_lib" STATIC ${NEEDLE_SOURCE_FILES})
 target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC seqan3::seqan3)
 target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC sharg::sharg)
+# target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC seqan::hibf)
 target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC robin_hood::robin_hood)
 target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC OpenMP::OpenMP_CXX)
 target_include_directories ("${PROJECT_NAME}_lib" PUBLIC ../include)

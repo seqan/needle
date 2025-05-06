@@ -73,6 +73,7 @@ CPMUsePackageLock (${CMAKE_CURRENT_LIST_DIR}/cmake/package-lock.cmake)
 CPMGetPackage (use_ccache)
 CPMGetPackage (seqan3)
 CPMGetPackage (sharg)
+# CPMGetPackage (hibf)
 
 # Temporarily disable warnings for deprecated CMake minimum version in `robin-hood-hashing`.
 # cmake-format: off
