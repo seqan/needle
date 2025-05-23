@@ -17,7 +17,6 @@ struct ibf_test : public app_test
 {
     void initialization_args(estimate_ibf_arguments & args)
     {
-        args.compressed = true;
         args.k = 4;
         args.shape = seqan3::ungapped{args.k};
         args.w_size = seqan3::window_size{4};
@@ -43,11 +42,11 @@ TEST_F(ibf_test, given_expression_thresholds)
 
     EXPECT_EQ(expected, medians);
 
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    seqan::hibf::interleaved_bloom_filter ibf;
     ASSERT_TRUE(std::filesystem::exists("IBF_Test_Exp_IBF_1"));
     {
         load_ibf(ibf, "IBF_Test_Exp_IBF_1");
-        auto agent = ibf.membership_agent();
+        auto agent = ibf.containment_agent();
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
@@ -65,7 +64,6 @@ TEST_F(ibf_test, given_expression_thresholds)
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
-        EXPECT_EQ(true, args.compressed);
         EXPECT_EQ(ibf_args.number_expression_thresholds, args.number_expression_thresholds);
         EXPECT_RANGE_EQ(ibf_args.expression_thresholds, args.expression_thresholds);
         EXPECT_EQ(ibf_args.samplewise, args.samplewise);
@@ -90,11 +88,11 @@ TEST_F(ibf_test, given_expression_thresholds_include_file)
 
     EXPECT_EQ(expected, medians);
 
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    seqan::hibf::interleaved_bloom_filter ibf;
     ASSERT_TRUE(std::filesystem::exists("IBF_Test_Include_IBF_1"));
     {
         load_ibf(ibf, "IBF_Test_Include_IBF_1");
-        auto agent = ibf.membership_agent();
+        auto agent = ibf.containment_agent();
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
@@ -123,11 +121,11 @@ TEST_F(ibf_test, given_expression_thresholds_exclude_file)
 
     EXPECT_EQ(expected, medians);
 
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    seqan::hibf::interleaved_bloom_filter ibf;
     ASSERT_TRUE(std::filesystem::exists("IBF_Test_Exclude_IBF_1"));
     {
         load_ibf(ibf, "IBF_Test_Exclude_IBF_1");
-        auto agent = ibf.membership_agent();
+        auto agent = ibf.containment_agent();
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
@@ -155,12 +153,12 @@ TEST_F(ibf_test, no_given_expression_thresholds)
 
     EXPECT_EQ(expected, medians);
 
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    seqan::hibf::interleaved_bloom_filter ibf;
 
     ASSERT_TRUE(std::filesystem::exists("IBF_Test_IBF_Level_0"));
     {
         load_ibf(ibf, "IBF_Test_IBF_Level_0");
-        auto agent = ibf.membership_agent();
+        auto agent = ibf.containment_agent();
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
@@ -188,12 +186,12 @@ TEST_F(ibf_test, expression_thresholds_by_genome)
 
     EXPECT_EQ(expected, medians);
 
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    seqan::hibf::interleaved_bloom_filter ibf;
 
     ASSERT_TRUE(std::filesystem::exists("IBF_Test_IBF_Level_0"));
     {
         load_ibf(ibf, "IBF_Test_IBF_Level_0");
-        auto agent = ibf.membership_agent();
+        auto agent = ibf.containment_agent();
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
@@ -244,11 +242,11 @@ TEST_F(ibf_test, given_cutoffs)
 
     EXPECT_EQ(expected, medians);
 
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    seqan::hibf::interleaved_bloom_filter ibf;
     ASSERT_TRUE(std::filesystem::exists("IBF_Test_Cut_IBF_1"));
     {
         load_ibf(ibf, "IBF_Test_Cut_IBF_1");
-        auto agent = ibf.membership_agent();
+        auto agent = ibf.containment_agent();
 
         std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
@@ -266,7 +264,6 @@ TEST_F(ibf_test, given_cutoffs)
         EXPECT_EQ(4, args.w_size.get());
         EXPECT_EQ(0, args.s.get());
         EXPECT_EQ(15, args.shape.to_ulong());
-        EXPECT_EQ(true, args.compressed);
         EXPECT_EQ(ibf_args.number_expression_thresholds, args.number_expression_thresholds);
         EXPECT_RANGE_EQ(ibf_args.expression_thresholds, args.expression_thresholds);
         EXPECT_EQ(ibf_args.samplewise, args.samplewise);
@@ -290,12 +287,12 @@ TEST_F(ibf_test, different_file_sizes)
 
     EXPECT_EQ(expected, medians);
 
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    seqan::hibf::interleaved_bloom_filter ibf;
 
     ASSERT_TRUE(std::filesystem::exists("IBF_Test_Diff_IBF_Level_0"));
     {
         load_ibf(ibf, "IBF_Test_Diff_IBF_Level_0");
-        auto agent = ibf.membership_agent();
+        auto agent = ibf.containment_agent();
 
         std::vector<bool> expected_result(2, 0);
         auto & res = agent.bulk_contains(2);

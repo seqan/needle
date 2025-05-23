@@ -18,7 +18,6 @@ struct count_test : public app_test
 {
     void initialization_args(estimate_ibf_arguments & args)
     {
-        args.compressed = true;
         args.k = 4;
         args.shape = seqan3::ungapped{args.k};
         args.w_size = seqan3::window_size{4};
