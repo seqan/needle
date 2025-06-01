@@ -21,104 +21,6 @@ inline std::vector<uint64_t> get_minimiser(seqan3::dna4_vector const & seq, mini
     return minimiser;
 }
 
-// Actual estimation
-template <typename ibf_t, bool last_exp, bool normalization, typename exp_t>
-void check_ibf(minimiser_arguments const & args,
-               ibf_t const & ibf,
-               std::vector<uint16_t> & estimations_i,
-               seqan3::dna4_vector const & seq,
-               std::vector<float> & prev_counts,
-               exp_t const & expressions,
-               uint16_t const level,
-               std::vector<double> const & fprs,
-               std::vector<uint64_t> const & deleted)
-{
-    // Check, if one expression threshold for all or individual thresholds
-    static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
-
-    std::vector<uint64_t> const minimiser = get_minimiser(seq, args);
-    uint64_t const minimiser_count = minimiser.size();
-
-#ifndef NDEBUG
-    if (minimiser_count > std::numeric_limits<uint16_t>::max())
-        log("Warning: 16-bit counter might overflow.");
-#endif
-
-    // Count minimisers in ibf of current level
-    std::vector<float> counter(ibf.bin_count());
-    auto agent = ibf.counting_agent();
-    std::ranges::copy(agent.bulk_count(minimiser), counter.begin());
-
-    // Defines where the median should be
-    float const minimiser_pos = minimiser_count / 2.0;
-
-    // Check every experiment by going over the number of bins in the ibf.
-    for (size_t bin = 0; bin < counter.size(); ++bin)
-    {
-        if (std::ranges::find(deleted, bin) != deleted.end())
-            continue;
-
-        // Correction by substracting the expected number of false positives
-        counter[bin] = [&]()
-        {
-            float const expected_false_positives = minimiser_count * fprs[bin];
-            float const corrected_count = counter[bin] - expected_false_positives;
-            float const normalized_count = std::max(0.0, corrected_count / (1.0 - fprs[bin]));
-            return normalized_count;
-        }();
-
-        // Check if considering previously seen minimisers and minimisers found at current level equal to or are greater
-        // than the minimiser_pow, which gives the median position.
-        // If an estimation took already place (estimations_i[bin]!=0), a second estimation is not performed.
-        if (estimations_i[bin] == 0 && prev_counts[bin] + counter[bin] >= minimiser_pos)
-        {
-            // If there was no previous level, because we are looking at the last level.
-            if constexpr (last_exp)
-            {
-                if constexpr (multiple_expressions)
-                    estimations_i[bin] = expressions[level][bin];
-                else
-                    estimations_i[bin] = expressions;
-            }
-            else
-            {
-                assert(minimiser_pos > prev_counts[bin]);
-                // Should never fail. This would mean that prev_counts[bin] was enough by itself and we should already
-                // have estimated on the previous level.
-                assert(counter[bin] > 0.0);
-                float const normalized_minimiser_pos = (minimiser_pos - prev_counts[bin]) / counter[bin];
-
-                // Actually calculate estimation, in the else case level stands for the prev_expression
-                if constexpr (multiple_expressions)
-                {
-                    size_t const prev_level_expression = expressions[level + 1][bin];
-                    size_t const expression_difference = prev_level_expression - expressions[level][bin];
-                    size_t const estimate = prev_level_expression - (normalized_minimiser_pos * expression_difference);
-
-                    estimations_i[bin] = std::max<size_t>(expressions[level][bin], estimate);
-                }
-                else
-                {
-                    size_t const prev_level_expression = level;
-                    size_t const expression_difference = prev_level_expression - expressions;
-                    size_t const estimate = prev_level_expression - (normalized_minimiser_pos * expression_difference);
-
-                    estimations_i[bin] = std::max<size_t>(expressions, estimate);
-                }
-            }
-
-            // Perform normalization by dividing through the threshold of the first level. Only works if multiple expressions were used.
-            if constexpr (normalization && multiple_expressions)
-                estimations_i[bin] /= expressions[1][bin];
-        }
-        else
-        {
-            // If not found at this level, add to previous count.
-            prev_counts[bin] += counter[bin];
-        }
-    }
-}
-
 /*! \brief Function to estimate expression value.
 *  \param args        The arguments.
 *  \param ibf         The ibf determing what kind ibf is used (compressed or uncompressed).
@@ -157,11 +59,8 @@ void estimate(estimate_ibf_arguments & args,
         {
             std::ifstream fin{deleted_files_path};
             uint64_t number;
-
             while (fin >> number)
-            {
                 result.push_back(number);
-            }
         }
         return result;
     }();
@@ -173,7 +72,6 @@ void estimate(estimate_ibf_arguments & args,
     std::vector<seqan3::dna4_vector> seqs;
     std::vector<std::vector<float>> prev_counts;
     std::vector<std::vector<uint16_t>> estimations;
-    uint64_t prev_expression{};
     bool counters_initialised = false;
 
     // ========================================================================
@@ -191,22 +89,29 @@ void estimate(estimate_ibf_arguments & args,
     std::ranges::sort(args.expression_thresholds);
 
     // ========================================================================
+    // Load the single IBF
+    // ========================================================================
+    load_ibf(ibf, filenames::ibf(estimate_args.path_in, samplewise, 0, args));
+
+    // Calculate dimensions based on IBF structure
+    size_t const num_levels = args.number_expression_thresholds;
+    size_t const total_bins = ibf.bin_count();
+
+    assert(total_bins % num_levels == 0);                   // Ensure that total_bins is divisible by num_levels
+    size_t const num_experiments = total_bins / num_levels; // This should match the number of files/experiments
+
+    // ========================================================================
     // Helper functions
     // ========================================================================
     auto init_counter = [&](size_t const size)
     {
-        static_assert(std::same_as<std::ranges::range_value_t<decltype(prev_counts)>, std::vector<float>>);
-        prev_counts.resize(size, std::vector<float>(ibf.bin_count()));
-
-        static_assert(std::same_as<std::ranges::range_value_t<decltype(estimations)>, std::vector<uint16_t>>);
-        estimations.resize(size, std::vector<uint16_t>(ibf.bin_count()));
-
+        prev_counts.resize(size, std::vector<float>(num_experiments));
+        estimations.resize(size, std::vector<uint16_t>(num_experiments));
         return true;
     };
 
     auto clear_data = [&]()
     {
-        prev_expression = 0u;
         ids.clear();
         seqs.clear();
         std::ranges::for_each(prev_counts,
@@ -219,34 +124,6 @@ void estimate(estimate_ibf_arguments & args,
                               {
                                   std::ranges::fill(v, uint16_t{});
                               });
-    };
-
-    auto process_ibf = [&]<bool is_last_level>(size_t const i, size_t const level)
-    {
-        if constexpr (samplewise)
-        {
-            check_ibf<ibf_t, is_last_level, normalization_method>(args,
-                                                                  ibf,
-                                                                  estimations[i],
-                                                                  seqs[i],
-                                                                  prev_counts[i],
-                                                                  expressions,
-                                                                  level,
-                                                                  fprs[level],
-                                                                  deleted);
-        }
-        else
-        {
-            check_ibf<ibf_t, is_last_level, false>(args,
-                                                   ibf,
-                                                   estimations[i],
-                                                   seqs[i],
-                                                   prev_counts[i],
-                                                   args.expression_thresholds[level],
-                                                   prev_expression,
-                                                   fprs[level],
-                                                   deleted);
-        }
     };
 
     // ========================================================================
@@ -263,35 +140,105 @@ void estimate(estimate_ibf_arguments & args,
             seqs.push_back(seq);
         }
 
-        bool is_last_level = true;
-        for (size_t const level : std::views::iota(0u, args.number_expression_thresholds) | std::views::reverse)
-        {
-            load_ibf(ibf, filenames::ibf(estimate_args.path_in, samplewise, level, args));
-
-            // If there are less records than the batch size, only use as much as needed.
-            if (!counters_initialised)
-                counters_initialised = init_counter(seqs.size());
+        if (!counters_initialised)
+            counters_initialised = init_counter(seqs.size());
 
 #pragma omp parallel for
-            for (size_t i = 0; i < seqs.size(); ++i)
+        for (size_t i = 0; i < seqs.size(); ++i)
+        {
+            std::vector<uint64_t> const minimiser = get_minimiser(seqs[i], args);
+            float const minimiser_count = minimiser.size();
+            float const minimiser_pos = minimiser_count / 2.0f;
+
+            auto agent = ibf.counting_agent();
+            std::vector<float> all_counts(total_bins);
+            std::ranges::copy(agent.bulk_count(minimiser), all_counts.begin());
+
+            // For each experiment (file)
+            for (size_t exp_idx = 0; exp_idx < num_experiments; ++exp_idx)
             {
-                if (is_last_level)
-                    process_ibf.template operator()<true>(i, level);
-                else
-                    process_ibf.template operator()<false>(i, level);
+                float prev_count = 0.0f;
+
+                // Go through levels from highest threshold to lowest
+                for (size_t l = 0; l < num_levels; ++l)
+                {
+                    size_t const level = num_levels - 1 - l; // Start from highest level
+                    size_t const bin_idx = level * num_experiments + exp_idx;
+
+                    // Check if this bin is deleted
+                    if (std::ranges::find(deleted, bin_idx) != deleted.end())
+                        continue;
+
+                    // Get the count for this bin
+                    float count = all_counts[bin_idx];
+
+                    // False positive correction
+                    float const expected_fp = minimiser_count * fprs[level][exp_idx];
+                    float const corrected = count - expected_fp;
+                    float const normalized =
+                        std::max(0.0f, static_cast<float>(corrected / (1.0 - fprs[level][exp_idx])));
+
+                    // Check if we've found enough minimizers to reach the median
+                    if (prev_count + normalized >= minimiser_pos)
+                    {
+                        // Level found
+                        if (l == num_levels - 1) // This is the last (lowest) level
+                        {
+                            if constexpr (samplewise)
+                                estimations[i][exp_idx] = expressions[level][exp_idx];
+                            else
+                                estimations[i][exp_idx] = args.expression_thresholds[level];
+                        }
+                        else
+                        {
+                            // Interpolate between this level and the previous one
+                            assert(minimiser_pos > prev_count);
+                            assert(normalized > 0.0f);
+
+                            float const normalized_minimiser_pos = (minimiser_pos - prev_count) / normalized;
+
+                            if constexpr (samplewise)
+                            {
+                                size_t const prev_level = level + 1; // Previous level had higher threshold
+                                uint16_t const current_threshold = expressions[level][exp_idx];
+                                uint16_t const prev_threshold = expressions[prev_level][exp_idx];
+                                uint16_t const threshold_diff = prev_threshold - current_threshold;
+                                uint16_t const estimate =
+                                    prev_threshold - static_cast<uint16_t>(normalized_minimiser_pos * threshold_diff);
+                                estimations[i][exp_idx] = std::max(current_threshold, estimate);
+                            }
+                            else
+                            {
+                                uint16_t const current_threshold = args.expression_thresholds[level];
+                                uint16_t const prev_threshold = args.expression_thresholds[level + 1];
+                                uint16_t const threshold_diff = prev_threshold - current_threshold;
+                                uint16_t const estimate =
+                                    prev_threshold - static_cast<uint16_t>(normalized_minimiser_pos * threshold_diff);
+                                estimations[i][exp_idx] = std::max(current_threshold, estimate);
+                            }
+                        }
+
+                        // Apply normalization if requested
+                        if constexpr (normalization_method && samplewise)
+                            estimations[i][exp_idx] = static_cast<uint16_t>(
+                                estimations[i][exp_idx] / expressions[0][exp_idx]); // Normalize by first level
+
+                        break; // Found the estimate for this experiment
+                    }
+                    else
+                    {
+                        // Add to previous count and continue to next level
+                        prev_count += normalized;
+                    }
+                }
             }
-
-            if constexpr (!samplewise)
-                prev_expression = args.expression_thresholds[level];
-
-            is_last_level = false;
         }
 
-        // Write results
+        // Write results: one line per sequence, one value per experiment
         for (size_t i = 0; i < seqs.size(); ++i)
         {
             outfile << ids[i] << '\t';
-            for (size_t j = 0; j < ibf.bin_count(); ++j)
+            for (size_t j = 0; j < num_experiments; ++j)
                 outfile << estimations[i][j] << '\t';
             outfile << '\n';
         }

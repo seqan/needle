@@ -170,7 +170,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         omp_set_num_threads(ibf_args.threads);
     }
 
-    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / ibf_args.threads), 8u, 64u);
+    // size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / ibf_args.threads), 8u, 64u);
 
     // If expression_thresholds should only be depending on minimsers in a certain genome file, genome is created.
     robin_hood::unordered_set<uint64_t> genome{};
@@ -249,41 +249,63 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         }
     }
 
-    // Create IBFs
-    std::vector<seqan::hibf::interleaved_bloom_filter> ibfs;
-    for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
-    {
-        uint64_t size{};
-        for (size_t i = 0; i < num_files; i++)
-        {
-            // size = std::max<size_t>(size, sizes[i][j]);
-            size += sizes[i][j];
-        }
+    size_t const total_bins = num_files * ibf_args.number_expression_thresholds;
 
-        if (size == num_files)
+    uint64_t max_elements = 0;
+    uint64_t total_elements = 0;
+
+    for (size_t i = 0; i < num_files; ++i)
+    {
+        for (size_t j = 0; j < ibf_args.number_expression_thresholds; ++j)
         {
-            throw std::invalid_argument{
-                std::string("The chosen expression threshold is not well picked. If you use the automatic ")
-                + std::string("expression threshold determination, please decrease the number of levels. If you use ")
-                + std::string("your own expression thresholds, decrease the thresholds from level ")
-                + std::to_string(ibf_args.expression_thresholds[j]) + std::string(" on.\n")};
+            max_elements = std::max(max_elements, sizes[i][j]);
+            total_elements += sizes[i][j];
         }
-        size = seqan::hibf::build::bin_size_in_bits({.fpr = fprs[j], //
-                                                     .hash_count = num_hash,
-                                                     .elements = seqan::hibf::divide_and_ceil(size, num_files)});
-        sizes_ibf.push_back(size);
-        ibfs.emplace_back(seqan::hibf::bin_count{num_files},
-                          seqan::hibf::bin_size{size},
-                          seqan::hibf::hash_function_count{num_hash});
     }
 
-// Add minimisers to ibf
-#pragma omp parallel for schedule(dynamic, chunk_size)
+    // Check if we have valid data
+    if (max_elements == 0)
+    {
+        throw std::invalid_argument{"No minimizers found for any threshold level."};
+    }
+
+    // Use average elements per bin for sizing
+    uint64_t avg_elements = std::max(1UL, total_elements / total_bins);
+    uint64_t elements_for_sizing = avg_elements;
+    // Alternatively: Use maximum elements for sizing:
+    // uint64_t elements_for_sizing = std::max(max_elements, avg_elements);
+
+    // Calculate IBF bin size using the first FPR
+    double const target_fpr = fprs[0];
+
+    // m = -hn/ln(1-p^(1/h))
+    double const log_p_over_h = std::log(target_fpr) / static_cast<double>(num_hash);
+    double const one_minus_p_pow_inv_h = 1.0 - std::exp(log_p_over_h);
+
+    if (one_minus_p_pow_inv_h <= 0.0)
+    {
+        throw std::invalid_argument{"Invalid FPR value - results in invalid bloom filter parameters."};
+    }
+
+    double const denominator = std::log(one_minus_p_pow_inv_h);
+    double const numerator = -static_cast<double>(elements_for_sizing * num_hash);
+    uint64_t const ibf_bin_size = static_cast<uint64_t>(std::ceil(numerator / denominator));
+
+    // Create single IBF
+    seqan::hibf::interleaved_bloom_filter single_ibf(seqan::hibf::bin_count{total_bins},
+                                                     seqan::hibf::bin_size{ibf_bin_size},
+                                                     seqan::hibf::hash_function_count{num_hash});
+
+    // Initialize sizes_ibf for compatibility with FPR calculation
+    sizes_ibf.assign(ibf_args.number_expression_thresholds, ibf_bin_size);
+
+    // Collect minimizer insertions from all threads
+    std::vector<std::vector<std::pair<uint64_t, std::vector<size_t>>>> file_insertions(num_files);
+
+    // Sequentially process each file TODO: implement parallel processing
     for (size_t i = 0; i < num_files; i++)
     {
-        robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
-        // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
-        // and afterwards discarded.
+        robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{};
         robin_hood::unordered_node_map<uint64_t, uint8_t> cutoff_table;
         std::vector<uint16_t> expression_thresholds;
 
@@ -321,8 +343,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             cutoff_table.clear();
         }
 
-        // If set_expression_thresholds_samplewise is not set the expressions as determined by the first file are used for
-        // all files.
+        // Handle samplewise expression thresholds
         if constexpr (samplewise)
         {
             get_expression_thresholds(ibf_args.number_expression_thresholds,
@@ -335,9 +356,12 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             expressions[i] = expression_thresholds;
         }
 
-        // Every minimiser is stored in IBF, if it occurence is greater than or equal to the expression level
-        for (auto && [hash, occurence] : hash_table)
+        // Collect insertions for this file
+        std::vector<std::pair<uint64_t, std::vector<size_t>>> local_insertions;
+
+        for (auto && [hash, occurrence] : hash_table)
         {
+            std::vector<size_t> target_bins;
             for (size_t const j : std::views::iota(0u, ibf_args.number_expression_thresholds) | std::views::reverse)
             {
                 uint16_t const threshold = [&]()
@@ -348,23 +372,37 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                         return ibf_args.expression_thresholds[j];
                 }();
 
-                if (occurence >= threshold)
+                if (occurrence >= threshold)
                 {
-                    ibfs[j].emplace(hash, seqan::hibf::bin_index{i});
+                    size_t bin_index = j * num_files + i;
+                    target_bins.push_back(bin_index);
                     counts_per_level[i][j]++;
                     break;
                 }
             }
+            if (!target_bins.empty())
+            {
+                local_insertions.emplace_back(hash, target_bins);
+            }
+        }
+        file_insertions[i] = std::move(local_insertions);
+    }
+
+    // Insert all collected minimizers into the IBF (single-threaded)
+    for (auto const & file_data : file_insertions)
+    {
+        for (auto const & [hash, bins] : file_data)
+        {
+            for (size_t bin_idx : bins)
+            {
+                single_ibf.emplace(hash, seqan::hibf::bin_index{bin_idx});
+            }
         }
     }
 
-    // Store IBFs
-    for (unsigned i = 0; i < ibf_args.number_expression_thresholds; i++)
-    {
-        std::filesystem::path const filename = filenames::ibf(ibf_args.path_out, samplewise, i, ibf_args);
-
-        store_ibf(ibfs[i], filename);
-    }
+    // Store the single IBF
+    std::filesystem::path const filename = filenames::ibf(ibf_args.path_out, samplewise, 0, ibf_args);
+    store_ibf(single_ibf, filename);
 
     // Store all expression thresholds per level.
     if constexpr (samplewise)
@@ -379,16 +417,24 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         outfile << "/\n";
     }
 
+    // Store FPR information
     std::ofstream outfile{filenames::fprs(ibf_args.path_out)};
     for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
     {
         for (size_t i = 0; i < num_files; i++)
         {
-            // m = -hn/ln(1-p^(1/h))
-            double const exp_arg = (num_hash * counts_per_level[i][j]) / static_cast<double>(sizes_ibf[j]);
-            double const log_arg = 1.0 - std::exp(-exp_arg);
-            double const fpr = std::exp(num_hash * std::log(log_arg));
-            outfile << fpr << " ";
+            // Calculate actual FPR based on IBF parameters
+            if (counts_per_level[i][j] > 0 && sizes_ibf[j] > 0)
+            {
+                double const exp_arg = (num_hash * counts_per_level[i][j]) / static_cast<double>(sizes_ibf[j]);
+                double const log_arg = 1.0 - std::exp(-exp_arg);
+                double const fpr = (log_arg > 0) ? std::exp(num_hash * std::log(log_arg)) : 1.0;
+                outfile << fpr << " ";
+            }
+            else
+            {
+                outfile << "0.0 ";
+            }
         }
         outfile << "\n";
     }

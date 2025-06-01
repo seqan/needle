@@ -11,7 +11,7 @@
 namespace filenames
 {
 
-constexpr std::string_view ibf_prefix = "IBF_";
+constexpr std::string_view ibf_prefix = "IBF";
 constexpr std::string_view ibf_samplewise_prefix = "IBF_Level_";
 static_assert(ibf_samplewise_prefix.starts_with(ibf_prefix));
 
@@ -37,15 +37,15 @@ constexpr std::string_view stored_files_name = "Stored_Files.txt";
 ibf(std::filesystem::path base_path, bool const samplewise, uint16_t const level, estimate_ibf_arguments const & args)
 {
     if (samplewise)
-        base_path += (ibf_samplewise_prefix.data() + std::to_string(level));
+        base_path += ibf_prefix.data();
     else
-        base_path += (ibf_prefix.data() + std::to_string(args.expression_thresholds[level]));
+        base_path += ibf_prefix.data();
     return base_path;
 }
 
 [[nodiscard]] inline std::filesystem::path levels(std::filesystem::path base_path)
 {
-    base_path += ibf_levels_name;
+    base_path += ibf_levels_name; 
     return base_path;
 }
 
