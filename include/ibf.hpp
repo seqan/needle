@@ -31,7 +31,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
                           minimiser_file_input_arguments & minimiser_args,
                           std::vector<double> & fpr,
                           std::vector<uint8_t> & cutoffs,
-                          std::filesystem::path const expression_by_genome_file = "",
+                          std::filesystem::path const & expression_by_genome_file = "",
                           size_t num_hash = 1);
 
 /*! \brief Creates IBFs based on the minimiser files
@@ -47,5 +47,5 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files,
                           estimate_ibf_arguments & ibf_args,
                           std::vector<double> & fpr,
-                          std::filesystem::path const expression_by_genome_file = "",
+                          std::filesystem::path const & expression_by_genome_file = "",
                           size_t num_hash = 1);

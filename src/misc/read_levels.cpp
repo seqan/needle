@@ -22,7 +22,7 @@ float_or_int parse(std::string const & buffer)
 
 // Reads the level file ibf creates
 template <typename float_or_int>
-void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::filesystem::path filename)
+void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::filesystem::path const & filename)
 {
     std::ifstream fin{filename};
     auto stream_view = seqan3::detail::istreambuf(fin);
@@ -56,5 +56,7 @@ void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::file
     while (*stream_it != '/');
 }
 
-template void read_levels<uint16_t>(std::vector<std::vector<uint16_t>> & expressions, std::filesystem::path filename);
-template void read_levels<double>(std::vector<std::vector<double>> & expressions, std::filesystem::path filename);
+template void read_levels<uint16_t>(std::vector<std::vector<uint16_t>> & expressions,
+                                    std::filesystem::path const & filename);
+template void read_levels<double>(std::vector<std::vector<double>> & expressions,
+                                  std::filesystem::path const & filename);

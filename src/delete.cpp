@@ -9,12 +9,13 @@
 // Delete from ibfs
 void delete_bin(std::vector<uint64_t> const & delete_files,
                 estimate_ibf_arguments & ibf_args,
-                std::filesystem::path path_in,
+                std::filesystem::path const & path_in,
                 bool samplewise)
 {
     load_args(ibf_args, filenames::data(path_in));
 
     std::vector<seqan3::bin_index> bins_to_delete{};
+    bins_to_delete.reserve(delete_files.size());
     for (size_t i = 0; i < delete_files.size(); i++)
         bins_to_delete.push_back(seqan3::bin_index{delete_files[i]});
 

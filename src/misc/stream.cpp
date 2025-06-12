@@ -4,7 +4,8 @@
 
 #include "misc/stream.hpp"
 
-void read_binary(std::filesystem::path filename, robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table)
+void read_binary(std::filesystem::path const & filename,
+                 robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table)
 {
     std::ifstream fin{filename, std::ios::binary};
 
@@ -34,7 +35,7 @@ void read_binary(std::filesystem::path filename, robin_hood::unordered_node_map<
 }
 
 void read_binary_start(minimiser_arguments & args,
-                       std::filesystem::path filename,
+                       std::filesystem::path const & filename,
                        uint64_t & num_of_minimisers,
                        uint8_t & cutoff)
 {

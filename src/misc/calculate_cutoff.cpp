@@ -9,7 +9,7 @@
 #include "misc/check_for_fasta_format.hpp"
 
 // Determine cutoff for one experiment
-uint8_t calculate_cutoff(std::filesystem::path sequence_file, int samples)
+uint8_t calculate_cutoff(std::filesystem::path const & sequence_file, int samples)
 {
     // Cutoff according to Mantis paper -1 because we use "<" and not "<="
     uint16_t const default_cutoff{49};
