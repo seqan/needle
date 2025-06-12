@@ -271,6 +271,7 @@ void fill_hash_table_parallel(minimiser_arguments const & args,
     };
 
     std::vector<std::thread> thread_pool{};
+    thread_pool.reserve(thread_count);
     for (size_t i = 0; i < thread_count; ++i)
         thread_pool.emplace_back(job, i);
 

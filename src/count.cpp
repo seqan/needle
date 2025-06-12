@@ -8,8 +8,8 @@
 #include "misc/stream.hpp"
 
 void count_genome(minimiser_arguments const & args,
-                  std::filesystem::path include_file,
-                  std::filesystem::path exclude_file)
+                  std::filesystem::path const & include_file,
+                  std::filesystem::path const & exclude_file)
 {
     robin_hood::unordered_set<uint64_t> include_set_table{};
     robin_hood::unordered_set<uint64_t> exclude_set_table{};
@@ -50,9 +50,9 @@ void count_genome(minimiser_arguments const & args,
 }
 
 void count(minimiser_arguments const & args,
-           std::vector<std::filesystem::path> sequence_files,
-           std::filesystem::path include_file,
-           std::filesystem::path genome_file,
+           std::vector<std::filesystem::path> const & sequence_files,
+           std::filesystem::path const & include_file,
+           std::filesystem::path const & genome_file,
            bool paired)
 {
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{};

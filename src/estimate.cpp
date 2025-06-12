@@ -126,7 +126,7 @@ void check_ibf(minimiser_arguments const & args,
 template <typename ibf_t, bool samplewise, bool normalization_method = false>
 void estimate(estimate_ibf_arguments & args,
               ibf_t & ibf,
-              std::filesystem::path file_out,
+              std::filesystem::path const & file_out,
               estimate_arguments const & estimate_args)
 {
     // ========================================================================

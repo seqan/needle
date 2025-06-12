@@ -175,7 +175,7 @@ void initialise_arguments_minimiser(sharg::parser & parser,
                           "Every sample has an automatically generated cutoff, which is based on the file size."});
 }
 
-void read_input_file_list(std::vector<std::filesystem::path> & sequence_files, std::filesystem::path input_file)
+void read_input_file_list(std::vector<std::filesystem::path> & sequence_files, std::filesystem::path const & input_file)
 {
     std::ifstream fin{input_file};
 
@@ -196,7 +196,6 @@ int run_needle_count(sharg::parser & parser)
     std::vector<std::filesystem::path> sequence_files{};
     std::filesystem::path genome_file;
     std::filesystem::path include_file;
-    std::filesystem::path out_path = "./";
     bool paired = false;
 
     parser.info.short_description = "Get expression value depending on minimizers. This function is an alternative to "
@@ -236,7 +235,6 @@ int run_needle_count_genome(sharg::parser & parser)
     initialise_minimiser_arguments(parser, args);
     std::filesystem::path genome_file;
     std::filesystem::path exclude_file{""};
-    std::filesystem::path out_path = "./";
 
     parser.info.short_description = "Creates the genome file necessary as an input to count.";
     parser.add_positional_option(genome_file,
