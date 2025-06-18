@@ -413,7 +413,7 @@ TEST_F(minimiser_test, small_example_exclude)
         // Test binary file
         read_binary(("Minimiser_Test_Ex_" + std::string{sequence_files[i].stem()} + ".minimiser"), result_hash_table);
         minimiser_files.push_back(("Minimiser_Test_Ex_" + std::string{sequence_files[i].stem()} + ".minimiser"));
-        EXPECT_TRUE(result_hash_table.find(216) == result_hash_table.end()); //TCGA, only minimiser in mini_gen2
+        EXPECT_FALSE(result_hash_table.contains(216)); //TCGA, only minimiser in mini_gen2
         for (auto & hash : expected_hash_tables[i])
         {
             if (hash.first == 216) //TCGA, only minimiser in mini_gen2

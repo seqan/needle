@@ -19,5 +19,5 @@
 */
 void delete_bin(std::vector<uint64_t> const & delete_files,
                 estimate_ibf_arguments & ibf_args,
-                std::filesystem::path path_in,
+                std::filesystem::path const & path_in,
                 bool samplewise);

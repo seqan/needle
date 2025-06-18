@@ -20,37 +20,37 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
                    estimate_ibf_arguments & ibf_args,
                    std::filesystem::path path_in,
                    std::vector<uint8_t> & cutoffs,
-                   std::filesystem::path expression_by_genome_file = "",
+                   std::filesystem::path const & expression_by_genome_file = "",
                    minimiser_file_input_arguments const & minimiser_args = {})
 {
     size_t old_bin_number{};
     size_t new_bin_number{};
-    size_t num_files;
     size_t num_hash_functions{};
 
-    if constexpr (minimiser_files_given)
-        num_files = minimiser_files.size();
-    else
-        num_files = minimiser_args.samples.size();
+    size_t const num_files = [&]() constexpr
+    {
+        if constexpr (minimiser_files_given)
+            return minimiser_files.size();
+        else
+            return minimiser_args.samples.size();
+    }();
 
-    std::vector<std::vector<uint16_t>> expressions{};
-    std::vector<std::vector<uint64_t>> counts_per_level{};
+    std::vector<std::vector<uint16_t>> expressions = [&]()
+    {
+        std::vector<std::vector<uint16_t>> result;
+        if constexpr (samplewise)
+            result.resize(num_files, std::vector<uint16_t>(ibf_args.number_expression_thresholds));
+        return result;
+    }();
+
     std::vector<uint64_t> sizes{};
+    std::vector<std::vector<uint64_t>> counts_per_level(num_files,
+                                                        std::vector<uint64_t>(ibf_args.number_expression_thresholds));
 
     bool const calculate_cutoffs = cutoffs.empty();
 
     robin_hood::unordered_set<uint64_t> include_set_table; // Storage for minimisers in include file
     robin_hood::unordered_set<uint64_t> exclude_set_table; // Storage for minimisers in exclude file
-    if constexpr (samplewise)
-    {
-        std::vector<uint16_t> zero_vector(ibf_args.number_expression_thresholds);
-        for (unsigned j = 0; j < num_files; j++)
-            expressions.push_back(zero_vector);
-    }
-
-    std::vector<uint64_t> zero_vector2(ibf_args.number_expression_thresholds);
-    for (unsigned j = 0; j < num_files; j++)
-        counts_per_level.push_back(zero_vector2);
 
     if constexpr (!minimiser_files_given)
     {
@@ -298,8 +298,8 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & sequence
                              estimate_ibf_arguments & ibf_args,
                              minimiser_file_input_arguments & minimiser_args,
                              std::vector<uint8_t> & cutoffs,
-                             std::filesystem::path const expression_by_genome_file,
-                             std::filesystem::path path_in,
+                             std::filesystem::path const & expression_by_genome_file,
+                             std::filesystem::path const & path_in,
                              bool samplewise)
 {
     // Declarations
@@ -330,8 +330,8 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & sequence
 // Insert into ibfs based on the minimiser file
 std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & minimiser_files,
                              estimate_ibf_arguments & ibf_args,
-                             std::filesystem::path const expression_by_genome_file,
-                             std::filesystem::path path_in,
+                             std::filesystem::path const & expression_by_genome_file,
+                             std::filesystem::path const & path_in,
                              bool samplewise)
 {
     std::vector<uint8_t> cutoffs{};

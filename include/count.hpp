@@ -15,8 +15,8 @@
 * \param exclude_file       A file containing minimizers which should be ignored.
 */
 void count_genome(minimiser_arguments const & args,
-                  std::filesystem::path include_file,
-                  std::filesystem::path exclude_file);
+                  std::filesystem::path const & include_file,
+                  std::filesystem::path const & exclude_file);
 
 /*!\brief Get the concrete expression values (= median of all counts of one transcript) for given experiments.
 *         This function can be used to estimate how good the median approach can be, if all count values are available.
@@ -27,7 +27,7 @@ void count_genome(minimiser_arguments const & args,
 * \param paired             Flag to indicate if input data is paired or not.
 */
 void count(minimiser_arguments const & args,
-           std::vector<std::filesystem::path> sequence_files,
-           std::filesystem::path include_file,
-           std::filesystem::path genome_file,
+           std::vector<std::filesystem::path> const & sequence_files,
+           std::filesystem::path const & include_file,
+           std::filesystem::path const & genome_file,
            bool paired);

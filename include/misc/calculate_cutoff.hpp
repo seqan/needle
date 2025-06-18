@@ -8,4 +8,4 @@
 #include <filesystem>
 
 // Determine cutoff for one experiment
-uint8_t calculate_cutoff(std::filesystem::path sequence_file, int samples);
+uint8_t calculate_cutoff(std::filesystem::path const & sequence_file, int samples);

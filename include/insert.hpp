@@ -26,8 +26,8 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & sequence
                              estimate_ibf_arguments & ibf_args,
                              minimiser_file_input_arguments & minimiser_args,
                              std::vector<uint8_t> & cutoffs,
-                             std::filesystem::path const expression_by_genome_file,
-                             std::filesystem::path path_in,
+                             std::filesystem::path const & expression_by_genome_file,
+                             std::filesystem::path const & path_in,
                              bool samplewise);
 
 /*! \brief Insert into IBFs based on the minimiser files
@@ -42,6 +42,6 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & sequence
 */
 std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & minimiser_files,
                              estimate_ibf_arguments & ibf_args,
-                             std::filesystem::path const expression_by_genome_file,
-                             std::filesystem::path path_in,
+                             std::filesystem::path const & expression_by_genome_file,
+                             std::filesystem::path const & path_in,
                              bool samplewise);
