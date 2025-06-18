@@ -4,10 +4,11 @@
 
 #include "ibf.hpp"
 
+#include <omp.h>
+
 #include <cereal/archives/binary.hpp>
 
 #include <hibf/build/bin_size_in_bits.hpp>
-#include <hibf/misc/divide_and_ceil.hpp>
 
 #include "misc/calculate_cutoff.hpp"
 #include "misc/check_cutoffs_samples.hpp"
@@ -249,7 +250,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     }
 
     // Create IBFs
-    std::vector<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>> ibfs;
+    std::vector<seqan::hibf::interleaved_bloom_filter> ibfs;
     for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
     {
         uint64_t size{};
@@ -271,7 +272,9 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                                                      .hash_count = num_hash,
                                                      .elements = seqan::hibf::divide_and_ceil(size, num_files)});
         sizes_ibf.push_back(size);
-        ibfs.emplace_back(seqan3::bin_count{num_files}, seqan3::bin_size{size}, seqan3::hash_function_count{num_hash});
+        ibfs.emplace_back(seqan::hibf::bin_count{num_files},
+                          seqan::hibf::bin_size{size},
+                          seqan::hibf::hash_function_count{num_hash});
     }
 
 // Add minimisers to ibf
@@ -347,7 +350,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
                 if (occurence >= threshold)
                 {
-                    ibfs[j].emplace(hash, seqan3::bin_index{i});
+                    ibfs[j].emplace(hash, seqan::hibf::bin_index{i});
                     counts_per_level[i][j]++;
                     break;
                 }
@@ -360,15 +363,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     {
         std::filesystem::path const filename = filenames::ibf(ibf_args.path_out, samplewise, i, ibf_args);
 
-        if (ibf_args.compressed)
-        {
-            seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf{ibfs[i]};
-            store_ibf(ibf, filename);
-        }
-        else
-        {
-            store_ibf(ibfs[i], filename);
-        }
+        store_ibf(ibfs[i], filename);
     }
 
     // Store all expression thresholds per level.

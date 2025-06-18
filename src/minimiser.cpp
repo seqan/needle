@@ -4,6 +4,9 @@
 
 #include "minimiser.hpp"
 
+#include <numeric>
+#include <omp.h>
+
 #include "misc/calculate_cutoff.hpp"
 #include "misc/check_cutoffs_samples.hpp"
 #include "misc/fill_hash_table.hpp"

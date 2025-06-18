@@ -19,7 +19,6 @@ struct estimate_test : public app_test
 {
     void initialization_args(estimate_ibf_arguments & args)
     {
-        args.compressed = true;
         args.k = 4;
         args.shape = seqan3::ungapped{args.k};
         args.w_size = seqan3::window_size{4};
@@ -56,7 +55,6 @@ TEST_F(estimate_test, small_example_uncompressed)
     minimiser_file_input_arguments minimiser_args{};
     estimate_arguments estimate_args{};
     initialization_args(ibf_args);
-    ibf_args.compressed = false;
     ibf_args.expression_thresholds = {1, 2, 4};
     std::vector<double> fpr = {0.05};
     std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta")};
@@ -170,7 +168,6 @@ TEST_F(estimate_test, small_example_different_expressions_per_level_normalizatio
     estimate_args.normalization_method = 1;
     initialization_args(ibf_args);
     ibf_args.number_expression_thresholds = 2;
-    ibf_args.compressed = false;
     std::vector<double> fpr = {0.05};
     std::vector<uint8_t> cutoffs{};
     std::vector<std::filesystem::path> sequence_files = {data("mini_example.fasta")};
@@ -204,7 +201,6 @@ TEST_F(estimate_test, example)
                                                          data("exp_12.fasta")};
     minimiser_args.samples = {2, 2};
     ibf_args.expression_thresholds = {4, 32};
-    ibf_args.compressed = false;
     std::vector<uint8_t> cutoffs{};
     ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs);
 
@@ -239,7 +235,6 @@ TEST_F(estimate_test, example_multiple_threads)
     minimiser_args.samples = {2, 2};
     ibf_args.expression_thresholds = {4, 32};
     std::vector<double> fpr = {0.05};
-    ibf_args.compressed = false;
     std::vector<uint8_t> cutoffs{};
     ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs);
     ibf_args.threads = 2;
@@ -276,7 +271,6 @@ TEST_F(estimate_test, example_different_expressions_per_level)
     minimiser_args.samples = {2, 2};
     ibf_args.number_expression_thresholds = 4;
     std::vector<double> fpr = {0.05};
-    ibf_args.compressed = false;
     minimiser(sequence_files, ibf_args, minimiser_args, cutoffs);
     std::vector<std::filesystem::path> minimiser_files{"exp_01.minimiser", "exp_11.minimiser"};
     ASSERT_TRUE(std::filesystem::exists(minimiser_files[0]));
@@ -318,7 +312,6 @@ TEST_F(estimate_test, example_different_expressions_per_level_multiple_threads)
     minimiser_args.samples = {2, 2};
     ibf_args.number_expression_thresholds = 4;
     std::vector<double> fpr = {0.05};
-    ibf_args.compressed = false;
     minimiser(sequence_files, ibf_args, minimiser_args, cutoffs);
     std::vector<std::filesystem::path> minimiser_files{"exp_01.minimiser", "exp_11.minimiser"};
     ASSERT_TRUE(std::filesystem::exists(minimiser_files[0]));

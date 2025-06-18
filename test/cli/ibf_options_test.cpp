@@ -22,7 +22,7 @@ TEST_F(ibf_options_test, ibf_no_options)
 
 TEST_F(ibf_options_test, ibf_fail_no_argument)
 {
-    app_test_result result = execute_app("ibf", "-c");
+    app_test_result result = execute_app("ibf", "--ram");
     std::string expected{
         "[Error] Not enough positional arguments provided (Need at least 1). See -h/--help for more information.\n"};
     EXPECT_FAILURE(result);
@@ -111,7 +111,7 @@ TEST_F(ibf_options_test, ibfmin_no_options)
 
 TEST_F(ibf_options_test, ibfmin_fail_no_argument)
 {
-    app_test_result result = execute_app("ibfmin -c");
+    app_test_result result = execute_app("ibfmin", "--threads 2");
     std::string expected{
         "[Error] Not enough positional arguments provided (Need at least 1). See -h/--help for more information.\n"};
     EXPECT_FAILURE(result);
@@ -173,7 +173,7 @@ TEST_F(ibf_options_test, ibfmin_with_argument)
 
 TEST_F(ibf_options_test, compressed)
 {
-    app_test_result result = execute_app("ibfmin -f 0.05 -l 1 -c ", data("mini_example.minimiser"));
+    app_test_result result = execute_app("ibfmin -f 0.05 -l 1", data("mini_example.minimiser"));
     EXPECT_SUCCESS(result);
     EXPECT_EQ(result.out, "");
     EXPECT_EQ(result.err, std::string{});

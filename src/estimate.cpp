@@ -4,6 +4,8 @@
 
 #include "estimate.hpp"
 
+#include <omp.h>
+
 #include <cereal/archives/binary.hpp>
 
 #include "misc/debug.hpp"
@@ -316,8 +318,5 @@ void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_
         }
     };
 
-    if (args.compressed)
-        call.template operator()<seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed>>({});
-    else
-        call.template operator()<seqan3::interleaved_bloom_filter<seqan3::data_layout::uncompressed>>({});
+    call.template operator()<seqan::hibf::interleaved_bloom_filter>({});
 }

@@ -24,7 +24,6 @@ struct minimiser_test : public app_test
         args.w_size = seqan3::window_size{4};
         args.s = seqan3::seed{0};
         args.path_out = "Minimiser_Test_";
-        args.compressed = true;
     }
 
     std::vector<robin_hood::unordered_node_map<uint64_t, uint16_t>> expected_hash_tables{
@@ -103,9 +102,9 @@ TEST_F(minimiser_test, small_example)
     }
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    seqan::hibf::interleaved_bloom_filter ibf;
     load_ibf(ibf, "Minimiser_Test_IBF_0");
-    auto agent = ibf.membership_agent();
+    auto agent = ibf.containment_agent();
 
     std::vector<bool> expected_result(2, 0);
     auto & res = agent.bulk_contains(2);
@@ -198,9 +197,9 @@ TEST_F(minimiser_test, small_example_samplewise)
     args.expression_thresholds = {};
     EXPECT_EQ(expected_levels, ibf(minimiser_files, args, fpr));
 
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    seqan::hibf::interleaved_bloom_filter ibf;
     load_ibf(ibf, "Minimiser_Test_IBF_Level_0");
-    auto agent = ibf.membership_agent();
+    auto agent = ibf.containment_agent();
 
     std::vector<bool> expected_result(2, 0);
     auto & res = agent.bulk_contains(2);
@@ -249,9 +248,9 @@ TEST_F(minimiser_test, cutoff_by_filesize)
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
 
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    seqan::hibf::interleaved_bloom_filter ibf;
     load_ibf(ibf, "Minimiser_Test_IBF_0");
-    auto agent = ibf.membership_agent();
+    auto agent = ibf.containment_agent();
 
     std::vector<bool> expected_result(2, 0);
     auto & res = agent.bulk_contains(2);
@@ -311,9 +310,9 @@ TEST_F(minimiser_test, small_example_two_threads)
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
 
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    seqan::hibf::interleaved_bloom_filter ibf;
     load_ibf(ibf, "Minimiser_Test_IBF_0");
-    auto agent = ibf.membership_agent();
+    auto agent = ibf.containment_agent();
 
     std::vector<bool> expected_result(2, 0);
     auto & res = agent.bulk_contains(2);
@@ -426,9 +425,9 @@ TEST_F(minimiser_test, small_example_exclude)
     }
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    seqan::hibf::interleaved_bloom_filter ibf;
     load_ibf(ibf, "Minimiser_Test_Ex_IBF_0");
-    auto agent = ibf.membership_agent();
+    auto agent = ibf.containment_agent();
 
     std::vector<bool> expected_result(2, 0);
     auto & res = agent.bulk_contains(2);
@@ -509,9 +508,9 @@ TEST_F(minimiser_test, small_example_shape)
     }
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
-    seqan3::interleaved_bloom_filter<seqan3::data_layout::compressed> ibf;
+    seqan::hibf::interleaved_bloom_filter ibf;
     load_ibf(ibf, "Minimiser_Test_Shape_IBF_0");
-    auto agent = ibf.membership_agent();
+    auto agent = ibf.containment_agent();
 
     std::vector<bool> expected_result(2, 0);
     auto & res = agent.bulk_contains(7);

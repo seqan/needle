@@ -14,8 +14,8 @@ struct insert_options_test : public app_test
 TEST_F(insert_options_test, insert_no_options)
 {
     app_test_result result = execute_app("insert");
-    std::string expected{"needle-insert - Inserts into a given uncompressed Needle index.\n"
-                         "===============================================================\n"
+    std::string expected{"needle-insert - Inserts into a given Needle index.\n"
+                         "==================================================\n"
                          "    Try -h or --help for more information.\n"};
     EXPECT_SUCCESS(result);
     EXPECT_EQ(result.out, expected);
@@ -24,7 +24,7 @@ TEST_F(insert_options_test, insert_no_options)
 
 TEST_F(insert_options_test, insert_fail_no_argument)
 {
-    app_test_result result = execute_app("insert", "-c");
+    app_test_result result = execute_app("insert", "--ram");
     std::string expected{
         "[Error] Not enough positional arguments provided (Need at least 1). See -h/--help for more information.\n"};
     EXPECT_FAILURE(result);
