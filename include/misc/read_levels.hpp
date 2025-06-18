@@ -9,4 +9,4 @@
 
 // Reads the level file ibf creates
 template <typename float_or_int>
-void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::filesystem::path filename);
+void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::filesystem::path const & filename);

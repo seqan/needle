@@ -21,7 +21,7 @@
 // Check number of expression levels, sort expression levels
 void check_expression(std::vector<uint16_t> & expression_thresholds,
                       uint8_t & number_expression_thresholds,
-                      std::filesystem::path const expression_by_genome_file)
+                      std::filesystem::path const & expression_by_genome_file)
 {
     // Sort given expression rates
     std::ranges::sort(expression_thresholds);
@@ -70,7 +70,7 @@ void check_fpr(uint8_t const number_expression_thresholds, std::vector<double> &
 
 // Estimate the file size for every expression level, necessary when samplewise=false, because then it is completly
 // unclear how many minimisers are to store per file.
-void get_filsize_per_expression_level(std::filesystem::path filename,
+void get_filsize_per_expression_level(std::filesystem::path const & filename,
                                       uint8_t const number_expression_thresholds,
                                       std::vector<uint16_t> const & expression_thresholds,
                                       std::vector<uint64_t> & sizes,
@@ -120,7 +120,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 estimate_ibf_arguments & ibf_args,
                 std::vector<uint8_t> & cutoffs,
                 size_t num_hash = 1,
-                std::filesystem::path expression_by_genome_file = "",
+                std::filesystem::path const & expression_by_genome_file = "",
                 minimiser_file_input_arguments const & minimiser_args = {})
 {
     size_t const num_files = [&]() constexpr
@@ -406,7 +406,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
                           minimiser_file_input_arguments & minimiser_args,
                           std::vector<double> & fpr,
                           std::vector<uint8_t> & cutoffs,
-                          std::filesystem::path const expression_by_genome_file,
+                          std::filesystem::path const & expression_by_genome_file,
                           size_t num_hash)
 {
     // Declarations
@@ -456,7 +456,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
 std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_files,
                           estimate_ibf_arguments & ibf_args,
                           std::vector<double> & fpr,
-                          std::filesystem::path const expression_by_genome_file,
+                          std::filesystem::path const & expression_by_genome_file,
                           size_t num_hash)
 {
     check_expression(ibf_args.expression_thresholds, ibf_args.number_expression_thresholds, expression_by_genome_file);

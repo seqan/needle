@@ -29,7 +29,8 @@ inline auto & write_stream(std::ofstream & stream, t const & val)
 * \param hash_table         The hash table to store minimisers into.
 
 */
-void read_binary(std::filesystem::path filename, robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table);
+void read_binary(std::filesystem::path const & filename,
+                 robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table);
 
 /*!\brief Reads the beginning of a binary file that needle minimiser creates.
 * \param args               Min arguments.
@@ -38,6 +39,6 @@ void read_binary(std::filesystem::path filename, robin_hood::unordered_node_map<
 * \param cutoff             cutoff value.
 */
 void read_binary_start(minimiser_arguments & args,
-                       std::filesystem::path filename,
+                       std::filesystem::path const & filename,
                        uint64_t & num_of_minimisers,
                        uint8_t & cutoff);
