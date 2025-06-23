@@ -288,7 +288,7 @@ TEST_F(estimate_test, example_different_expressions_per_level)
     std::ifstream output_file(ibf_args.path_out);
     std::string line;
     // Count would expect 6 and 34
-    std::string expected{"GeneA\t7\t26\t"};
+    std::string expected{"GeneA\t6\t26\t"};
     if (output_file.is_open())
     {
         while (std::getline(output_file, line))
@@ -330,7 +330,7 @@ TEST_F(estimate_test, example_different_expressions_per_level_multiple_threads)
     std::ifstream output_file(ibf_args.path_out);
     std::string line;
     // Count would expect 6 and 34
-    std::string expected{"GeneA\t7\t26\t"};
+    std::string expected{"GeneA\t6\t26\t"};
     if (output_file.is_open())
     {
         while (std::getline(output_file, line))
