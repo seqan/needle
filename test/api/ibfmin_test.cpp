@@ -42,17 +42,15 @@ TEST_F(ibfmin_test, given_expression_thresholds)
     EXPECT_EQ(expected, medians);
 
     seqan::hibf::interleaved_bloom_filter ibf;
-    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Given_IBF_1"));
+    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Given_IBF"));
     {
-        load_ibf(ibf, "IBFMIN_Test_Given_IBF_1");
+        load_ibf(ibf, "IBFMIN_Test_Given_IBF");
         auto agent = ibf.containment_agent();
 
-        std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(97);
-        EXPECT_RANGE_EQ(expected_result, res);
-        expected_result[0] = 1;
+        EXPECT_RANGE_EQ((std::vector<bool>{0, 1}), res);
         auto & res2 = agent.bulk_contains(24);
-        EXPECT_RANGE_EQ(expected_result, res2);
+        EXPECT_RANGE_EQ((std::vector<bool>{1, 0}), res2);
     }
 }
 
@@ -74,13 +72,15 @@ TEST_F(ibfmin_test, given_expression_thresholds_multiple_threads)
     EXPECT_EQ(expected, medians);
 
     seqan::hibf::interleaved_bloom_filter ibf;
-    load_ibf(ibf, "IBFMIN_Test_Multiple_IBF_1");
+    load_ibf(ibf, "IBFMIN_Test_Multiple_IBF");
     auto agent = ibf.containment_agent();
 
-    std::vector<bool> expected_result(128, 0);
+    std::vector<bool> expected_result(256, 0);
+    std::ranges::fill(expected_result.begin() + 128, expected_result.end(), 1);
     auto & res = agent.bulk_contains(97);
     EXPECT_RANGE_EQ(expected_result, res);
-    std::vector<bool> expected_result2(128, 1);
+    std::vector<bool> expected_result2(256, 1);
+    std::ranges::fill(expected_result2.begin() + 128, expected_result2.end(), 0);
     auto & res2 = agent.bulk_contains(24);
     EXPECT_RANGE_EQ(expected_result2, res2);
 }
@@ -99,18 +99,16 @@ TEST_F(ibfmin_test, no_given_expression_thresholds)
 
     EXPECT_EQ(expected, medians);
 
-    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_IBF_Level_0"));
+    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_IBF"));
     {
         seqan::hibf::interleaved_bloom_filter ibf;
-        load_ibf(ibf, "IBFMIN_Test_IBF_Level_0");
+        load_ibf(ibf, "IBFMIN_Test_IBF");
         auto agent = ibf.containment_agent();
 
-        std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(2);
-        EXPECT_RANGE_EQ(expected_result, res);
-        expected_result[0] = 1;
+        EXPECT_RANGE_EQ((std::vector<bool>{0, 0}), res);
         auto & res2 = agent.bulk_contains(24);
-        EXPECT_RANGE_EQ(expected_result, res2);
+        EXPECT_RANGE_EQ((std::vector<bool>{1, 0}), res2);
     }
 }
 
@@ -128,10 +126,10 @@ TEST_F(ibfmin_test, expression_thresholds_by_genome)
 
     EXPECT_EQ(expected, medians);
 
-    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_IBF_Level_0"));
+    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_IBF"));
     {
         seqan::hibf::interleaved_bloom_filter ibf;
-        load_ibf(ibf, "IBFMIN_Test_IBF_Level_0");
+        load_ibf(ibf, "IBFMIN_Test_IBF");
         auto agent = ibf.containment_agent();
 
         std::vector<bool> expected_result(1, 0);
@@ -161,13 +159,14 @@ TEST_F(ibfmin_test, no_given_expression_thresholds_multiple_threads)
     EXPECT_EQ(expected, medians);
 
     seqan::hibf::interleaved_bloom_filter ibf;
-    load_ibf(ibf, "IBFMIN_Test_Multiple_IBF_Level_0");
+    load_ibf(ibf, "IBFMIN_Test_Multiple_IBF");
     auto agent = ibf.containment_agent();
 
-    std::vector<bool> expected_result(128, 0);
+    std::vector<bool> expected_result(256, 0);
     auto & res = agent.bulk_contains(2);
     EXPECT_RANGE_EQ(expected_result, res);
-    std::vector<bool> expected_result2(128, 1);
+    std::vector<bool> expected_result2(256, 1);
+    std::ranges::fill(expected_result2.begin() + 128, expected_result2.end(), 0);
     auto & res2 = agent.bulk_contains(24);
     EXPECT_RANGE_EQ(expected_result2, res2);
 }
@@ -193,16 +192,14 @@ TEST_F(ibfmin_test, different_shape)
     EXPECT_EQ(expected, medians);
 
     seqan::hibf::interleaved_bloom_filter ibf;
-    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Shape_IBF_1"));
+    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Shape_IBF"));
     {
-        load_ibf(ibf, "IBFMIN_Test_Shape_IBF_1");
+        load_ibf(ibf, "IBFMIN_Test_Shape_IBF");
         auto agent = ibf.containment_agent();
 
-        std::vector<bool> expected_result(1, 0);
         auto & res = agent.bulk_contains(97);
-        EXPECT_RANGE_EQ(expected_result, res);
-        expected_result[0] = 1;
+        EXPECT_RANGE_EQ((std::vector<bool>{0, 0}), res);
         auto & res2 = agent.bulk_contains(4);
-        EXPECT_RANGE_EQ(expected_result, res2);
+        EXPECT_RANGE_EQ((std::vector<bool>{1, 0}), res2);
     }
 }

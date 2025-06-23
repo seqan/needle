@@ -249,63 +249,57 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         }
     }
 
-    size_t const total_bins = num_files * ibf_args.number_expression_thresholds;
-
-    uint64_t max_elements = 0;
-    uint64_t total_elements = 0;
-
-    for (size_t i = 0; i < num_files; ++i)
+    seqan::hibf::interleaved_bloom_filter single_ibf = [&]()
     {
-        for (size_t j = 0; j < ibf_args.number_expression_thresholds; ++j)
+        size_t const total_bins = num_files * ibf_args.number_expression_thresholds;
+
+        uint64_t max_elements = 0;
+        uint64_t total_elements = 0;
+
+        for (size_t i = 0; i < num_files; ++i)
         {
-            max_elements = std::max(max_elements, sizes[i][j]);
-            total_elements += sizes[i][j];
+            for (size_t j = 0; j < ibf_args.number_expression_thresholds; ++j)
+            {
+                max_elements = std::max(max_elements, sizes[i][j]);
+                total_elements += sizes[i][j];
+            }
         }
-    }
 
-    // Check if we have valid data
-    if (max_elements == 0)
-    {
-        throw std::invalid_argument{"No minimizers found for any threshold level."};
-    }
+        // Check if we have valid data
+        if (max_elements == num_files)
+        {
+            throw std::invalid_argument{"No minimizers found for any threshold level."};
+        }
 
-    // Use average elements per bin for sizing
-    uint64_t avg_elements = std::max(1UL, total_elements / total_bins);
-    uint64_t elements_for_sizing = avg_elements;
-    // Alternatively: Use maximum elements for sizing:
-    // uint64_t elements_for_sizing = std::max(max_elements, avg_elements);
+        // Use average elements per bin for sizing
+        uint64_t avg_elements = std::max<uint64_t>(1UL, total_elements / total_bins);
+        // uint64_t elements_for_sizing = avg_elements;
+        // Alternatively: Use maximum elements for sizing:
+        uint64_t elements_for_sizing = std::max(max_elements, avg_elements);
 
-    // Calculate IBF bin size using the first FPR
-    double const target_fpr = fprs[0];
+        uint64_t const ibf_bin_size = seqan::hibf::build::bin_size_in_bits({.fpr = fprs[0], //
+                                                                            .hash_count = num_hash,
+                                                                            .elements = elements_for_sizing});
 
-    // m = -hn/ln(1-p^(1/h))
-    double const log_p_over_h = std::log(target_fpr) / static_cast<double>(num_hash);
-    double const one_minus_p_pow_inv_h = 1.0 - std::exp(log_p_over_h);
+        // Initialize sizes_ibf for compatibility with FPR calculation
+        sizes_ibf.assign(ibf_args.number_expression_thresholds, ibf_bin_size);
 
-    if (one_minus_p_pow_inv_h <= 0.0)
-    {
-        throw std::invalid_argument{"Invalid FPR value - results in invalid bloom filter parameters."};
-    }
-
-    double const denominator = std::log(one_minus_p_pow_inv_h);
-    double const numerator = -static_cast<double>(elements_for_sizing * num_hash);
-    uint64_t const ibf_bin_size = static_cast<uint64_t>(std::ceil(numerator / denominator));
-
-    // Create single IBF
-    seqan::hibf::interleaved_bloom_filter single_ibf(seqan::hibf::bin_count{total_bins},
+        // Create single IBF
+        return seqan::hibf::interleaved_bloom_filter{seqan::hibf::bin_count{total_bins},
                                                      seqan::hibf::bin_size{ibf_bin_size},
-                                                     seqan::hibf::hash_function_count{num_hash});
-
-    // Initialize sizes_ibf for compatibility with FPR calculation
-    sizes_ibf.assign(ibf_args.number_expression_thresholds, ibf_bin_size);
+                                                     seqan::hibf::hash_function_count{num_hash}};
+    }();
 
     // Collect minimizer insertions from all threads
     std::vector<std::vector<std::pair<uint64_t, std::vector<size_t>>>> file_insertions(num_files);
 
-    // Sequentially process each file TODO: implement parallel processing
+// Parallelize this loop
+#pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < num_files; i++)
     {
-        robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{};
+        robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
+        // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
+        // and afterwards discarded.
         robin_hood::unordered_node_map<uint64_t, uint8_t> cutoff_table;
         std::vector<uint16_t> expression_thresholds;
 
@@ -424,10 +418,12 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         for (size_t i = 0; i < num_files; i++)
         {
             // Calculate actual FPR based on IBF parameters
+            // TODO: Why this case?
             if (counts_per_level[i][j] > 0 && sizes_ibf[j] > 0)
             {
                 double const exp_arg = (num_hash * counts_per_level[i][j]) / static_cast<double>(sizes_ibf[j]);
                 double const log_arg = 1.0 - std::exp(-exp_arg);
+                // TODO: Why this ternary?
                 double const fpr = (log_arg > 0) ? std::exp(num_hash * std::log(log_arg)) : 1.0;
                 outfile << fpr << " ";
             }

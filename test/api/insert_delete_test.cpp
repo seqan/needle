@@ -43,24 +43,18 @@ TEST_F(delete_test, no_given_thresholds)
     std::vector<std::filesystem::path> sequence_files_delete = {data("mini_example.fasta"), data("mini_example.fasta")};
     ibf(sequence_files_delete, ibf_args_delete, minimiser_args_delete, fpr, cutoffs_delete);
     seqan::hibf::interleaved_bloom_filter ibf{};
-    load_ibf(ibf, "IBF_delete_Exp_IBF_Level_0");
-    seqan::hibf::interleaved_bloom_filter ibf_0{seqan::hibf::bin_count{2u},
-                                                seqan::hibf::bin_size{ibf.bin_size()},
-                                                seqan::hibf::hash_function_count{1u}};
-    load_ibf(ibf, "IBF_delete_Exp_IBF_Level_1");
-    seqan::hibf::interleaved_bloom_filter ibf_1{seqan::hibf::bin_count{2u},
+    ASSERT_TRUE(std::filesystem::exists("IBF_delete_Exp_IBF"));
+    load_ibf(ibf, "IBF_delete_Exp_IBF");
+    seqan::hibf::interleaved_bloom_filter ibf_0{seqan::hibf::bin_count{4u},
                                                 seqan::hibf::bin_size{ibf.bin_size()},
                                                 seqan::hibf::hash_function_count{1u}};
 
     delete_bin({0, 1}, ibf_args_delete, "IBF_delete_Exp_", true);
 
     seqan::hibf::interleaved_bloom_filter ibf_delete{};
-
-    load_ibf(ibf_delete, "IBF_delete_Exp_IBF_Level_0");
+    ASSERT_TRUE(std::filesystem::exists("IBF_delete_Exp_IBF"));
+    load_ibf(ibf_delete, "IBF_delete_Exp_IBF");
     EXPECT_TRUE((ibf_0 == ibf_delete));
-
-    load_ibf(ibf_delete, "IBF_delete_Exp_IBF_Level_1");
-    EXPECT_TRUE((ibf_1 == ibf_delete));
 }
 
 TEST_F(insert_test, ibf)
@@ -93,12 +87,10 @@ TEST_F(insert_test, ibf)
     seqan::hibf::interleaved_bloom_filter ibf;
     seqan::hibf::interleaved_bloom_filter ibf_insert;
 
-    load_ibf(ibf, "IBF_True_Exp_IBF_1");
-    load_ibf(ibf_insert, "IBF_Insert_Exp_IBF_1");
-    EXPECT_TRUE((ibf == ibf_insert));
-
-    load_ibf(ibf, "IBF_True_Exp_IBF_2");
-    load_ibf(ibf_insert, "IBF_Insert_Exp_IBF_2");
+    ASSERT_TRUE(std::filesystem::exists("IBF_True_Exp_IBF"));
+    load_ibf(ibf, "IBF_True_Exp_IBF");
+    ASSERT_TRUE(std::filesystem::exists("IBF_Insert_Exp_IBF"));
+    load_ibf(ibf_insert, "IBF_Insert_Exp_IBF");
     EXPECT_TRUE((ibf == ibf_insert));
 
     std::vector<std::vector<double>> fpr_ibf{};
@@ -138,12 +130,10 @@ TEST_F(insert_test, ibf_no_given_thresholds)
     seqan::hibf::interleaved_bloom_filter ibf;
     seqan::hibf::interleaved_bloom_filter ibf_insert;
 
-    load_ibf(ibf, "IBF_True_Exp_IBF_Level_0");
-    load_ibf(ibf_insert, "IBF_Insert_Exp_IBF_Level_0");
-    EXPECT_TRUE((ibf == ibf_insert));
-
-    load_ibf(ibf, "IBF_True_Exp_IBF_Level_1");
-    load_ibf(ibf_insert, "IBF_Insert_Exp_IBF_Level_1");
+    ASSERT_TRUE(std::filesystem::exists("IBF_True_Exp_IBF"));
+    load_ibf(ibf, "IBF_True_Exp_IBF");
+    ASSERT_TRUE(std::filesystem::exists("IBF_Insert_Exp_IBF"));
+    load_ibf(ibf_insert, "IBF_Insert_Exp_IBF");
     EXPECT_TRUE((ibf == ibf_insert));
 
     std::vector<std::vector<uint16_t>> expressions_ibf{};
@@ -194,12 +184,10 @@ TEST_F(insert_test, ibf_delete)
     seqan::hibf::interleaved_bloom_filter ibf;
     seqan::hibf::interleaved_bloom_filter ibf_insert;
 
-    load_ibf(ibf, "IBF_True_Exp_IBF_1");
-    load_ibf(ibf_insert, "IBF_Insert_Exp_IBF_1");
-    EXPECT_TRUE((ibf == ibf_insert));
-
-    load_ibf(ibf, "IBF_True_Exp_IBF_2");
-    load_ibf(ibf_insert, "IBF_Insert_Exp_IBF_2");
+    ASSERT_TRUE(std::filesystem::exists("IBF_True_Exp_IBF"));
+    load_ibf(ibf, "IBF_True_Exp_IBF");
+    ASSERT_TRUE(std::filesystem::exists("IBF_Insert_Exp_IBF"));
+    load_ibf(ibf_insert, "IBF_Insert_Exp_IBF");
     EXPECT_TRUE((ibf == ibf_insert));
 
     std::vector<std::vector<double>> fpr_ibf{};
@@ -244,13 +232,11 @@ TEST_F(insert_test, ibf_delete_no_given_threshold)
     seqan::hibf::interleaved_bloom_filter ibf;
     seqan::hibf::interleaved_bloom_filter ibf_insert;
 
-    load_ibf(ibf, "IBF_True_Exp_IBF_Level_0");
+    ASSERT_TRUE(std::filesystem::exists("IBF_True_Exp_IBF"));
+    load_ibf(ibf, "IBF_True_Exp_IBF");
 
-    load_ibf(ibf_insert, "IBF_Insert_Exp_IBF_Level_0");
-    EXPECT_TRUE((ibf == ibf_insert));
-
-    load_ibf(ibf, "IBF_True_Exp_IBF_Level_1");
-    load_ibf(ibf_insert, "IBF_Insert_Exp_IBF_Level_1");
+    ASSERT_TRUE(std::filesystem::exists("IBF_Insert_Exp_IBF"));
+    load_ibf(ibf_insert, "IBF_Insert_Exp_IBF");
     EXPECT_TRUE((ibf == ibf_insert));
 
     std::vector<std::vector<uint16_t>> expressions_ibf{};
@@ -288,12 +274,10 @@ TEST_F(insert_test, ibfmin)
     seqan::hibf::interleaved_bloom_filter ibf;
     seqan::hibf::interleaved_bloom_filter ibf_insert;
 
-    load_ibf(ibf, "IBFMIN_Test_Given_IBF_1");
-    load_ibf(ibf_insert, "IBFMIN_Insert_Given_IBF_1");
-    EXPECT_TRUE((ibf == ibf_insert));
-
-    load_ibf(ibf, "IBFMIN_Test_Given_IBF_2");
-    load_ibf(ibf_insert, "IBFMIN_Insert_Given_IBF_2");
+    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Given_IBF"));
+    load_ibf(ibf, "IBFMIN_Test_Given_IBF");
+    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Insert_Given_IBF"));
+    load_ibf(ibf_insert, "IBFMIN_Insert_Given_IBF");
     EXPECT_TRUE((ibf == ibf_insert));
 
     std::vector<std::vector<double>> fpr_ibf{};
@@ -327,12 +311,10 @@ TEST_F(insert_test, ibfmin_delete)
     seqan::hibf::interleaved_bloom_filter ibf;
     seqan::hibf::interleaved_bloom_filter ibf_insert;
 
-    load_ibf(ibf, "IBFMIN_Test_Given_IBF_1");
-    load_ibf(ibf_insert, "IBFMIN_Insert_Given_IBF_1");
-    EXPECT_TRUE((ibf == ibf_insert));
-
-    load_ibf(ibf, "IBFMIN_Test_Given_IBF_2");
-    load_ibf(ibf_insert, "IBFMIN_Insert_Given_IBF_2");
+    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Given_IBF"));
+    load_ibf(ibf, "IBFMIN_Test_Given_IBF");
+    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Insert_Given_IBF"));
+    load_ibf(ibf_insert, "IBFMIN_Insert_Given_IBF");
     EXPECT_TRUE((ibf == ibf_insert));
 
     std::vector<std::vector<double>> fpr_ibf{};
@@ -366,12 +348,10 @@ TEST_F(insert_test, ibfmin_no_given_thresholds)
     seqan::hibf::interleaved_bloom_filter ibf;
     seqan::hibf::interleaved_bloom_filter ibf_insert;
 
-    load_ibf(ibf, "IBFMIN_Test_Given_IBF_Level_0");
-    load_ibf(ibf_insert, "IBFMIN_Insert_Given_IBF_Level_0");
-    EXPECT_TRUE((ibf == ibf_insert));
-
-    load_ibf(ibf, "IBFMIN_Test_Given_IBF_Level_1");
-    load_ibf(ibf_insert, "IBFMIN_Insert_Given_IBF_Level_1");
+    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Given_IBF"));
+    load_ibf(ibf, "IBFMIN_Test_Given_IBF");
+    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Insert_Given_IBF"));
+    load_ibf(ibf_insert, "IBFMIN_Insert_Given_IBF");
     EXPECT_TRUE((ibf == ibf_insert));
 
     std::vector<std::vector<uint16_t>> expressions_ibf{};
@@ -413,12 +393,10 @@ TEST_F(insert_test, delete_ibfmin_no_given_thresholds)
     seqan::hibf::interleaved_bloom_filter ibf;
     seqan::hibf::interleaved_bloom_filter ibf_insert;
 
-    load_ibf(ibf, "IBFMIN_Test_Given_Del_IBF_Level_0");
-    load_ibf(ibf_insert, "IBFMIN_Insert_Given_Del_IBF_Level_0");
-    EXPECT_TRUE((ibf == ibf_insert));
-
-    load_ibf(ibf, "IBFMIN_Test_Given_Del_IBF_Level_1");
-    load_ibf(ibf_insert, "IBFMIN_Insert_Given_Del_IBF_Level_1");
+    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Given_Del_IBF"));
+    load_ibf(ibf, "IBFMIN_Test_Given_Del_IBF");
+    ASSERT_TRUE(std::filesystem::exists("IBFMIN_Insert_Given_Del_IBF"));
+    load_ibf(ibf_insert, "IBFMIN_Insert_Given_Del_IBF");
     EXPECT_TRUE((ibf == ibf_insert));
 
     std::vector<std::vector<uint16_t>> expressions_ibf{};

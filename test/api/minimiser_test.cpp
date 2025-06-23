@@ -103,7 +103,8 @@ TEST_F(minimiser_test, small_example)
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
     seqan::hibf::interleaved_bloom_filter ibf;
-    load_ibf(ibf, "Minimiser_Test_IBF_0");
+    ASSERT_TRUE(std::filesystem::exists("Minimiser_Test_IBF"));
+    load_ibf(ibf, "Minimiser_Test_IBF");
     auto agent = ibf.containment_agent();
 
     std::vector<bool> expected_result(2, 0);
@@ -198,7 +199,8 @@ TEST_F(minimiser_test, small_example_samplewise)
     EXPECT_EQ(expected_levels, ibf(minimiser_files, args, fpr));
 
     seqan::hibf::interleaved_bloom_filter ibf;
-    load_ibf(ibf, "Minimiser_Test_IBF_Level_0");
+    ASSERT_TRUE(std::filesystem::exists("Minimiser_Test_IBF"));
+    load_ibf(ibf, "Minimiser_Test_IBF");
     auto agent = ibf.containment_agent();
 
     std::vector<bool> expected_result(2, 0);
@@ -249,7 +251,8 @@ TEST_F(minimiser_test, cutoff_by_filesize)
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
 
     seqan::hibf::interleaved_bloom_filter ibf;
-    load_ibf(ibf, "Minimiser_Test_IBF_0");
+    ASSERT_TRUE(std::filesystem::exists("Minimiser_Test_IBF"));
+    load_ibf(ibf, "Minimiser_Test_IBF");
     auto agent = ibf.containment_agent();
 
     std::vector<bool> expected_result(2, 0);
@@ -311,7 +314,8 @@ TEST_F(minimiser_test, small_example_two_threads)
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
 
     seqan::hibf::interleaved_bloom_filter ibf;
-    load_ibf(ibf, "Minimiser_Test_IBF_0");
+    ASSERT_TRUE(std::filesystem::exists("Minimiser_Test_IBF"));
+    load_ibf(ibf, "Minimiser_Test_IBF");
     auto agent = ibf.containment_agent();
 
     std::vector<bool> expected_result(2, 0);
@@ -426,7 +430,8 @@ TEST_F(minimiser_test, small_example_exclude)
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
     seqan::hibf::interleaved_bloom_filter ibf;
-    load_ibf(ibf, "Minimiser_Test_Ex_IBF_0");
+    ASSERT_TRUE(std::filesystem::exists("Minimiser_Test_Ex_IBF"));
+    load_ibf(ibf, "Minimiser_Test_Ex_IBF");
     auto agent = ibf.containment_agent();
 
     std::vector<bool> expected_result(2, 0);
@@ -509,7 +514,8 @@ TEST_F(minimiser_test, small_example_shape)
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
     seqan::hibf::interleaved_bloom_filter ibf;
-    load_ibf(ibf, "Minimiser_Test_Shape_IBF_0");
+    ASSERT_TRUE(std::filesystem::exists("Minimiser_Test_Shape_IBF"));
+    load_ibf(ibf, "Minimiser_Test_Shape_IBF");
     auto agent = ibf.containment_agent();
 
     std::vector<bool> expected_result(2, 0);

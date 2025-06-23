@@ -34,7 +34,7 @@ constexpr std::string_view stored_files_name = "Stored_Files.txt";
 // We also want to avoid unnecessary copies of the path: https://godbolt.org/z/Mxrjxf8h3
 
 [[nodiscard]] inline std::filesystem::path
-ibf(std::filesystem::path base_path, bool const samplewise, uint16_t const level, estimate_ibf_arguments const & args)
+ibf(std::filesystem::path base_path, bool const samplewise, uint16_t const, estimate_ibf_arguments const &)
 {
     if (samplewise)
         base_path += ibf_prefix.data();
@@ -45,7 +45,7 @@ ibf(std::filesystem::path base_path, bool const samplewise, uint16_t const level
 
 [[nodiscard]] inline std::filesystem::path levels(std::filesystem::path base_path)
 {
-    base_path += ibf_levels_name; 
+    base_path += ibf_levels_name;
     return base_path;
 }
 
