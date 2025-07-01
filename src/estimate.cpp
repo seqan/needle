@@ -7,6 +7,7 @@
 #include <omp.h>
 
 #include <cereal/archives/binary.hpp>
+#include <hibf/hierarchical_interleaved_bloom_filter.hpp>
 
 #include "misc/debug.hpp"
 #include "misc/filenames.hpp"
@@ -24,14 +25,14 @@ inline std::vector<uint64_t> get_minimiser(seqan3::dna4_vector const & seq, mini
 // Actual estimation
 template <typename ibf_t, bool normalization, typename exp_t>
 void check_ibf(estimate_ibf_arguments const & args,
-               ibf_t const & ibf,
-               std::vector<uint16_t> & estimations,
-               seqan3::dna4_vector const & seq,
-               exp_t const & expressions,
-               std::vector<std::vector<double>> const & fprs,
-               std::vector<uint64_t> const & deleted,
-               size_t const num_levels,
-               size_t const num_experiments)
+                    ibf_t const & ibf,
+                    std::vector<uint16_t> & estimations,
+                    seqan3::dna4_vector const & seq,
+                    exp_t const & expressions,
+                    std::vector<std::vector<double>> const & fprs,
+                    std::vector<uint64_t> const & deleted,
+                    size_t const num_levels,
+                    size_t const num_experiments)
 {
     // Check, if one expression threshold for all or individual thresholds
     static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
@@ -44,9 +45,17 @@ void check_ibf(estimate_ibf_arguments const & args,
         log("Warning: 16-bit counter might overflow.");
 #endif
 
-    std::vector<float> counter(ibf.bin_count());
-    auto agent = ibf.counting_agent();
-    std::ranges::copy(agent.bulk_count(minimiser), counter.begin());
+    std::vector<float> counter(num_levels * num_experiments, 0.0f);
+    auto agent = ibf.membership_agent();
+    for (auto const & mini : minimiser)
+    {
+        auto const & result = agent.membership_for(std::vector<uint64_t>{mini}, 1u);
+        
+        for (size_t user_bin_id : result)
+        {
+            counter[user_bin_id] += 1.0f;
+        }
+    }
 
     // Defines where the median should be
     float const minimiser_pos = minimiser_count / 2.0;
@@ -116,9 +125,8 @@ void check_ibf(estimate_ibf_arguments const & args,
                 }
 
                 // Apply normalization if requested
-                // TODO: Is this meant to be expressions[0]?
                 if constexpr (normalization && multiple_expressions)
-                    estimations[experiment] /= expressions[1][experiment]; // Normalize by first level
+                    estimations[experiment] /= expressions[0][experiment]; // Normalize by first level
 
                 break; // Found the estimate for this experiment
             }
@@ -208,7 +216,7 @@ void estimate(estimate_ibf_arguments & args,
 
     // Calculate dimensions based on IBF structure
     size_t const num_levels = args.number_expression_thresholds;
-    size_t const total_bins = ibf.bin_count();
+    size_t const total_bins = ibf.number_of_user_bins;
 
     assert(total_bins % num_levels == 0);                   // Ensure that total_bins is divisible by num_levels
     size_t const num_experiments = total_bins / num_levels; // This should match the number of files/experiments
@@ -326,5 +334,5 @@ void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_
         }
     };
 
-    call.template operator()<seqan::hibf::interleaved_bloom_filter>({});
+    call.template operator()<seqan::hibf::hierarchical_interleaved_bloom_filter>({});
 }
