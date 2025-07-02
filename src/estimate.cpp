@@ -116,9 +116,8 @@ void check_ibf(estimate_ibf_arguments const & args,
                 }
 
                 // Apply normalization if requested
-                // TODO: Is this meant to be expressions[0]?
                 if constexpr (normalization && multiple_expressions)
-                    estimations[experiment] /= expressions[1][experiment]; // Normalize by first level
+                    estimations[experiment] /= expressions[0][experiment]; // Normalize by first level
 
                 break; // Found the estimate for this experiment
             }
