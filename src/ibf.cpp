@@ -347,7 +347,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     // Populate user bins from collected insertions
     for (size_t i = 0; i < num_files; ++i)
     {
-        for (const auto & [hash, bins] : file_insertions[i])
+        for (auto const & [hash, bins] : file_insertions[i])
         {
             for (size_t bin_idx : bins)
             {
@@ -364,11 +364,11 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     };
 
     // HIBF config
-    seqan::hibf::config hibf_config{    
+    seqan::hibf::config hibf_config{
         .input_fn = hibf_input,
         .number_of_user_bins = user_bin_minimisers.size(),
         .number_of_hash_functions = num_hash,
-        .maximum_fpr = fprs[0], 
+        .maximum_fpr = fprs[0],
         .threads = ibf_args.threads,
     };
 

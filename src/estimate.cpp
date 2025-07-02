@@ -7,6 +7,7 @@
 #include <omp.h>
 
 #include <cereal/archives/binary.hpp>
+
 #include <hibf/hierarchical_interleaved_bloom_filter.hpp>
 
 #include "misc/debug.hpp"
@@ -25,14 +26,14 @@ inline std::vector<uint64_t> get_minimiser(seqan3::dna4_vector const & seq, mini
 // Actual estimation
 template <typename ibf_t, bool normalization, typename exp_t>
 void check_ibf(estimate_ibf_arguments const & args,
-                    ibf_t const & ibf,
-                    std::vector<uint16_t> & estimations,
-                    seqan3::dna4_vector const & seq,
-                    exp_t const & expressions,
-                    std::vector<std::vector<double>> const & fprs,
-                    std::vector<uint64_t> const & deleted,
-                    size_t const num_levels,
-                    size_t const num_experiments)
+               ibf_t const & ibf,
+               std::vector<uint16_t> & estimations,
+               seqan3::dna4_vector const & seq,
+               exp_t const & expressions,
+               std::vector<std::vector<double>> const & fprs,
+               std::vector<uint64_t> const & deleted,
+               size_t const num_levels,
+               size_t const num_experiments)
 {
     // Check, if one expression threshold for all or individual thresholds
     static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
@@ -50,7 +51,7 @@ void check_ibf(estimate_ibf_arguments const & args,
     for (auto const & mini : minimiser)
     {
         auto const & result = agent.membership_for(std::vector<uint64_t>{mini}, 1u);
-        
+
         for (size_t user_bin_id : result)
         {
             counter[user_bin_id] += 1.0f;
