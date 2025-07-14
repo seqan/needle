@@ -46,17 +46,10 @@ void check_ibf(estimate_ibf_arguments const & args,
         log("Warning: 16-bit counter might overflow.");
 #endif
 
-    std::vector<float> counter(num_levels * num_experiments, 0.0f);
-    auto agent = ibf.membership_agent();
-    for (auto const & mini : minimiser)
-    {
-        auto const & result = agent.membership_for(std::vector<uint64_t>{mini}, 1u);
-
-        for (size_t user_bin_id : result)
-        {
-            counter[user_bin_id] += 1.0f;
-        }
-    }
+    std::vector<float> counter(ibf.number_of_user_bins);
+    assert(counter.size() == num_levels * num_experiments);
+    auto agent = ibf.counting_agent();
+    std::ranges::copy(agent.bulk_count(minimiser, 1u), counter.begin());
 
     // Defines where the median should be
     float const minimiser_pos = minimiser_count / 2.0;
