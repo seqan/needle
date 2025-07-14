@@ -420,7 +420,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             // Calculate actual FPR based on IBF parameters
             double const exp_arg = (num_hash * counts_per_level[i][j]) / static_cast<double>(sizes_ibf[j]);
             double const log_arg = 1.0 - std::exp(-exp_arg);
-            double const fpr = std::exp(num_hash * std::log(log_arg);
+            double const fpr = std::exp(num_hash * std::log(log_arg));
             outfile << fpr << " ";
         }
         outfile << "\n";
