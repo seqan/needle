@@ -2,20 +2,21 @@
 // SPDX-FileCopyrightText: 2016-2025 Knut Reinert & MPI für molekulare Genetik
 // SPDX-License-Identifier: BSD-3-Clause
 
-#include "insert.hpp"
+#if 0 // Not yet supported for Needle with HIBF.
+#    include "insert.hpp"
 
-#include <numeric>
-#include <omp.h>
+#    include <numeric>
+#    include <omp.h>
 
-#include "misc/calculate_cutoff.hpp"
-#include "misc/check_cutoffs_samples.hpp"
-#include "misc/check_for_fasta_format.hpp"
-#include "misc/filenames.hpp"
-#include "misc/fill_hash_table.hpp"
-#include "misc/get_expression_thresholds.hpp"
-#include "misc/get_include_set_table.hpp"
-#include "misc/read_levels.hpp"
-#include "misc/stream.hpp"
+#    include "misc/calculate_cutoff.hpp"
+#    include "misc/check_cutoffs_samples.hpp"
+#    include "misc/check_for_fasta_format.hpp"
+#    include "misc/filenames.hpp"
+#    include "misc/fill_hash_table.hpp"
+#    include "misc/get_expression_thresholds.hpp"
+#    include "misc/get_include_set_table.hpp"
+#    include "misc/read_levels.hpp"
+#    include "misc/stream.hpp"
 
 // Actual insertion
 template <bool samplewise, bool minimiser_files_given = true>
@@ -99,10 +100,10 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
     size_t num_deleted = pos_insert.size();
 
     // Adjust IBFs
-    std::vector<seqan::hibf::interleaved_bloom_filter> ibfs;
+    std::vector<seqan::hibf::hierarchical_interleaved_bloom_filter> ibfs;
     for (size_t j = 0; j < ibf_args.number_expression_thresholds; j++)
     {
-        seqan::hibf::interleaved_bloom_filter ibf_load{};
+        seqan::hibf::hierarchical_interleaved_bloom_filter ibf_load{};
         load_ibf(ibf_load, filenames::ibf(path_in, samplewise, j, ibf_args));
 
         old_bin_number = ibf_load.bin_count();
@@ -119,7 +120,7 @@ void insert_helper(std::vector<std::filesystem::path> const & minimiser_files,
         pos_insert.push_back(j);
 
 // Add minimisers to ibf
-#pragma omp parallel for schedule(dynamic, chunk_size)
+#    pragma omp parallel for schedule(dynamic, chunk_size)
     for (size_t i = 0; i < num_files; i++)
     {
         robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
@@ -340,3 +341,4 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & minimise
 
     return ibf_args.expression_thresholds;
 }
+#endif

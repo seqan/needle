@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2016-2025 Knut Reinert & MPI für molekulare Genetik
 // SPDX-License-Identifier: BSD-3-Clause
 
-#pragma once
+#if 0 // Not yet supported for Needle with HIBF.
+#    pragma once
 
-#include <cstdint>
-#include <filesystem>
-#include <vector>
+#    include <cstdint>
+#    include <filesystem>
+#    include <vector>
 
-#include "shared.hpp"
+#    include "shared.hpp"
 
 /*! \brief Delete bins from ibfs
 * \param delete_files    A vector of integers specifiying the bins to delete.
@@ -21,3 +22,4 @@ void delete_bin(std::vector<uint64_t> const & delete_files,
                 estimate_ibf_arguments & ibf_args,
                 std::filesystem::path const & path_in,
                 bool samplewise);
+#endif

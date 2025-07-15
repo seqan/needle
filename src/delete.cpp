@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: 2016-2025 Knut Reinert & MPI für molekulare Genetik
 // SPDX-License-Identifier: BSD-3-Clause
 
-#include "delete.hpp"
+#if 0 // Not yet supported for Needle with HIBF.
+#    include "delete.hpp"
 
-#include <omp.h>
+#    include <omp.h>
 
-#include "misc/filenames.hpp"
+#    include "misc/filenames.hpp"
 
 // Delete from ibfs
 void delete_bin(std::vector<uint64_t> const & delete_files,
@@ -24,12 +25,12 @@ void delete_bin(std::vector<uint64_t> const & delete_files,
     omp_set_num_threads(ibf_args.threads);
 
 // Delete bins from ibfs
-#pragma omp parallel
+#    pragma omp parallel
     for (unsigned i = 0; i < ibf_args.number_expression_thresholds; i++)
     {
         std::filesystem::path filename = filenames::ibf(path_in, samplewise, i, ibf_args);
 
-        seqan::hibf::interleaved_bloom_filter ibf;
+        seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
         load_ibf(ibf, filename);
         ibf.clear(bins_to_delete);
 
@@ -46,3 +47,4 @@ void delete_bin(std::vector<uint64_t> const & delete_files,
     }
     outfile << "\n";
 }
+#endif

@@ -102,19 +102,19 @@ TEST_F(minimiser_test, small_example)
     }
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
-    seqan::hibf::interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
     ASSERT_TRUE(std::filesystem::exists("Minimiser_Test_IBF"));
     load_ibf(ibf, "Minimiser_Test_IBF");
-    auto agent = ibf.containment_agent();
+    auto agent = ibf.counting_agent();
 
-    std::vector<bool> expected_result(2, 0);
-    auto & res = agent.bulk_contains(2);
+    std::vector<uint16_t> expected_result(2, 0);
+    auto & res = agent.bulk_count(std::views::single(2u), 1);
     EXPECT_RANGE_EQ(expected_result, res);
     expected_result[0] = 1;
-    auto & res2 = agent.bulk_contains(0);
+    auto & res2 = agent.bulk_count(std::views::single(0u), 1);
     EXPECT_RANGE_EQ(expected_result, res2);
     expected_result[1] = 1;
-    auto & res3 = agent.bulk_contains(27);
+    auto & res3 = agent.bulk_count(std::views::single(27u), 1);
     EXPECT_RANGE_EQ(expected_result, res3);
 }
 
@@ -198,19 +198,19 @@ TEST_F(minimiser_test, small_example_samplewise)
     args.expression_thresholds = {};
     EXPECT_EQ(expected_levels, ibf(minimiser_files, args, fpr));
 
-    seqan::hibf::interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
     ASSERT_TRUE(std::filesystem::exists("Minimiser_Test_IBF"));
     load_ibf(ibf, "Minimiser_Test_IBF");
-    auto agent = ibf.containment_agent();
+    auto agent = ibf.counting_agent();
 
-    std::vector<bool> expected_result(2, 0);
-    auto & res = agent.bulk_contains(2);
+    std::vector<uint16_t> expected_result(2, 0);
+    auto & res = agent.bulk_count(std::views::single(2u), 1);
     EXPECT_RANGE_EQ(expected_result, res);
-    auto & res2 = agent.bulk_contains(0);
+    auto & res2 = agent.bulk_count(std::views::single(0u), 1);
     expected_result[0] = 1;
     EXPECT_RANGE_EQ(expected_result, res2);
     expected_result[1] = 1;
-    auto & res3 = agent.bulk_contains(27);
+    auto & res3 = agent.bulk_count(std::views::single(27u), 1);
     EXPECT_RANGE_EQ(expected_result, res3);
 }
 
@@ -250,20 +250,20 @@ TEST_F(minimiser_test, cutoff_by_filesize)
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
 
-    seqan::hibf::interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
     ASSERT_TRUE(std::filesystem::exists("Minimiser_Test_IBF"));
     load_ibf(ibf, "Minimiser_Test_IBF");
-    auto agent = ibf.containment_agent();
+    auto agent = ibf.counting_agent();
 
-    std::vector<bool> expected_result(2, 0);
-    auto & res = agent.bulk_contains(2);
+    std::vector<uint16_t> expected_result(2, 0);
+    auto & res = agent.bulk_count(std::views::single(2u), 1);
     EXPECT_RANGE_EQ(expected_result, res);
     expected_result[0] = 1;
-    auto & res2 = agent.bulk_contains(0);
+    auto & res2 = agent.bulk_count(std::views::single(0u), 1);
     EXPECT_RANGE_EQ(expected_result, res2);
     expected_result[0] = 0;
     expected_result[1] = 1;
-    auto & res3 = agent.bulk_contains(85);
+    auto & res3 = agent.bulk_count(std::views::single(85u), 1);
     EXPECT_RANGE_EQ(expected_result, res3);
 }
 
@@ -313,19 +313,19 @@ TEST_F(minimiser_test, small_example_two_threads)
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
 
-    seqan::hibf::interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
     ASSERT_TRUE(std::filesystem::exists("Minimiser_Test_IBF"));
     load_ibf(ibf, "Minimiser_Test_IBF");
-    auto agent = ibf.containment_agent();
+    auto agent = ibf.counting_agent();
 
-    std::vector<bool> expected_result(2, 0);
-    auto & res = agent.bulk_contains(2);
+    std::vector<uint16_t> expected_result(2, 0);
+    auto & res = agent.bulk_count(std::views::single(2u), 1);
     EXPECT_RANGE_EQ(expected_result, res);
     expected_result[0] = 1;
-    auto & res2 = agent.bulk_contains(0);
+    auto & res2 = agent.bulk_count(std::views::single(0u), 1);
     EXPECT_RANGE_EQ(expected_result, res2);
     expected_result[1] = 1;
-    auto & res3 = agent.bulk_contains(27);
+    auto & res3 = agent.bulk_count(std::views::single(27u), 1);
     EXPECT_RANGE_EQ(expected_result, res3);
 }
 
@@ -429,19 +429,19 @@ TEST_F(minimiser_test, small_example_exclude)
     }
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
-    seqan::hibf::interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
     ASSERT_TRUE(std::filesystem::exists("Minimiser_Test_Ex_IBF"));
     load_ibf(ibf, "Minimiser_Test_Ex_IBF");
-    auto agent = ibf.containment_agent();
+    auto agent = ibf.counting_agent();
 
-    std::vector<bool> expected_result(2, 0);
-    auto & res = agent.bulk_contains(2);
+    std::vector<uint16_t> expected_result(2, 0);
+    auto & res = agent.bulk_count(std::views::single(2u), 1);
     EXPECT_RANGE_EQ(expected_result, res);
     expected_result[0] = 1;
-    auto & res2 = agent.bulk_contains(0);
+    auto & res2 = agent.bulk_count(std::views::single(0u), 1);
     EXPECT_RANGE_EQ(expected_result, res2);
     expected_result[1] = 1;
-    auto & res3 = agent.bulk_contains(27);
+    auto & res3 = agent.bulk_count(std::views::single(27u), 1);
     EXPECT_RANGE_EQ(expected_result, res3);
 }
 
@@ -513,18 +513,18 @@ TEST_F(minimiser_test, small_example_shape)
     }
 
     EXPECT_EQ(args.expression_thresholds, ibf(minimiser_files, args, fpr));
-    seqan::hibf::interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
     ASSERT_TRUE(std::filesystem::exists("Minimiser_Test_Shape_IBF"));
     load_ibf(ibf, "Minimiser_Test_Shape_IBF");
-    auto agent = ibf.containment_agent();
+    auto agent = ibf.counting_agent();
 
-    std::vector<bool> expected_result(2, 0);
-    auto & res = agent.bulk_contains(7);
+    std::vector<uint16_t> expected_result(2, 0);
+    auto & res = agent.bulk_count(std::views::single(7u), 1);
     EXPECT_RANGE_EQ(expected_result, res);
     expected_result[0] = 1;
-    auto & res2 = agent.bulk_contains(12);
+    auto & res2 = agent.bulk_count(std::views::single(12u), 1);
     EXPECT_RANGE_EQ(expected_result, res2);
     expected_result[1] = 1;
-    auto & res3 = agent.bulk_contains(2);
+    auto & res3 = agent.bulk_count(std::views::single(2u), 1);
     EXPECT_RANGE_EQ(expected_result, res3);
 }

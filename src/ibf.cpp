@@ -9,6 +9,8 @@
 #include <cereal/archives/binary.hpp>
 
 #include <hibf/build/bin_size_in_bits.hpp>
+#include <hibf/config.hpp>
+#include <hibf/hierarchical_interleaved_bloom_filter.hpp>
 
 #include "misc/calculate_cutoff.hpp"
 #include "misc/check_cutoffs_samples.hpp"
@@ -141,7 +143,6 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     }();
 
     std::vector<std::vector<uint64_t>> sizes(num_files);
-    std::vector<uint64_t> sizes_ibf{};
     std::vector<std::vector<uint64_t>> counts_per_level(num_files,
                                                         std::vector<uint64_t>(ibf_args.number_expression_thresholds));
 
@@ -170,7 +171,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         omp_set_num_threads(ibf_args.threads);
     }
 
-    // size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / ibf_args.threads), 8u, 64u);
+    size_t const chunk_size = std::clamp<size_t>(std::bit_ceil(num_files / ibf_args.threads), 8u, 64u);
 
     // If expression_thresholds should only be depending on minimsers in a certain genome file, genome is created.
     robin_hood::unordered_set<uint64_t> genome{};
@@ -249,52 +250,10 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         }
     }
 
-    seqan::hibf::interleaved_bloom_filter single_ibf = [&]()
-    {
-        size_t const total_bins = num_files * ibf_args.number_expression_thresholds;
-
-        uint64_t max_elements = 0;
-        uint64_t total_elements = 0;
-
-        for (size_t i = 0; i < num_files; ++i)
-        {
-            for (size_t j = 0; j < ibf_args.number_expression_thresholds; ++j)
-            {
-                max_elements = std::max(max_elements, sizes[i][j]);
-                total_elements += sizes[i][j];
-            }
-        }
-
-        // Check if we have valid data
-        if (max_elements == num_files)
-        {
-            throw std::invalid_argument{"No minimizers found for any threshold level."};
-        }
-
-        // Use average elements per bin for sizing
-        uint64_t avg_elements = std::max<uint64_t>(1UL, total_elements / total_bins);
-        // uint64_t elements_for_sizing = avg_elements;
-        // Alternatively: Use maximum elements for sizing:
-        uint64_t elements_for_sizing = std::max(max_elements, avg_elements);
-
-        uint64_t const ibf_bin_size = seqan::hibf::build::bin_size_in_bits({.fpr = fprs[0], //
-                                                                            .hash_count = num_hash,
-                                                                            .elements = elements_for_sizing});
-
-        // Initialize sizes_ibf for compatibility with FPR calculation
-        sizes_ibf.assign(ibf_args.number_expression_thresholds, ibf_bin_size);
-
-        // Create single IBF
-        return seqan::hibf::interleaved_bloom_filter{seqan::hibf::bin_count{total_bins},
-                                                     seqan::hibf::bin_size{ibf_bin_size},
-                                                     seqan::hibf::hash_function_count{num_hash}};
-    }();
-
     // Collect minimizer insertions from all threads
     std::vector<std::vector<std::pair<uint64_t, std::vector<size_t>>>> file_insertions(num_files);
 
-// Parallelize this loop
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic, chunk_size)
     for (size_t i = 0; i < num_files; i++)
     {
         robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
@@ -382,21 +341,57 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         file_insertions[i] = std::move(local_insertions);
     }
 
-    // Insert all collected minimizers into the IBF (single-threaded)
-    for (auto const & file_data : file_insertions)
+    // HIBF construction
+    std::vector<std::vector<uint64_t>> user_bin_minimisers(num_files * ibf_args.number_expression_thresholds);
+
+    // Populate user bins from collected insertions
+    for (size_t i = 0; i < num_files; ++i)
     {
-        for (auto const & [hash, bins] : file_data)
+        for (auto const & [hash, bins] : file_insertions[i])
         {
             for (size_t bin_idx : bins)
             {
-                single_ibf.emplace(hash, seqan::hibf::bin_index{bin_idx});
+                user_bin_minimisers[bin_idx].push_back(hash);
             }
         }
     }
 
-    // Store the single IBF
+    // !Workaround: Bins cannot be empty in HIBF
+    for (size_t i = 0; i < user_bin_minimisers.size(); ++i)
+    {
+        if (user_bin_minimisers[i].empty())
+        {
+            user_bin_minimisers[i].push_back(0);
+        }
+    }
+
+    // Maybe Todo: Original needle checks `size == num_files` for each expression level, and throws if true becasue
+    // the thresholds are bad if this happens.
+    // We could probably add a similar check here.
+    // If "sum of all files for an expression level == num_files", and re-enable the test in ibf_test.cpp
+
+    // HIBF input function
+    auto hibf_input = [&](size_t const user_bin_id, seqan::hibf::insert_iterator it)
+    {
+        for (auto hash : user_bin_minimisers[user_bin_id])
+            it = hash;
+    };
+
+    // HIBF config
+    seqan::hibf::config hibf_config{
+        .input_fn = hibf_input,
+        .number_of_user_bins = user_bin_minimisers.size(),
+        .number_of_hash_functions = num_hash,
+        .maximum_fpr = fprs[0],
+        .threads = ibf_args.threads,
+    };
+
+    // Construct the HIBF
+    seqan::hibf::hierarchical_interleaved_bloom_filter hibf{hibf_config};
+
+    // Store the HIBF
     std::filesystem::path const filename = filenames::ibf(ibf_args.path_out, samplewise, 0, ibf_args);
-    store_ibf(single_ibf, filename);
+    store_ibf(hibf, filename);
 
     // Store all expression thresholds per level.
     if constexpr (samplewise)
@@ -412,16 +407,15 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     }
 
     // Store FPR information
+    //TODO: implement fpr calculation for HIBF
     std::ofstream outfile{filenames::fprs(ibf_args.path_out)};
     for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
     {
         for (size_t i = 0; i < num_files; i++)
         {
-            // Calculate actual FPR based on IBF parameters
-            double const exp_arg = (num_hash * counts_per_level[i][j]) / static_cast<double>(sizes_ibf[j]);
-            double const log_arg = 1.0 - std::exp(-exp_arg);
-            double const fpr = std::exp(num_hash * std::log(log_arg));
-            outfile << fpr << " ";
+            // For HIBF, use the configured maximum FPR as approximation
+            // since internal bin structure is not directly accessible
+            outfile << fprs[0] << " ";
         }
         outfile << "\n";
     }

@@ -8,6 +8,8 @@
 
 #include <cereal/archives/binary.hpp>
 
+#include <hibf/hierarchical_interleaved_bloom_filter.hpp>
+
 #include "misc/debug.hpp"
 #include "misc/filenames.hpp"
 #include "misc/read_levels.hpp"
@@ -44,9 +46,10 @@ void check_ibf(estimate_ibf_arguments const & args,
         log("Warning: 16-bit counter might overflow.");
 #endif
 
-    std::vector<float> counter(ibf.bin_count());
+    std::vector<float> counter(ibf.number_of_user_bins);
+    assert(counter.size() == num_levels * num_experiments);
     auto agent = ibf.counting_agent();
-    std::ranges::copy(agent.bulk_count(minimiser), counter.begin());
+    std::ranges::copy(agent.bulk_count(minimiser, 1u), counter.begin());
 
     // Defines where the median should be
     float const minimiser_pos = minimiser_count / 2.0;
@@ -208,7 +211,7 @@ void estimate(estimate_ibf_arguments & args,
 
     // Calculate dimensions based on IBF structure
     size_t const num_levels = args.number_expression_thresholds;
-    size_t const total_bins = ibf.bin_count();
+    size_t const total_bins = ibf.number_of_user_bins;
 
     assert(total_bins % num_levels == 0);                   // Ensure that total_bins is divisible by num_levels
     size_t const num_experiments = total_bins / num_levels; // This should match the number of files/experiments
@@ -326,5 +329,5 @@ void call_estimate(estimate_ibf_arguments & args, estimate_arguments & estimate_
         }
     };
 
-    call.template operator()<seqan::hibf::interleaved_bloom_filter>({});
+    call.template operator()<seqan::hibf::hierarchical_interleaved_bloom_filter>({});
 }
