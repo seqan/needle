@@ -360,6 +360,7 @@ int run_needle_ibf(sharg::parser & parser)
     return 0;
 }
 
+#if 0 // Not yet supported for Needle with HIBF.
 int run_needle_insert(sharg::parser & parser)
 {
     estimate_ibf_arguments ibf_args{};
@@ -422,6 +423,7 @@ int run_needle_insert(sharg::parser & parser)
 
     return 0;
 }
+#endif
 
 int run_needle_ibf_min(sharg::parser & parser)
 {
@@ -473,6 +475,7 @@ int run_needle_ibf_min(sharg::parser & parser)
     return 0;
 }
 
+#if 0 // Not yet supported for Needle with HIBF.
 int run_needle_insert_min(sharg::parser & parser)
 {
     estimate_ibf_arguments ibf_args{};
@@ -528,7 +531,9 @@ int run_needle_insert_min(sharg::parser & parser)
 
     return 0;
 }
+#endif
 
+#if 0 // Not yet supported for Needle with HIBF.
 int run_needle_delete_bin(sharg::parser & parser)
 {
     estimate_ibf_arguments ibf_args{};
@@ -566,6 +571,7 @@ int run_needle_delete_bin(sharg::parser & parser)
 
     return 0;
 }
+#endif
 
 int run_needle_minimiser(sharg::parser & parser)
 {
@@ -626,7 +632,8 @@ int main(int argc, char const ** argv)
         if (sub_parser.info.app_name == std::string_view{"needle-count"})
             run_needle_count(sub_parser);
         else if (sub_parser.info.app_name == std::string_view{"needle-delete"})
-            run_needle_delete_bin(sub_parser);
+            throw sharg::parser_error{"This operation is not yet supported for Needle with HIBF."};
+        // run_needle_delete_bin(sub_parser);
         else if (sub_parser.info.app_name == std::string_view{"needle-genome"})
             run_needle_count_genome(sub_parser);
         else if (sub_parser.info.app_name == std::string_view{"needle-estimate"})
@@ -636,9 +643,11 @@ int main(int argc, char const ** argv)
         else if (sub_parser.info.app_name == std::string_view{"needle-ibfmin"})
             run_needle_ibf_min(sub_parser);
         else if (sub_parser.info.app_name == std::string_view{"needle-insert"})
-            run_needle_insert(sub_parser);
+            throw sharg::parser_error{"This operation is not yet supported for Needle with HIBF."};
+        // run_needle_insert(sub_parser);
         else if (sub_parser.info.app_name == std::string_view{"needle-insertmin"})
-            run_needle_insert_min(sub_parser);
+            throw sharg::parser_error{"This operation is not yet supported for Needle with HIBF."};
+        // run_needle_insert_min(sub_parser);
         else if (sub_parser.info.app_name == std::string_view{"needle-minimiser"})
             run_needle_minimiser(sub_parser);
     }

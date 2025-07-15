@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2016-2025 Knut Reinert & MPI für molekulare Genetik
 // SPDX-License-Identifier: BSD-3-Clause
 
-#pragma once
+#if 0 // Not yet supported for Needle with HIBF.
+#    pragma once
 
-#include <cstdint>
-#include <filesystem>
-#include <vector>
+#    include <cstdint>
+#    include <filesystem>
+#    include <vector>
 
-#include "shared.hpp"
+#    include "shared.hpp"
 
 /*! \brief Insert into IBFs.
 * \param sequence_files  A vector of sequence file paths.
@@ -45,3 +46,4 @@ std::vector<uint16_t> insert(std::vector<std::filesystem::path> const & minimise
                              std::filesystem::path const & expression_by_genome_file,
                              std::filesystem::path const & path_in,
                              bool samplewise);
+#endif
