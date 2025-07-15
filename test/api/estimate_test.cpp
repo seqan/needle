@@ -212,7 +212,11 @@ TEST_F(estimate_test, example)
     ASSERT_TRUE(std::filesystem::exists(ibf_args.path_out));
     std::ifstream output_file(ibf_args.path_out);
     std::string line;
+#if defined(__INTEL_LLVM_COMPILER) && defined(NDEBUG) // Floating point precision situation with Intel compiler
+    std::string expected{"GeneA\t15\t32\t"};
+#else
     std::string expected{"GeneA\t14\t32\t"};
+#endif
     if (output_file.is_open())
     {
         while (std::getline(output_file, line))
@@ -247,7 +251,11 @@ TEST_F(estimate_test, example_multiple_threads)
     ASSERT_TRUE(std::filesystem::exists(ibf_args.path_out));
     std::ifstream output_file(ibf_args.path_out);
     std::string line;
+#if defined(__INTEL_LLVM_COMPILER) && defined(NDEBUG) // Floating point precision situation with Intel compiler
+    std::string expected{"GeneA\t15\t32\t"};
+#else
     std::string expected{"GeneA\t14\t32\t"};
+#endif
     if (output_file.is_open())
     {
         while (std::getline(output_file, line))
