@@ -356,6 +356,20 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         }
     }
 
+    // !Workaround: Bins cannot be empty in HIBF
+    for (size_t i = 0; i < user_bin_minimisers.size(); ++i)
+    {
+        if (user_bin_minimisers[i].empty())
+        {
+            user_bin_minimisers[i].push_back(0);
+        }
+    }
+
+    // Maybe Todo: Original needle checks `size == num_files` for each expression level, and throws if true becasue
+    // the thresholds are bad if this happens.
+    // We could probably add a similar check here.
+    // If "sum of all files for an expression level == num_files", and re-enable the test in ibf_test.cpp
+
     // HIBF input function
     auto hibf_input = [&](size_t const user_bin_id, seqan::hibf::insert_iterator it)
     {
