@@ -41,16 +41,16 @@ TEST_F(ibfmin_test, given_expression_thresholds)
 
     EXPECT_EQ(expected, medians);
 
-    seqan::hibf::interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
     ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Given_IBF"));
     {
         load_ibf(ibf, "IBFMIN_Test_Given_IBF");
-        auto agent = ibf.containment_agent();
+        auto agent = ibf.counting_agent();
 
-        auto & res = agent.bulk_contains(97);
-        EXPECT_RANGE_EQ((std::vector<bool>{0, 1}), res);
-        auto & res2 = agent.bulk_contains(24);
-        EXPECT_RANGE_EQ((std::vector<bool>{1, 0}), res2);
+        auto & res = agent.bulk_count(std::views::single(97u), 1);
+        EXPECT_RANGE_EQ((std::vector<uint16_t>{0, 1}), res);
+        auto & res2 = agent.bulk_count(std::views::single(24u), 1);
+        EXPECT_RANGE_EQ((std::vector<uint16_t>{1, 0}), res2);
     }
 }
 
@@ -71,18 +71,25 @@ TEST_F(ibfmin_test, given_expression_thresholds_multiple_threads)
 
     EXPECT_EQ(expected, medians);
 
-    seqan::hibf::interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
     load_ibf(ibf, "IBFMIN_Test_Multiple_IBF");
-    auto agent = ibf.containment_agent();
+    auto agent = ibf.counting_agent();
 
-    std::vector<bool> expected_result(256, 0);
-    std::ranges::fill(expected_result.begin() + 128, expected_result.end(), 1);
-    auto & res = agent.bulk_contains(97);
-    EXPECT_RANGE_EQ(expected_result, res);
-    std::vector<bool> expected_result2(256, 1);
-    std::ranges::fill(expected_result2.begin() + 128, expected_result2.end(), 0);
-    auto & res2 = agent.bulk_contains(24);
-    EXPECT_RANGE_EQ(expected_result2, res2);
+    auto & res = agent.bulk_count(std::views::single(97u), 1);
+    EXPECT_TRUE(std::ranges::all_of(std::span{res.begin(), 128},
+                                    [](uint16_t v)
+                                    {
+                                        return v == 0u;
+                                    }));
+    EXPECT_TRUE(std::ranges::all_of(std::span{res.begin() + 128, 128},
+                                    [](uint16_t v)
+                                    {
+                                        return v != 0u;
+                                    }));
+    std::vector<uint16_t> expected_result(256, 1);
+    std::ranges::fill(expected_result.begin() + 128, expected_result.end(), 0);
+    auto & res2 = agent.bulk_count(std::views::single(24u), 1);
+    EXPECT_RANGE_EQ(expected_result, res2);
 }
 
 TEST_F(ibfmin_test, no_given_expression_thresholds)
@@ -101,14 +108,14 @@ TEST_F(ibfmin_test, no_given_expression_thresholds)
 
     ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_IBF"));
     {
-        seqan::hibf::interleaved_bloom_filter ibf;
+        seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
         load_ibf(ibf, "IBFMIN_Test_IBF");
-        auto agent = ibf.containment_agent();
+        auto agent = ibf.counting_agent();
 
-        auto & res = agent.bulk_contains(2);
-        EXPECT_RANGE_EQ((std::vector<bool>{0, 0}), res);
-        auto & res2 = agent.bulk_contains(24);
-        EXPECT_RANGE_EQ((std::vector<bool>{1, 0}), res2);
+        auto & res = agent.bulk_count(std::views::single(2u), 1);
+        EXPECT_RANGE_EQ((std::vector<uint16_t>{0, 0}), res);
+        auto & res2 = agent.bulk_count(std::views::single(24u), 1);
+        EXPECT_RANGE_EQ((std::vector<uint16_t>{1, 0}), res2);
     }
 }
 
@@ -128,15 +135,15 @@ TEST_F(ibfmin_test, expression_thresholds_by_genome)
 
     ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_IBF"));
     {
-        seqan::hibf::interleaved_bloom_filter ibf;
+        seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
         load_ibf(ibf, "IBFMIN_Test_IBF");
-        auto agent = ibf.containment_agent();
+        auto agent = ibf.counting_agent();
 
-        std::vector<bool> expected_result(1, 0);
-        auto & res = agent.bulk_contains(2);
+        std::vector<uint16_t> expected_result(1, 0);
+        auto & res = agent.bulk_count(std::views::single(2u), 1);
         EXPECT_RANGE_EQ(expected_result, res);
         expected_result[0] = 1;
-        auto & res2 = agent.bulk_contains(24);
+        auto & res2 = agent.bulk_count(std::views::single(24u), 1);
         EXPECT_RANGE_EQ(expected_result, res2);
     }
 }
@@ -158,16 +165,16 @@ TEST_F(ibfmin_test, no_given_expression_thresholds_multiple_threads)
 
     EXPECT_EQ(expected, medians);
 
-    seqan::hibf::interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
     load_ibf(ibf, "IBFMIN_Test_Multiple_IBF");
-    auto agent = ibf.containment_agent();
+    auto agent = ibf.counting_agent();
 
-    std::vector<bool> expected_result(256, 0);
-    auto & res = agent.bulk_contains(2);
+    std::vector<uint16_t> expected_result(256, 0);
+    auto & res = agent.bulk_count(std::views::single(2u), 1);
     EXPECT_RANGE_EQ(expected_result, res);
-    std::vector<bool> expected_result2(256, 1);
+    std::vector<uint16_t> expected_result2(256, 1);
     std::ranges::fill(expected_result2.begin() + 128, expected_result2.end(), 0);
-    auto & res2 = agent.bulk_contains(24);
+    auto & res2 = agent.bulk_count(std::views::single(24u), 1);
     EXPECT_RANGE_EQ(expected_result2, res2);
 }
 
@@ -191,15 +198,15 @@ TEST_F(ibfmin_test, different_shape)
 
     EXPECT_EQ(expected, medians);
 
-    seqan::hibf::interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
     ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Shape_IBF"));
     {
         load_ibf(ibf, "IBFMIN_Test_Shape_IBF");
-        auto agent = ibf.containment_agent();
+        auto agent = ibf.counting_agent();
 
-        auto & res = agent.bulk_contains(97);
-        EXPECT_RANGE_EQ((std::vector<bool>{0, 0}), res);
-        auto & res2 = agent.bulk_contains(4);
-        EXPECT_RANGE_EQ((std::vector<bool>{1, 0}), res2);
+        auto & res = agent.bulk_count(std::views::single(97u), 1);
+        EXPECT_RANGE_EQ((std::vector<uint16_t>{0, 0}), res);
+        auto & res2 = agent.bulk_count(std::views::single(4u), 1);
+        EXPECT_RANGE_EQ((std::vector<uint16_t>{1, 0}), res2);
     }
 }

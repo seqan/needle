@@ -91,7 +91,7 @@ TEST_F(estimate_test, small_example_gene_not_found)
     ASSERT_TRUE(std::filesystem::exists(ibf_args.path_out));
     std::ifstream output_file(ibf_args.path_out);
     std::string line;
-    std::string expected{"gen2\t0\t"};
+    std::string expected{"gen2\t3\t"};
     if (output_file.is_open())
     {
         while (std::getline(output_file, line))
@@ -212,7 +212,11 @@ TEST_F(estimate_test, example)
     ASSERT_TRUE(std::filesystem::exists(ibf_args.path_out));
     std::ifstream output_file(ibf_args.path_out);
     std::string line;
-    std::string expected{"GeneA\t10\t32\t"};
+#if defined(__INTEL_LLVM_COMPILER) && defined(NDEBUG) // Floating point precision situation with Intel compiler
+    std::string expected{"GeneA\t15\t32\t"};
+#else
+    std::string expected{"GeneA\t14\t32\t"};
+#endif
     if (output_file.is_open())
     {
         while (std::getline(output_file, line))
@@ -247,7 +251,11 @@ TEST_F(estimate_test, example_multiple_threads)
     ASSERT_TRUE(std::filesystem::exists(ibf_args.path_out));
     std::ifstream output_file(ibf_args.path_out);
     std::string line;
-    std::string expected{"GeneA\t10\t32\t"};
+#if defined(__INTEL_LLVM_COMPILER) && defined(NDEBUG) // Floating point precision situation with Intel compiler
+    std::string expected{"GeneA\t15\t32\t"};
+#else
+    std::string expected{"GeneA\t14\t32\t"};
+#endif
     if (output_file.is_open())
     {
         while (std::getline(output_file, line))
@@ -288,7 +296,7 @@ TEST_F(estimate_test, example_different_expressions_per_level)
     std::ifstream output_file(ibf_args.path_out);
     std::string line;
     // Count would expect 6 and 34
-    std::string expected{"GeneA\t6\t26\t"};
+    std::string expected{"GeneA\t7\t26\t"};
     if (output_file.is_open())
     {
         while (std::getline(output_file, line))
@@ -330,7 +338,7 @@ TEST_F(estimate_test, example_different_expressions_per_level_multiple_threads)
     std::ifstream output_file(ibf_args.path_out);
     std::string line;
     // Count would expect 6 and 34
-    std::string expected{"GeneA\t6\t26\t"};
+    std::string expected{"GeneA\t7\t26\t"};
     if (output_file.is_open())
     {
         while (std::getline(output_file, line))

@@ -42,16 +42,16 @@ TEST_F(delete_test, no_given_thresholds)
     ibf_args_delete.path_out = "IBF_delete_Exp_";
     std::vector<std::filesystem::path> sequence_files_delete = {data("mini_example.fasta"), data("mini_example.fasta")};
     ibf(sequence_files_delete, ibf_args_delete, minimiser_args_delete, fpr, cutoffs_delete);
-    seqan::hibf::interleaved_bloom_filter ibf{};
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf{};
     ASSERT_TRUE(std::filesystem::exists("IBF_delete_Exp_IBF"));
     load_ibf(ibf, "IBF_delete_Exp_IBF");
-    seqan::hibf::interleaved_bloom_filter ibf_0{seqan::hibf::bin_count{4u},
-                                                seqan::hibf::bin_size{ibf.bin_size()},
-                                                seqan::hibf::hash_function_count{1u}};
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf_0{seqan::hibf::bin_count{4u},
+                                                             seqan::hibf::bin_size{ibf.bin_size()},
+                                                             seqan::hibf::hash_function_count{1u}};
 
     delete_bin({0, 1}, ibf_args_delete, "IBF_delete_Exp_", true);
 
-    seqan::hibf::interleaved_bloom_filter ibf_delete{};
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf_delete{};
     ASSERT_TRUE(std::filesystem::exists("IBF_delete_Exp_IBF"));
     load_ibf(ibf_delete, "IBF_delete_Exp_IBF");
     EXPECT_TRUE((ibf_0 == ibf_delete));
@@ -84,8 +84,8 @@ TEST_F(insert_test, ibf)
 
     insert(sequence_files_insert, ibf_args_insert, minimiser_args_insert, cutoffs_insert, "", "IBF_Insert_Exp_", false);
 
-    seqan::hibf::interleaved_bloom_filter ibf;
-    seqan::hibf::interleaved_bloom_filter ibf_insert;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf_insert;
 
     ASSERT_TRUE(std::filesystem::exists("IBF_True_Exp_IBF"));
     load_ibf(ibf, "IBF_True_Exp_IBF");
@@ -127,8 +127,8 @@ TEST_F(insert_test, ibf_no_given_thresholds)
     std::vector<uint16_t> medians_insert =
         ibf(sequence_files_insert, ibf_args_insert, minimiser_args_insert, fpr, cutoffs_insert);
     insert(sequence_files_insert, ibf_args_insert, minimiser_args_insert, cutoffs_insert, "", "IBF_Insert_Exp_", true);
-    seqan::hibf::interleaved_bloom_filter ibf;
-    seqan::hibf::interleaved_bloom_filter ibf_insert;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf_insert;
 
     ASSERT_TRUE(std::filesystem::exists("IBF_True_Exp_IBF"));
     load_ibf(ibf, "IBF_True_Exp_IBF");
@@ -181,8 +181,8 @@ TEST_F(insert_test, ibf_delete)
     delete_bin({1}, ibf_args_insert, ibf_args_insert.path_out, false);
     insert(sequence_files_insert, ibf_args_insert, minimiser_args_insert, cutoffs_insert, "", "IBF_Insert_Exp_", false);
 
-    seqan::hibf::interleaved_bloom_filter ibf;
-    seqan::hibf::interleaved_bloom_filter ibf_insert;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf_insert;
 
     ASSERT_TRUE(std::filesystem::exists("IBF_True_Exp_IBF"));
     load_ibf(ibf, "IBF_True_Exp_IBF");
@@ -229,8 +229,8 @@ TEST_F(insert_test, ibf_delete_no_given_threshold)
     delete_bin({1}, ibf_args_insert, ibf_args_insert.path_out, true);
     insert(sequence_files_insert, ibf_args_insert, minimiser_args_insert, cutoffs_insert, "", "IBF_Insert_Exp_", true);
 
-    seqan::hibf::interleaved_bloom_filter ibf;
-    seqan::hibf::interleaved_bloom_filter ibf_insert;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf_insert;
 
     ASSERT_TRUE(std::filesystem::exists("IBF_True_Exp_IBF"));
     load_ibf(ibf, "IBF_True_Exp_IBF");
@@ -271,8 +271,8 @@ TEST_F(insert_test, ibfmin)
     ibf(minimiser_file_insert, ibf_args_insert, fpr);
     insert(minimiser_file_insert, ibf_args_insert, "", "IBFMIN_Insert_Given_", false);
 
-    seqan::hibf::interleaved_bloom_filter ibf;
-    seqan::hibf::interleaved_bloom_filter ibf_insert;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf_insert;
 
     ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Given_IBF"));
     load_ibf(ibf, "IBFMIN_Test_Given_IBF");
@@ -308,8 +308,8 @@ TEST_F(insert_test, ibfmin_delete)
     delete_bin({1}, ibf_args_insert, ibf_args_insert.path_out, false);
     insert(minimiser_file_insert, ibf_args_insert, "", "IBFMIN_Insert_Given_", false);
 
-    seqan::hibf::interleaved_bloom_filter ibf;
-    seqan::hibf::interleaved_bloom_filter ibf_insert;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf_insert;
 
     ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Given_IBF"));
     load_ibf(ibf, "IBFMIN_Test_Given_IBF");
@@ -345,8 +345,8 @@ TEST_F(insert_test, ibfmin_no_given_thresholds)
     ibf(minimiser_file_insert, ibf_args_insert, fpr);
     insert(minimiser_file_insert, ibf_args_insert, "", "IBFMIN_Insert_Given_", true);
 
-    seqan::hibf::interleaved_bloom_filter ibf;
-    seqan::hibf::interleaved_bloom_filter ibf_insert;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf_insert;
 
     ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Given_IBF"));
     load_ibf(ibf, "IBFMIN_Test_Given_IBF");
@@ -390,8 +390,8 @@ TEST_F(insert_test, delete_ibfmin_no_given_thresholds)
     delete_bin({1}, ibf_args_insert, ibf_args_insert.path_out, true);
     insert(minimiser_file_insert, ibf_args_insert, "", "IBFMIN_Insert_Given_Del_", true);
 
-    seqan::hibf::interleaved_bloom_filter ibf;
-    seqan::hibf::interleaved_bloom_filter ibf_insert;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf;
+    seqan::hibf::hierarchical_interleaved_bloom_filter ibf_insert;
 
     ASSERT_TRUE(std::filesystem::exists("IBFMIN_Test_Given_Del_IBF"));
     load_ibf(ibf, "IBFMIN_Test_Given_Del_IBF");
