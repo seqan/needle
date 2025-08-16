@@ -8,7 +8,7 @@
 # cmake-format: off
 
 # hibf
-set (NEEDLE_HIBF_VERSION 36c223527d7d4eb2bcdcd88d47c71984f50a00a3 CACHE STRING "")
+set (NEEDLE_HIBF_VERSION 79191baa50cd1282e95335a121e538be2281aa40 CACHE STRING "")
 CPMDeclarePackage (hibf
                    NAME hibf
                    GIT_TAG ${NEEDLE_HIBF_VERSION} # main
@@ -19,7 +19,7 @@ CPMDeclarePackage (hibf
 )
 
 # seqan3
-set (NEEDLE_SEQAN3_VERSION 6dfa1b442d1fabd07024edcc37a29b61d5beae8f CACHE STRING "")
+set (NEEDLE_SEQAN3_VERSION 8724133817fc7889b280253c209aa47f6395a13c CACHE STRING "")
 CPMDeclarePackage (seqan3
                    NAME seqan3
                    GIT_TAG ${NEEDLE_SEQAN3_VERSION} # main
@@ -30,7 +30,7 @@ CPMDeclarePackage (seqan3
 )
 
 # sharg
-set (NEEDLE_SHARG_VERSION be113bcffe49c0d62cbd65a191820f05386aa8da CACHE STRING "")
+set (NEEDLE_SHARG_VERSION f9c5c7baf1c60bd556a5726ae4a737ed1536fabf CACHE STRING "")
 CPMDeclarePackage (sharg
                    NAME sharg
                    GIT_TAG ${NEEDLE_SHARG_VERSION} # main
