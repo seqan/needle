@@ -19,10 +19,11 @@ CPMDeclarePackage (hibf
 )
 
 # seqan3
-set (NEEDLE_SEQAN3_VERSION c67fe131cfe639c5fc5695bac0d41bfff2c9b93f CACHE STRING "")
+set (NEEDLE_SEQAN3_VERSION 3.4.0 CACHE STRING "")
 CPMDeclarePackage (seqan3
                    NAME seqan3
-                   GIT_TAG ${NEEDLE_SEQAN3_VERSION} # main
+                   VERSION ${NEEDLE_SEQAN3_VERSION}
+                   GIT_TAG ${NEEDLE_SEQAN3_VERSION}
                    GITHUB_REPOSITORY seqan/seqan3
                    SYSTEM TRUE
                    EXCLUDE_FROM_ALL TRUE
