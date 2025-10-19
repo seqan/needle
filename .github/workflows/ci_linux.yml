@@ -38,6 +38,16 @@ jobs:
     container:
       image: ghcr.io/seqan/${{ matrix.compiler }}
     steps:
+      - name: Free Up Space
+        if: matrix.compiler == 'intel'
+        run: |
+          df -h
+          du -hSd 1 "/__t"
+          if [[ -d "/__t" ]]; then
+            rm -fdr "/__t" || true
+            df -h
+          fi
+
       - name: Checkout
         uses: actions/checkout@v5
 
