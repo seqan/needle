@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 include (test/coverage)
+include (CMakeDependentOption)
 
 CPMGetPackage (googletest)
 
@@ -25,6 +26,9 @@ else ()
 endif ()
 add_definitions (-DBINDIR=\"${NEEDLE_TEST_BINARY_DIR}/\")
 
+option (NEEDLE_DO_NOT_KEEP_TEST_OUTPUT "Delete test output." OFF)
+cmake_dependent_option (NEEDLE_DO_NOT_KEEP_TEST_OUTPUT_CI "Delete test output." ON "DEFINED ENV{CI}" OFF)
+
 # Add the test interface library.
 if (NOT TARGET ${PROJECT_NAME}_test)
     add_library (${PROJECT_NAME}_test INTERFACE)
@@ -40,6 +44,11 @@ if (NOT TARGET ${PROJECT_NAME}_test)
         if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14)
             target_compile_options (${PROJECT_NAME}_lib PUBLIC "-Wnrvo")
         endif ()
+    endif ()
+
+    if (NEEDLE_DO_NOT_KEEP_TEST_OUTPUT OR NEEDLE_DO_NOT_KEEP_TEST_OUTPUT_CI)
+        message (STATUS "Deleting test output.")
+        target_compile_definitions (${PROJECT_NAME}_test INTERFACE "NEEDLE_DO_NOT_KEEP_TEST_OUTPUT")
     endif ()
 
     target_link_libraries (${PROJECT_NAME}_test INTERFACE "${PROJECT_NAME}_lib" "GTest::gtest_main")

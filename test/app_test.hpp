@@ -114,6 +114,9 @@ protected:
     {
         try
         {
+#ifdef NEEDLE_DO_NOT_KEEP_TEST_OUTPUT
+            std::filesystem::remove_all(current_workdir);
+#endif
             std::filesystem::current_path(original_workdir); // restore the original work dir
         }
         catch (std::exception const & exc)
