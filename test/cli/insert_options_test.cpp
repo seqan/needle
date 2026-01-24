@@ -16,9 +16,15 @@ TEST_F(insert_options_test, insert_no_options)
     app_test_result result = execute_app("insert");
     std::string expected{"needle-insert - Inserts into a given uncompressed Needle index.\n"
                          "===============================================================\n"
+                         "    needle insert [-p|--paired] [-c|--compressed] [--ram] [--include path]\n"
+                         "    [--exclude path] [--samples uint64]... [--cutoff uint8]... [-t|--threads\n"
+                         "    uint16] [-i|--in path] [--experiment-names bool] [--levels-by-genome path]\n"
+                         "    [--] path...\n"
                          "    Try -h or --help for more information.\n"};
     EXPECT_SUCCESS(result);
+#ifndef __APPLE__ // uint64_t vs unsigned long in sharg 1.2.1
     EXPECT_EQ(result.out, expected);
+#endif
     EXPECT_EQ(result.err, std::string{});
 }
 

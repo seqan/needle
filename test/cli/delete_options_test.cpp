@@ -16,9 +16,13 @@ TEST_F(delete_options_test, delete_no_options)
     app_test_result result = execute_app("delete");
     std::string expected{"needle-delete - Delete experiments specified by their position from the Needle index.\n"
                          "=====================================================================================\n"
+                         "    needle delete [-c|--compressed] [-o|--out path] [-t|--threads uint16]\n"
+                         "    [-i|--in path] [--] uint64...\n"
                          "    Try -h or --help for more information.\n"};
     EXPECT_SUCCESS(result);
+#ifndef __APPLE__ // uint64_t vs unsigned long in sharg 1.2.1
     EXPECT_EQ(result.out, expected);
+#endif
     EXPECT_EQ(result.err, std::string{});
 }
 

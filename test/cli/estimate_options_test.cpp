@@ -16,9 +16,13 @@ TEST_F(estimate_options_test, no_options)
     app_test_result result = execute_app("estimate");
     std::string expected{"needle-estimate - Estimate expression value of transcript based on the Needle index.\n"
                          "====================================================================================\n"
+                         "    needle estimate [-m|--normalization-mode] [-i|--in path] [-o|--out path]\n"
+                         "    [-t|--threads uint16] [-b|--batch uint64] [--] path\n"
                          "    Try -h or --help for more information.\n"};
     EXPECT_SUCCESS(result);
+#ifndef __APPLE__ // uint64_t vs unsigned long in sharg 1.2.1
     EXPECT_EQ(result.out, expected);
+#endif
     EXPECT_EQ(result.err, std::string{});
 }
 

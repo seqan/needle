@@ -14,9 +14,15 @@ TEST_F(minimiser_options_test, no_options)
     app_test_result result = execute_app("minimiser");
     std::string expected{"needle-minimiser - Calculates minimiser for given experiments.\n"
                          "==============================================================\n"
+                         "    needle minimiser [-p|--paired] [--ram] [-k|--kmer uint8] [-w|--window\n"
+                         "    uint32] [--shape uint64] [--seed uint64] [-o|--out path] [-t|--threads\n"
+                         "    uint16] [--include path] [--exclude path] [--samples uint64]... [--cutoff\n"
+                         "    uint8]... [--] path...\n"
                          "    Try -h or --help for more information.\n"};
     EXPECT_SUCCESS(result);
+#ifndef __APPLE__ // uint64_t vs unsigned long in sharg 1.2.1
     EXPECT_EQ(result.out, expected);
+#endif
     EXPECT_EQ(result.err, std::string{});
 }
 

@@ -69,5 +69,5 @@ jobs:
 
       - name: Run tests
         working-directory: build
-        run: ctest -j
+        run: ctest -j --output-on-failure
 

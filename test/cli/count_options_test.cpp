@@ -12,19 +12,22 @@ struct count_options_test : public app_test
 TEST_F(count_options_test, no_options)
 {
     app_test_result result = execute_app("count");
-    std::string expected{"needle-count - Get expression value depending on minimizers. "
-                         "This function is an alternative to pseudoaligners like kallisto. It "
-                         "estimates the expression value for all sequences in the genome file "
-                         "based on the exact minimiser occurrences of the given sequence files. "
-                         "Please run genome beforehand to create the genome file.\n"
-                         "======================================================================"
-                         "======================================================================"
-                         "======================================================================"
-                         "======================================================================"
-                         "==========================================\n    "
-                         "Try -h or --help for more information.\n"};
+    std::string expected{"needle-count - Get expression value depending on minimizers. This function is an alternative "
+                         "to pseudoaligners like kallisto. It estimates the expression value for all sequences in the "
+                         "genome file based on the exact minimiser occurrences of the given sequence files. Please run "
+                         "genome beforehand to create the genome "
+                         "file.\n======================================================================================"
+                         "============================================================================================="
+                         "============================================================================================="
+                         "==================================================\n"
+                         "    needle count [-p|--paired] [-k|--kmer uint8] [-w|--window uint32] [--shape\n"
+                         "    uint64] [--seed uint64] [-o|--out path] [-t|--threads uint16] --include\n"
+                         "    path [--genome path] [--] path...\n"
+                         "    Try -h or --help for more information.\n"};
     EXPECT_SUCCESS(result);
+#ifndef __APPLE__ // uint64_t vs unsigned long in sharg 1.2.1
     EXPECT_EQ(result.out, expected);
+#endif
     EXPECT_EQ(result.err, std::string{});
 }
 
@@ -85,9 +88,14 @@ TEST_F(genome_options_test, no_options)
     app_test_result result = execute_app("genome");
     std::string expected{"needle-genome - Creates the genome file necessary as an input to count.\n"
                          "=======================================================================\n"
+                         "    needle genome [-k|--kmer uint8] [-w|--window uint32] [--shape uint64]\n"
+                         "    [--seed uint64] [-o|--out path] [-t|--threads uint16] [--exclude path]\n"
+                         "    [--] path\n"
                          "    Try -h or --help for more information.\n"};
     EXPECT_SUCCESS(result);
+#ifndef __APPLE__ // uint64_t vs unsigned long in sharg 1.2.1
     EXPECT_EQ(result.out, expected);
+#endif
     EXPECT_EQ(result.err, std::string{});
 }
 

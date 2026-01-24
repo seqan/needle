@@ -31,10 +31,11 @@ CPMDeclarePackage (seqan3
 )
 
 # sharg
-set (NEEDLE_SHARG_VERSION d3b6c025554fc28a6f94d475fc136894b441432e CACHE STRING "")
+set (NEEDLE_SHARG_VERSION 1.2.1 CACHE STRING "")
 CPMDeclarePackage (sharg
                    NAME sharg
-                   GIT_TAG ${NEEDLE_SHARG_VERSION} # main
+                   VERSION ${NEEDLE_SHARG_VERSION}
+                   GIT_TAG ${NEEDLE_SHARG_VERSION}
                    GITHUB_REPOSITORY seqan/sharg-parser
                    SYSTEM TRUE
                    EXCLUDE_FROM_ALL TRUE
