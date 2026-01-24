@@ -14,9 +14,17 @@ TEST_F(ibf_options_test, ibf_no_options)
     app_test_result result = execute_app("ibf");
     std::string expected{"needle-ibf - Constructs the Needle index.\n"
                          "=========================================\n"
+                         "    needle ibf [-c|--compressed] [-p|--paired] [--ram] [-k|--kmer uint8]\n"
+                         "    [-w|--window uint32] [--shape uint64] [--seed uint64] [-o|--out path]\n"
+                         "    [-t|--threads uint16] [-f|--fpr double]... [-e|--expression_thresholds\n"
+                         "    uint16]... [-l|--number_expression_thresholds uint8] [-n|--hash uint64]\n"
+                         "    [--include path] [--exclude path] [--samples uint64]... [--cutoff\n"
+                         "    uint8]... [--experiment-names bool] [--levels-by-genome path] [--] path...\n"
                          "    Try -h or --help for more information.\n"};
     EXPECT_SUCCESS(result);
+#ifndef __APPLE__ // uint64_t vs unsigned long in sharg 1.2.1
     EXPECT_EQ(result.out, expected);
+#endif
     EXPECT_EQ(result.err, std::string{});
 }
 
@@ -103,9 +111,15 @@ TEST_F(ibf_options_test, ibfmin_no_options)
     std::string expected{
         "needle-ibfmin - Constructs the Needle index from the minimiser files created by needle minimiser.\n"
         "=================================================================================================\n"
+        "    needle ibfmin [-c|--compressed] [-o|--out path] [-t|--threads uint16]\n"
+        "    [--levels-by-genome path] [-f|--fpr double]... [-e|--expression_thresholds\n"
+        "    uint16]... [-l|--number_expression_thresholds uint8] [-n|--hash uint64]\n"
+        "    [--] path...\n"
         "    Try -h or --help for more information.\n"};
     EXPECT_SUCCESS(result);
+#ifndef __APPLE__ // uint64_t vs unsigned long in sharg 1.2.1
     EXPECT_EQ(result.out, expected);
+#endif
     EXPECT_EQ(result.err, std::string{});
 }
 
