@@ -10,4 +10,5 @@ add_app_test (ibf_options_test.cpp)
 add_app_test (minimiser_options_test.cpp)
 add_app_test (estimate_options_test.cpp)
 add_app_test (count_options_test.cpp)
+add_app_test (layout_options_test.cpp)
 # add_app_test (delete_options_test.cpp) # Not yet supported for Needle with HIBF.

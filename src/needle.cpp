@@ -11,6 +11,7 @@
 #include "estimate.hpp"
 #include "ibf.hpp"
 #include "insert.hpp"
+#include "layout/layout.hpp"
 #include "minimiser.hpp"
 #include "shared.hpp"
 
@@ -618,7 +619,7 @@ int main(int argc, char const ** argv)
             argc,
             argv,
             sharg::update_notifications::on,
-            {"count", "delete", "estimate", "genome", "ibf", "ibfmin", "insert", "insertmin", "minimiser"}};
+            {"count", "delete", "estimate", "genome", "ibf", "ibfmin", "insert", "insertmin", "layout", "minimiser"}};
         add_parser_meta(needle_parser);
         needle_parser.info.description.push_back(
             "Needle allows you to build an Interleaved Bloom Filter (IBF) with the "
@@ -648,6 +649,8 @@ int main(int argc, char const ** argv)
         else if (sub_parser.info.app_name == std::string_view{"needle-insertmin"})
             throw sharg::parser_error{"This operation is not yet supported for Needle with HIBF."};
         // run_needle_insert_min(sub_parser);
+        else if (sub_parser.info.app_name == std::string_view{"needle-layout"})
+            chopper_layout(sub_parser);
         else if (sub_parser.info.app_name == std::string_view{"needle-minimiser"})
             run_needle_minimiser(sub_parser);
     }

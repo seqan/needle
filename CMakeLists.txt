@@ -74,6 +74,7 @@ CPMGetPackage (use_ccache)
 CPMGetPackage (seqan3)
 CPMGetPackage (sharg)
 CPMGetPackage (hibf)
+CPMGetPackage (chopper)
 
 # Add the application. This will include `src/CMakeLists.txt`.
 add_subdirectory (src)

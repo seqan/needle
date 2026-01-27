@@ -18,6 +18,18 @@ CPMDeclarePackage (hibf
                    OPTIONS "INSTALL_HIBF OFF"
 )
 
+# chopper
+set (NEEDLE_CHOPPER_VERSION 0d03e6e80bd4f4ce82eaa8b059590de2bf7d4f7c CACHE STRING "")
+CPMDeclarePackage (chopper
+                   NAME chopper
+                   GIT_TAG ${NEEDLE_CHOPPER_VERSION} # fast_layout_newest_only_fast_layout
+                   GITHUB_REPOSITORY smehringer/chopper
+                   SYSTEM TRUE
+                   OPTIONS "CHOPPER_INSTALL OFF" "CHOPPER_BUILD_DOC OFF" "CHOPPER_BUILD_TEST OFF"
+                           "CMAKE_MESSAGE_LOG_LEVEL WARNING"
+                   EXCLUDE_FROM_ALL TRUE
+)
+
 # seqan3
 set (NEEDLE_SEQAN3_VERSION 3.4.0 CACHE STRING "")
 CPMDeclarePackage (seqan3
