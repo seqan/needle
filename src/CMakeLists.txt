@@ -28,8 +28,11 @@ target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC sharg::sharg)
 target_link_libraries ("${PROJECT_NAME}_lib" PUBLIC seqan::hibf)
 target_include_directories ("${PROJECT_NAME}_lib" PUBLIC ../include)
 
+add_subdirectory (layout)
+
 add_executable ("${PROJECT_NAME}" needle.cpp)
 target_link_libraries ("${PROJECT_NAME}" PRIVATE "${PROJECT_NAME}_lib")
+target_link_libraries ("${PROJECT_NAME}" PRIVATE "${PROJECT_NAME}_layout")
 set_target_properties ("${PROJECT_NAME}" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 target_compile_definitions ("${PROJECT_NAME}" PRIVATE NEEDLE_VERSION="${NEEDLE_ARGPARSE_VERSION}")
 target_compile_definitions ("${PROJECT_NAME}" PRIVATE NEEDLE_DATE="${NEEDLE_ARGPARSE_DATE}")
