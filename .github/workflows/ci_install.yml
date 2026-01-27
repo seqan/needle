@@ -40,7 +40,7 @@ jobs:
       options: --privileged
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: needle
 
@@ -90,12 +90,12 @@ jobs:
         if: contains(matrix.compiler, 'gcc')
         working-directory: build
         run: |
-          unshare -r -n ctest -j
+          unshare -r -n ctest -j --output-on-failure
           test -z $(find . -type f -executable -name "needle") # needle binary should not exist
 
       - name: Upload source package
         if: contains(matrix.compiler, 'gcc')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: needle-source-package
           path: create_source_package/needle-*.tar.xz*

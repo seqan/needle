@@ -38,8 +38,18 @@ jobs:
     container:
       image: ghcr.io/seqan/${{ matrix.compiler }}
     steps:
+      - name: Free Up Space
+        if: matrix.compiler == 'intel'
+        run: |
+          df -h
+          du -hSd 1 "/__t"
+          if [[ -d "/__t" ]]; then
+            rm -fdr "/__t" || true
+            df -h
+          fi
+
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup cache
         uses: seqan/actions/setup-actions-cache@main
@@ -59,5 +69,5 @@ jobs:
 
       - name: Run tests
         working-directory: build
-        run: ctest -j
+        run: ctest -j --output-on-failure
 
