@@ -116,6 +116,83 @@ void get_filsize_per_expression_level(std::filesystem::path const & filename,
     }
 }
 
+void store_fpr_information(seqan::hibf::hierarchical_interleaved_bloom_filter const & hibf,
+                           size_t const num_files,
+                           estimate_ibf_arguments const & ibf_args)
+{
+    //TODO: implement fpr calculation for HIBF
+    struct fpr_parameters
+    {
+        size_t bin_size{};
+        size_t elements{};
+        size_t hash_count{};
+    };
+
+    auto compute_fpr = [](fpr_parameters const & params) -> double
+    {
+        double const exp_arg = (params.hash_count * params.elements) / static_cast<double>(params.bin_size);
+        double const log_arg = 1.0 - std::exp(-exp_arg);
+        return std::exp(params.hash_count * std::log(log_arg));
+    };
+
+    // Combined FPR is the sum: std::log1p(-fpr1) + std::log1p(-fpr2) + ...
+    auto compute_combined_fpr = [](double const sum_of_split_fpr) -> double
+    {
+        return (1.0 - std::exp(sum_of_split_fpr));
+    };
+
+    size_t const num_levels = ibf_args.number_expression_thresholds;
+    std::vector<double> actual_fprs(num_files * num_levels);
+
+    auto traverse_hibf = [&](this auto self, size_t const ibf_idx) -> void
+    {
+        auto const & ibf = hibf.ibf_vector[ibf_idx];
+        auto const & ub_ids = hibf.ibf_bin_to_user_bin_id[ibf_idx];
+        auto const & next_ibfs = hibf.next_ibf_id[ibf_idx];
+
+        double sum{};
+        fpr_parameters params{.bin_size = ibf.bin_size(), .hash_count = ibf.hash_function_count()};
+
+        for (size_t tbin = 0; tbin < ibf.bin_count(); ++tbin)
+        {
+            params.elements = ibf.occupancy[tbin];
+            sum += std::log1p(-compute_fpr(params));
+
+            size_t const user_bin_id = ub_ids[tbin];
+
+            switch (user_bin_id)
+            {
+            case seqan::hibf::bin_kind::merged:
+                self(next_ibfs[tbin]);
+                [[fallthrough]];
+            case seqan::hibf::bin_kind::deleted:
+                sum = 0.0;
+                break;
+            default:
+                if (tbin + 1u == ibf.bin_count() || user_bin_id != ub_ids[tbin + 1]) // last bin || end of split bin
+                {
+                    actual_fprs[user_bin_id] = compute_combined_fpr(sum);
+                    sum = 0u;
+                }
+            }
+        }
+    };
+
+    traverse_hibf(0);
+
+    std::ofstream outfile{filenames::fprs(ibf_args.path_out)};
+    for (unsigned level = 0; level < ibf_args.number_expression_thresholds; level++)
+    {
+        for (size_t file = 0; file < num_files; file++)
+        {
+            size_t const bin = level * num_files + file;
+            outfile << actual_fprs[bin] << " ";
+        }
+        outfile << "\n";
+    }
+    outfile << "/\n";
+}
+
 // Actual ibf construction
 template <bool samplewise, bool minimiser_files_given = true>
 void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
@@ -378,13 +455,12 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
     };
 
     // HIBF config
-    seqan::hibf::config hibf_config{
-        .input_fn = hibf_input,
-        .number_of_user_bins = user_bin_minimisers.size(),
-        .number_of_hash_functions = num_hash,
-        .maximum_fpr = fprs[0],
-        .threads = ibf_args.threads,
-    };
+    seqan::hibf::config hibf_config{.input_fn = hibf_input,
+                                    .number_of_user_bins = user_bin_minimisers.size(),
+                                    .number_of_hash_functions = num_hash,
+                                    .maximum_fpr = fprs[0],
+                                    .threads = ibf_args.threads,
+                                    .track_occupancy = true};
 
     // Construct the HIBF
     seqan::hibf::hierarchical_interleaved_bloom_filter hibf{hibf_config};
@@ -406,20 +482,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         outfile << "/\n";
     }
 
-    // Store FPR information
-    //TODO: implement fpr calculation for HIBF
-    std::ofstream outfile{filenames::fprs(ibf_args.path_out)};
-    for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
-    {
-        for (size_t i = 0; i < num_files; i++)
-        {
-            // For HIBF, use the configured maximum FPR as approximation
-            // since internal bin structure is not directly accessible
-            outfile << fprs[0] << " ";
-        }
-        outfile << "\n";
-    }
-    outfile << "/\n";
+    store_fpr_information(hibf, num_files, ibf_args);
 }
 
 // Create ibfs
