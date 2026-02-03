@@ -7,6 +7,13 @@
 #include <filesystem>
 #include <vector>
 
+template <typename value_t>
+class needle_matrix;
+
 // Reads the level file ibf creates
 template <typename float_or_int>
 void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::filesystem::path const & filename);
+
+// Overload for needle_matrix
+template <typename float_or_int>
+void read_levels(needle_matrix<float_or_int> & expressions, std::filesystem::path const & filename);

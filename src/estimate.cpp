@@ -12,6 +12,7 @@
 
 #include "misc/debug.hpp"
 #include "misc/filenames.hpp"
+#include "misc/needle_matrix.hpp"
 #include "misc/read_levels.hpp"
 
 inline std::vector<uint64_t> get_minimiser(seqan3::dna4_vector const & seq, minimiser_arguments const & args)
@@ -27,7 +28,7 @@ inline std::vector<uint64_t> get_minimiser(seqan3::dna4_vector const & seq, mini
 template <typename ibf_t, bool normalization, typename exp_t>
 void check_ibf(estimate_ibf_arguments const & args,
                ibf_t const & ibf,
-               std::vector<uint16_t> & estimations,
+               std::span<uint16_t> estimations,
                seqan3::dna4_vector const & seq,
                exp_t const & expressions,
                std::vector<std::vector<double>> const & fprs,
@@ -36,7 +37,7 @@ void check_ibf(estimate_ibf_arguments const & args,
                size_t const num_experiments)
 {
     // Check, if one expression threshold for all or individual thresholds
-    static constexpr bool multiple_expressions = std::same_as<exp_t, std::vector<std::vector<uint16_t>>>;
+    static constexpr bool multiple_expressions = std::same_as<exp_t, needle_matrix<uint16_t>>;
 
     std::vector<uint64_t> const minimiser = get_minimiser(seq, args);
     uint64_t const minimiser_count = minimiser.size();
@@ -86,7 +87,7 @@ void check_ibf(estimate_ibf_arguments const & args,
                 if (level == num_levels - 1) // This is the last (lowest) level
                 {
                     if constexpr (multiple_expressions)
-                        estimations[experiment] = expressions[level][experiment];
+                        estimations[experiment] = expressions[level, experiment];
                     else
                         estimations[experiment] = args.expression_thresholds[level];
                 }
@@ -102,11 +103,11 @@ void check_ibf(estimate_ibf_arguments const & args,
                     // Actually calculate estimation, in the else case level stands for the prev_expression
                     if constexpr (multiple_expressions)
                     {
-                        size_t const prev_level_expression = expressions[level + 1][experiment];
-                        size_t const expression_difference = prev_level_expression - expressions[level][experiment];
+                        size_t const prev_level_expression = expressions[level + 1, experiment];
+                        size_t const expression_difference = prev_level_expression - expressions[level, experiment];
                         size_t const estimate =
                             prev_level_expression - (normalized_minimiser_pos * expression_difference);
-                        estimations[experiment] = std::max<size_t>(expressions[level][experiment], estimate);
+                        estimations[experiment] = std::max<size_t>(expressions[level, experiment], estimate);
                     }
                     else
                     {
@@ -121,7 +122,7 @@ void check_ibf(estimate_ibf_arguments const & args,
                 // Apply normalization if requested
                 // TODO: Is this meant to be expressions[0]?
                 if constexpr (normalization && multiple_expressions)
-                    estimations[experiment] /= expressions[1][experiment]; // Normalize by first level
+                    estimations[experiment] /= expressions[1, experiment]; // Normalize by first level
 
                 break; // Found the estimate for this experiment
             }
@@ -149,9 +150,9 @@ void estimate(estimate_ibf_arguments & args,
     // ========================================================================
     // const data
     // ========================================================================
-    std::vector<std::vector<uint16_t>> const expressions = [&]()
+    needle_matrix<uint16_t> const expressions = [&]()
     {
-        std::vector<std::vector<uint16_t>> result;
+        needle_matrix<uint16_t> result;
         if constexpr (samplewise)
             read_levels<uint16_t>(result, filenames::levels(estimate_args.path_in));
         return result;
@@ -186,8 +187,8 @@ void estimate(estimate_ibf_arguments & args,
     // ========================================================================
     std::vector<std::string> ids;
     std::vector<seqan3::dna4_vector> seqs;
-    std::vector<std::vector<float>> prev_counts;
-    std::vector<std::vector<uint16_t>> estimations;
+    needle_matrix<float> prev_counts;
+    needle_matrix<uint16_t> estimations;
     bool counters_initialised = false;
 
     // ========================================================================
@@ -221,12 +222,8 @@ void estimate(estimate_ibf_arguments & args,
     // ========================================================================
     auto init_counter = [&](size_t const size)
     {
-        static_assert(std::same_as<std::ranges::range_value_t<decltype(prev_counts)>, std::vector<float>>);
-        prev_counts.resize(size, std::vector<float>(num_experiments));
-
-        static_assert(std::same_as<std::ranges::range_value_t<decltype(estimations)>, std::vector<uint16_t>>);
-        estimations.resize(size, std::vector<uint16_t>(num_experiments));
-
+        prev_counts = needle_matrix<float>{size, num_experiments};
+        estimations = needle_matrix<uint16_t>{size, num_experiments};
         return true;
     };
 
@@ -234,16 +231,8 @@ void estimate(estimate_ibf_arguments & args,
     {
         ids.clear();
         seqs.clear();
-        std::ranges::for_each(prev_counts,
-                              [](auto & v)
-                              {
-                                  std::ranges::fill(v, float{});
-                              });
-        std::ranges::for_each(estimations,
-                              [](auto & v)
-                              {
-                                  std::ranges::fill(v, uint16_t{});
-                              });
+        prev_counts.zero();
+        estimations.zero();
     };
 
     auto process_ibf = [&](size_t const i)
@@ -252,7 +241,7 @@ void estimate(estimate_ibf_arguments & args,
         {
             check_ibf<ibf_t, normalization_method>(args,
                                                    ibf,
-                                                   estimations[i],
+                                                   estimations.level(i),
                                                    seqs[i],
                                                    expressions,
                                                    fprs,
@@ -264,7 +253,7 @@ void estimate(estimate_ibf_arguments & args,
         {
             check_ibf<ibf_t, false>(args,
                                     ibf,
-                                    estimations[i],
+                                    estimations.level(i),
                                     seqs[i],
                                     args.expression_thresholds,
                                     fprs,
@@ -303,7 +292,7 @@ void estimate(estimate_ibf_arguments & args,
         {
             outfile << ids[i] << '\t';
             for (size_t j = 0; j < num_experiments; ++j)
-                outfile << estimations[i][j] << '\t';
+                outfile << estimations[i, j] << '\t';
             outfile << '\n';
         }
     }
