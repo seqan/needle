@@ -201,8 +201,11 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 std::vector<uint8_t> & cutoffs,
                 size_t num_hash = 1,
                 std::filesystem::path const & expression_by_genome_file = "",
-                minimiser_file_input_arguments const & minimiser_args = {})
+                minimiser_file_input_arguments const & minimiser_args = {},
+                std::filesystem::path const & layout_file = {})
 {
+    (void)layout_file; // suppress unused-parameter warning; TODO: use layout_file to parse or call chopper
+
     size_t const num_files = [&]() constexpr
     {
         if constexpr (minimiser_files_given)
@@ -492,8 +495,11 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
                           std::vector<double> & fpr,
                           std::vector<uint8_t> & cutoffs,
                           std::filesystem::path const & expression_by_genome_file,
-                          size_t num_hash)
+                          size_t num_hash,
+                          std::filesystem::path const & layout_file)
 {
+    (void)layout_file; // TODO: use layout_file (parse or call chopper) in ibf_helper
+
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
 
@@ -522,7 +528,8 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
                                 cutoffs,
                                 num_hash,
                                 expression_by_genome_file,
-                                minimiser_args);
+                                minimiser_args,
+                                layout_file); 
     else
         ibf_helper<false, false>(sequence_files,
                                  fpr,
@@ -530,7 +537,8 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
                                  cutoffs,
                                  num_hash,
                                  expression_by_genome_file,
-                                 minimiser_args);
+                                 minimiser_args,
+                                 layout_file);
 
     store_args(ibf_args, filenames::data(ibf_args.path_out));
 
@@ -542,8 +550,11 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
                           estimate_ibf_arguments & ibf_args,
                           std::vector<double> & fpr,
                           std::filesystem::path const & expression_by_genome_file,
-                          size_t num_hash)
+                          size_t num_hash,
+                          std::filesystem::path const & layout_file)
 {
+    (void)layout_file; // TODO: use layout_file in ibf_helper
+
     check_expression(ibf_args.expression_thresholds, ibf_args.number_expression_thresholds, expression_by_genome_file);
     check_fpr(ibf_args.number_expression_thresholds, fpr);
 
@@ -551,9 +562,9 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
 
     std::vector<uint8_t> cutoffs{};
     if (ibf_args.samplewise)
-        ibf_helper<true>(minimiser_files, fpr, ibf_args, cutoffs, num_hash, expression_by_genome_file);
+        ibf_helper<true>(minimiser_files, fpr, ibf_args, cutoffs, num_hash, expression_by_genome_file, minimiser_file_input_arguments{}, layout_file);
     else
-        ibf_helper<false>(minimiser_files, fpr, ibf_args, cutoffs, num_hash, expression_by_genome_file);
+        ibf_helper<false>(minimiser_files, fpr, ibf_args, cutoffs, num_hash, expression_by_genome_file, minimiser_file_input_arguments{}, layout_file);
 
     store_args(ibf_args, filenames::data(ibf_args.path_out));
 
