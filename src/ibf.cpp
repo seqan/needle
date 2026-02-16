@@ -11,7 +11,8 @@
 #include <hibf/build/bin_size_in_bits.hpp>
 #include <hibf/config.hpp>
 #include <hibf/hierarchical_interleaved_bloom_filter.hpp>
-
+#include <memory>
+#include <hibf/layout/layout.hpp>
 #include "misc/calculate_cutoff.hpp"
 #include "misc/check_cutoffs_samples.hpp"
 #include "misc/check_for_fasta_format.hpp"
@@ -465,8 +466,23 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                                     .threads = ibf_args.threads,
                                     .track_occupancy = true};
 
-    // Construct the HIBF
-    seqan::hibf::hierarchical_interleaved_bloom_filter hibf{hibf_config};
+    // Construct the HIBF — prefer the ctor that consumes a precomputed layout if provided.
+    auto hibf = [&]()
+    {
+        if (!layout_file.empty())
+        {
+            seqan::hibf::layout::layout layout_obj;
+            std::ifstream in{layout_file, std::ios::binary};
+            if (!in)
+                throw std::runtime_error{"Could not open layout file: " + layout_file.string()};
+            layout_obj.read_from(in);
+            return seqan::hibf::hierarchical_interleaved_bloom_filter{hibf_config, layout_obj};
+        }
+        else
+        {
+            return seqan::hibf::hierarchical_interleaved_bloom_filter{hibf_config};
+        }
+    }();
 
     // Store the HIBF
     std::filesystem::path const filename = filenames::ibf(ibf_args.path_out, samplewise, 0, ibf_args);
