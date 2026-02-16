@@ -147,8 +147,12 @@ IncludeCategories:
     Priority:        7
     SortPriority:    0
     CaseSensitive:   false
-  - Regex:           '.*'
+  - Regex:           '<chopper/'
     Priority:        8
+    SortPriority:    0
+    CaseSensitive:   false
+  - Regex:           '.*'
+    Priority:        9
     SortPriority:    0
     CaseSensitive:   false
 IncludeIsMainRegex: '(Test)?$'

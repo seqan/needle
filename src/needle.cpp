@@ -319,7 +319,7 @@ int run_needle_ibf(sharg::parser & parser)
     std::filesystem::path expression_by_genome_file = "";
     std::vector<double> fpr{}; // The fpr of one IBF, can be different for different expression levels
     std::vector<uint8_t> cutoffs{};
-    std::filesystem::path layout_file{}; 
+    bool fast_layout{};
 
     initialise_minimiser_arguments(parser, ibf_args);
     initialise_arguments_ibf(parser, ibf_args, num_hash, fpr);
@@ -337,20 +337,20 @@ int run_needle_ibf(sharg::parser & parser)
                                     .long_id = "experiment-names",
                                     .description = "Use experiment names from the given txt file."});
 
-    parser.add_option(expression_by_genome_file,
-                      sharg::config{.short_id = '\0',
-                                    .long_id = "levels-by-genome",
-                                    .description = "Sequence file containing minimizers to determine expression thresholds.",
-                                    .validator = sharg::input_file_validator{}});
+    parser.add_option(
+        expression_by_genome_file,
+        sharg::config{.short_id = '\0',
+                      .long_id = "levels-by-genome",
+                      .description = "Sequence file containing minimizers to determine expression thresholds.",
+                      .validator = sharg::input_file_validator{}});
 
-    parser.add_option(layout_file,
-                      sharg::config{.short_id = '\0',
-                                    .long_id = "layout-file",
-                                    .description = "Path to a precomputed chopper layout file.",
-                                    .validator = sharg::input_file_validator{}});
-    parsing(parser, ibf_args); 
+    parser.add_flag(fast_layout,
+                    sharg::config{.short_id = '\0', //
+                                  .long_id = "fast-layout",
+                                  .description = "Use fast layout algorithm."});
+    parsing(parser, ibf_args);
 
-    ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs, expression_by_genome_file, num_hash, layout_file);
+    ibf(sequence_files, ibf_args, minimiser_args, fpr, cutoffs, expression_by_genome_file, num_hash, fast_layout);
 
     return 0;
 }

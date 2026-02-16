@@ -33,7 +33,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
                           std::vector<uint8_t> & cutoffs,
                           std::filesystem::path const & expression_by_genome_file = "",
                           size_t num_hash = 1,
-                          std::filesystem::path const & layout_file = {});
+                          bool const fast_layout = false);
 
 /*! \brief Creates IBFs based on the minimiser files
  * \param minimiser_files A vector of minimiser file paths.
@@ -50,4 +50,4 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
                           std::vector<double> & fpr,
                           std::filesystem::path const & expression_by_genome_file = "",
                           size_t num_hash = 1,
-                          std::filesystem::path const & layout_file = {});
+                          bool const fast_layout = false);

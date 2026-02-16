@@ -11,8 +11,13 @@
 #include <hibf/build/bin_size_in_bits.hpp>
 #include <hibf/config.hpp>
 #include <hibf/hierarchical_interleaved_bloom_filter.hpp>
-#include <memory>
 #include <hibf/layout/layout.hpp>
+#include <hibf/misc/iota_vector.hpp>
+#include <hibf/sketch/compute_sketches.hpp>
+#include <hibf/sketch/estimate_kmer_counts.hpp>
+
+#include <chopper/layout/execute.hpp>
+
 #include "misc/calculate_cutoff.hpp"
 #include "misc/check_cutoffs_samples.hpp"
 #include "misc/check_for_fasta_format.hpp"
@@ -21,6 +26,17 @@
 #include "misc/get_expression_thresholds.hpp"
 #include "misc/get_include_set_table.hpp"
 #include "misc/stream.hpp"
+
+namespace chopper::layout
+{
+// Foward declaration for linking. fast_layout is not declared in execute.hpp
+void fast_layout(chopper::configuration const & config,
+                 std::vector<size_t> const & positions,
+                 std::vector<size_t> const & cardinalities,
+                 std::vector<seqan::hibf::sketch::hyperloglog> const & sketches,
+                 std::vector<seqan::hibf::sketch::minhashes> const & minHash_sketches,
+                 seqan::hibf::layout::layout & hibf_layout);
+} // namespace chopper::layout
 
 // Check number of expression levels, sort expression levels
 void check_expression(std::vector<uint16_t> & expression_thresholds,
@@ -194,6 +210,47 @@ void store_fpr_information(seqan::hibf::hierarchical_interleaved_bloom_filter co
     outfile << "/\n";
 }
 
+// Full Chopper config with defaults:
+//  .partitioning_approach = chopper::partitioning_scheme::lsh_sim,
+//  .data_file = {},
+//  .debug = false,
+//  .output_filename = "layout.txt",
+//  .output_timings = {},
+//  .k = ibf_args.k,
+//  .window_size = static_cast<uint8_t>(ibf_args.w_size.get()),
+//  .precomputed_files = false,
+//  .sketch_directory = {},
+//  .disable_sketch_output = false,
+//  .determine_best_tmax = false,
+//  .force_all_binnings = false,
+//  .output_verbose_statistics = false,
+//  .hibf_config = hibf_config
+
+seqan::hibf::layout::layout compute_fast_layout(seqan::hibf::config const & hibf_config,
+                                                estimate_ibf_arguments const & ibf_args)
+{
+    seqan::hibf::layout::layout hibf_layout{};
+
+    chopper::configuration chopper_config{.data_file = {}, // Not initialised in cfg, so it must be here.
+                                          .k = ibf_args.k,
+                                          .window_size = static_cast<uint8_t>(ibf_args.w_size.get()),
+                                          .hibf_config = hibf_config};
+
+    std::vector<seqan::hibf::sketch::hyperloglog> sketches{};
+    std::vector<seqan::hibf::sketch::minhashes> minHash_sketches{};
+    std::vector<size_t> cardinalities;
+
+    seqan::hibf::sketch::compute_sketches(hibf_config, sketches, minHash_sketches);
+    seqan::hibf::sketch::estimate_kmer_counts(sketches, cardinalities);
+    chopper::layout::fast_layout(chopper_config,
+                                 seqan::hibf::iota_vector(sketches.size()),
+                                 cardinalities,
+                                 sketches,
+                                 minHash_sketches,
+                                 hibf_layout);
+    return hibf_layout;
+}
+
 // Actual ibf construction
 template <bool samplewise, bool minimiser_files_given = true>
 void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
@@ -203,10 +260,8 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 size_t num_hash = 1,
                 std::filesystem::path const & expression_by_genome_file = "",
                 minimiser_file_input_arguments const & minimiser_args = {},
-                std::filesystem::path const & layout_file = {})
+                bool const fast_layout = false)
 {
-    (void)layout_file; // suppress unused-parameter warning; TODO: use layout_file to parse or call chopper
-
     size_t const num_files = [&]() constexpr
     {
         if constexpr (minimiser_files_given)
@@ -465,18 +520,15 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                                     .maximum_fpr = fprs[0],
                                     .threads = ibf_args.threads,
                                     .track_occupancy = true};
+    hibf_config.validate_and_set_defaults();
 
     // Construct the HIBF — prefer the ctor that consumes a precomputed layout if provided.
     auto hibf = [&]()
     {
-        if (!layout_file.empty())
+        if (fast_layout)
         {
-            seqan::hibf::layout::layout layout_obj;
-            std::ifstream in{layout_file, std::ios::binary};
-            if (!in)
-                throw std::runtime_error{"Could not open layout file: " + layout_file.string()};
-            layout_obj.read_from(in);
-            return seqan::hibf::hierarchical_interleaved_bloom_filter{hibf_config, layout_obj};
+            seqan::hibf::layout::layout hibf_layout = compute_fast_layout(hibf_config, ibf_args);
+            return seqan::hibf::hierarchical_interleaved_bloom_filter{hibf_config, hibf_layout};
         }
         else
         {
@@ -512,10 +564,8 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
                           std::vector<uint8_t> & cutoffs,
                           std::filesystem::path const & expression_by_genome_file,
                           size_t num_hash,
-                          std::filesystem::path const & layout_file)
+                          bool const fast_layout)
 {
-    (void)layout_file; // TODO: use layout_file (parse or call chopper) in ibf_helper
-
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
 
@@ -545,7 +595,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
                                 num_hash,
                                 expression_by_genome_file,
                                 minimiser_args,
-                                layout_file); 
+                                fast_layout);
     else
         ibf_helper<false, false>(sequence_files,
                                  fpr,
@@ -554,7 +604,7 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
                                  num_hash,
                                  expression_by_genome_file,
                                  minimiser_args,
-                                 layout_file);
+                                 fast_layout);
 
     store_args(ibf_args, filenames::data(ibf_args.path_out));
 
@@ -567,10 +617,8 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
                           std::vector<double> & fpr,
                           std::filesystem::path const & expression_by_genome_file,
                           size_t num_hash,
-                          std::filesystem::path const & layout_file)
+                          bool const fast_layout)
 {
-    (void)layout_file; // TODO: use layout_file in ibf_helper
-
     check_expression(ibf_args.expression_thresholds, ibf_args.number_expression_thresholds, expression_by_genome_file);
     check_fpr(ibf_args.number_expression_thresholds, fpr);
 
@@ -578,9 +626,23 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
 
     std::vector<uint8_t> cutoffs{};
     if (ibf_args.samplewise)
-        ibf_helper<true>(minimiser_files, fpr, ibf_args, cutoffs, num_hash, expression_by_genome_file, minimiser_file_input_arguments{}, layout_file);
+        ibf_helper<true>(minimiser_files,
+                         fpr,
+                         ibf_args,
+                         cutoffs,
+                         num_hash,
+                         expression_by_genome_file,
+                         minimiser_file_input_arguments{},
+                         fast_layout);
     else
-        ibf_helper<false>(minimiser_files, fpr, ibf_args, cutoffs, num_hash, expression_by_genome_file, minimiser_file_input_arguments{}, layout_file);
+        ibf_helper<false>(minimiser_files,
+                          fpr,
+                          ibf_args,
+                          cutoffs,
+                          num_hash,
+                          expression_by_genome_file,
+                          minimiser_file_input_arguments{},
+                          fast_layout);
 
     store_args(ibf_args, filenames::data(ibf_args.path_out));
 
