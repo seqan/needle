@@ -65,6 +65,8 @@ struct minimiser_file_input_arguments
     bool paired = false;           // If true, than experiments are seen as paired-end experiments
     bool experiment_names = false; // Flag, if names of experiment should be stored in a txt file
     bool ram_friendly = false;
+    bool write_counts = false;
+    uint8_t number_expression_thresholds = 0;
 };
 
 /*! \brief Function, loading arguments
