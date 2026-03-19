@@ -19,7 +19,7 @@ CPMDeclarePackage (hibf
 )
 
 # seqan3
-set (NEEDLE_SEQAN3_VERSION 3.4.1 CACHE STRING "")
+set (NEEDLE_SEQAN3_VERSION 3.4.2 CACHE STRING "")
 CPMDeclarePackage (seqan3
                    NAME seqan3
                    VERSION ${NEEDLE_SEQAN3_VERSION}
