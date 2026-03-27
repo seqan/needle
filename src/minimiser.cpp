@@ -4,16 +4,16 @@
 
 #include "minimiser.hpp"
 
+#include <fstream>
 #include <numeric>
 #include <omp.h>
 #include <utility>
-#include <fstream>
 
 #include "misc/calculate_cutoff.hpp"
 #include "misc/check_cutoffs_samples.hpp"
 #include "misc/fill_hash_table.hpp"
-#include "misc/get_include_set_table.hpp"
 #include "misc/get_expression_thresholds.hpp"
+#include "misc/get_include_set_table.hpp"
 #include "misc/stream.hpp"
 
 // Add result struct
@@ -28,14 +28,14 @@ struct MinResult
 // Actuall minimiser calculation
 template <bool parallel = false>
 MinResult calculate_minimiser(std::vector<std::filesystem::path> const & sequence_files,
-                         robin_hood::unordered_set<uint64_t> const & include_set_table,
-                         robin_hood::unordered_set<uint64_t> const & exclude_set_table,
-                         minimiser_arguments const & args,
-                         minimiser_file_input_arguments const & minimiser_args,
-                         unsigned const i,
-                         std::vector<uint8_t> & cutoffs,
-                         uint8_t const number_expression_thresholds,
-                         bool const write_counts)
+                              robin_hood::unordered_set<uint64_t> const & include_set_table,
+                              robin_hood::unordered_set<uint64_t> const & exclude_set_table,
+                              minimiser_arguments const & args,
+                              minimiser_file_input_arguments const & minimiser_args,
+                              unsigned const i,
+                              std::vector<uint8_t> & cutoffs,
+                              uint8_t const number_expression_thresholds,
+                              bool const write_counts)
 {
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
     uint8_t cutoff{0};
@@ -103,7 +103,6 @@ MinResult calculate_minimiser(std::vector<std::filesystem::path> const & sequenc
         write_stream(outfile, hash.second);
     }
 
-
     uint64_t count = hash_table.size();
 
     MinResult res;
@@ -112,7 +111,13 @@ MinResult calculate_minimiser(std::vector<std::filesystem::path> const & sequenc
 
     // If insert counts requested, compute expression thresholds (sizes are computed).
     if (write_counts)
-        get_expression_thresholds(number_expression_thresholds, hash_table, res.expression_thresholds, res.sizes, robin_hood::unordered_set<uint64_t>{}, cutoff, true);
+        get_expression_thresholds(number_expression_thresholds,
+                                  hash_table,
+                                  res.expression_thresholds,
+                                  res.sizes,
+                                  robin_hood::unordered_set<uint64_t>{},
+                                  cutoff,
+                                  true);
 
     return res;
 }
@@ -152,16 +157,17 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files,
         for (size_t i = 0; i < minimiser_args.samples.size(); i++)
         {
             MinResult r = calculate_minimiser<true>(sequence_files,
-                                      include_set_table,
-                                      exclude_set_table,
-                                      args,
-                                      minimiser_args,
-                                      i,
-                                      cutoffs,
-                                      minimiser_args.number_expression_thresholds,
-                                      minimiser_args.write_counts);
+                                                    include_set_table,
+                                                    exclude_set_table,
+                                                    args,
+                                                    minimiser_args,
+                                                    i,
+                                                    cutoffs,
+                                                    minimiser_args.number_expression_thresholds,
+                                                    minimiser_args.write_counts);
             insert_counts[i] = r.count;
-            if (cutoffs.size() <= i) cutoffs.resize(minimiser_args.samples.size());
+            if (cutoffs.size() <= i)
+                cutoffs.resize(minimiser_args.samples.size());
             cutoffs[i] = r.cutoff;
             if (minimiser_args.write_counts)
             {
@@ -181,13 +187,22 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files,
 #pragma omp parallel for schedule(dynamic, chunk_size)
         for (size_t i = 0; i < minimiser_args.samples.size(); i++)
         {
-            results[i] = calculate_minimiser<false>(sequence_files, include_set_table, exclude_set_table, args, minimiser_args, i, cutoffs, minimiser_args.number_expression_thresholds, minimiser_args.write_counts);
+            results[i] = calculate_minimiser<false>(sequence_files,
+                                                    include_set_table,
+                                                    exclude_set_table,
+                                                    args,
+                                                    minimiser_args,
+                                                    i,
+                                                    cutoffs,
+                                                    minimiser_args.number_expression_thresholds,
+                                                    minimiser_args.write_counts);
         }
 
         for (size_t i = 0; i < minimiser_args.samples.size(); ++i)
         {
             insert_counts[i] = results[i].count;
-            if (cutoffs.size() <= i) cutoffs.resize(minimiser_args.samples.size());
+            if (cutoffs.size() <= i)
+                cutoffs.resize(minimiser_args.samples.size());
             cutoffs[i] = results[i].cutoff;
             if (minimiser_args.write_counts)
             {
@@ -252,8 +267,8 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files,
 
                 sizes_out << '\t' << per_level;
             }
-             sizes_out << '\n';
-             file_it += minimiser_args.samples[i];
+            sizes_out << '\n';
+            file_it += minimiser_args.samples[i];
         }
     }
 }

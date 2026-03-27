@@ -338,16 +338,16 @@ int run_needle_ibf(sharg::parser & parser)
                                     .description = "Use experiment names from the given txt file."});
 
     parser.add_option(expression_by_genome_file,
-        sharg::config{.short_id = '\0',
-                      .long_id = "levels-by-genome",
-                      .description = "Sequence file containing minimizers, only those minimizers will be "
+                      sharg::config{.short_id = '\0',
+                                    .long_id = "levels-by-genome",
+                                    .description = "Sequence file containing minimizers, only those minimizers will be "
                                                    "considered for determining the expression thresholds.",
-                      .validator = sharg::input_file_validator{}});
+                                    .validator = sharg::input_file_validator{}});
 
     parser.add_flag(minimiser_args.ram_friendly,
-                sharg::config{.short_id = '\0',
-                                .long_id = "ram",
-                                .description = "When multithreading, prioritize lower RAM usage over speed."});
+                    sharg::config{.short_id = '\0',
+                                  .long_id = "ram",
+                                  .description = "When multithreading, prioritize lower RAM usage over speed."});
 
     parser.add_flag(fast_layout,
                     sharg::config{.short_id = '\0', //
@@ -465,7 +465,7 @@ int run_needle_ibf_min(sharg::parser & parser)
                                     .description = "Sequence file containing minimizers, only those minimizers will be "
                                                    "considered for determining the expression thresholds.",
                                     .validator = sharg::input_file_validator{}});
-                                
+
     initialise_arguments_ibf(parser, ibf_args, num_hash, fpr);
 
     parsing(parser, ibf_args);
@@ -602,15 +602,17 @@ int run_needle_minimiser(sharg::parser & parser)
                                   .long_id = "ram",
                                   .description = "When multithreading, prioritize lower RAM usage over speed."});
 
-    parser.add_flag(minimiser_args.write_counts,
-                    sharg::config{.short_id = '\0',
-                                  .long_id = "write-counts",
-                                  .description = "Write per-user-bin minimiser counts, thresholds.tsv and preprocess.meta."});
+    parser.add_flag(
+        minimiser_args.write_counts,
+        sharg::config{.short_id = '\0',
+                      .long_id = "write-counts",
+                      .description = "Write per-user-bin minimiser counts, thresholds.tsv and preprocess.meta."});
 
-    parser.add_option(minimiser_args.number_expression_thresholds,
-                      sharg::config{.short_id = 'l',
-                                    .long_id = "number_expression_thresholds",
-                                    .description = "Number of expression thresholds to produce when --write-counts is set."});
+    parser.add_option(
+        minimiser_args.number_expression_thresholds,
+        sharg::config{.short_id = 'l',
+                      .long_id = "number_expression_thresholds",
+                      .description = "Number of expression thresholds to produce when --write-counts is set."});
 
     parsing(parser, args);
     if (sequence_files[0].extension() == ".lst")
