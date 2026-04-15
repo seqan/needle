@@ -3,6 +3,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "misc/stream.hpp"
+#include <functional>
+#include <fstream>
+#include <filesystem>
+#include <cstdint>
 
 void read_binary(std::filesystem::path const & filename,
                  robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table)
@@ -53,4 +57,32 @@ void read_binary_start(minimiser_arguments & args,
         args.shape = seqan3::ungapped{args.k};
     else
         read_stream(fin, args.shape);
+}
+
+void iterate_minimiser_file(std::filesystem::path const & filename,
+                            std::function<void(uint64_t, uint16_t)> callback)
+{
+    std::ifstream fin{filename, std::ios::binary};
+    if (!fin)
+        return;
+
+    // Skip the first 22 bytes (num_minimisers, cutoff, k, w_size, s)
+    fin.ignore(22);
+
+    bool ungapped{};
+    if (!read_stream(fin, ungapped))
+        return;
+    if (!ungapped)
+    {
+        fin.ignore(8); // args.shape
+    }
+
+    uint64_t minimiser{};
+    uint16_t minimiser_count{};
+    while (read_stream(fin, minimiser))
+    {
+        if (!read_stream(fin, minimiser_count))
+            break;
+        callback(minimiser, minimiser_count);
+    }
 }
