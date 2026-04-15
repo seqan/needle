@@ -417,18 +417,20 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             auto const & thr = (samplewise ? expressions[file_index] : ibf_args.expression_thresholds);
 
             bool emitted = false;
-            iterate_minimiser_file(minimiser_files[file_index], [&](uint64_t h, uint16_t c) {
-                // Determine level using upper_bound
-                auto p = std::ranges::upper_bound(thr, c);
-                if (p == thr.begin())
-                    return; // below first threshold -> skip
-                size_t level = static_cast<size_t>(std::ranges::distance(thr.begin(), p) - 1);
-                if (level == target_level)
-                {
-                    it = h;
-                    emitted = true;
-                }
-            });
+            iterate_minimiser_file(minimiser_files[file_index],
+                                   [&](uint64_t h, uint16_t c)
+                                   {
+                                       // Determine level using upper_bound
+                                       auto p = std::ranges::upper_bound(thr, c);
+                                       if (p == thr.begin())
+                                           return; // below first threshold -> skip
+                                       size_t level = static_cast<size_t>(std::ranges::distance(thr.begin(), p) - 1);
+                                       if (level == target_level)
+                                       {
+                                           it = h;
+                                           emitted = true;
+                                       }
+                                   });
 
             if (!emitted) // HIBF requires non-empty bins
                 it = 0;
@@ -589,10 +591,10 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
             }
         }
 
-    // Maybe Todo: Original needle checks `size == num_files` for each expression level, and throws if true becasue
-    // the thresholds are bad if this happens.
-    // We could probably add a similar check here.
-    // If "sum of all files for an expression level == num_files", and re-enable the test in ibf_test.cpp
+        // Maybe Todo: Original needle checks `size == num_files` for each expression level, and throws if true becasue
+        // the thresholds are bad if this happens.
+        // We could probably add a similar check here.
+        // If "sum of all files for an expression level == num_files", and re-enable the test in ibf_test.cpp
     }
 
     if constexpr (!minimiser_files_given)

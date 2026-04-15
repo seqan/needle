@@ -455,7 +455,6 @@ int run_needle_ibf_min(sharg::parser & parser)
                                                    "considered for determining the expression thresholds.",
                                     .validator = sharg::input_file_validator{}});
 
-
     initialise_arguments_ibf(parser, ibf_args, num_hash, fpr);
 
     parsing(parser, ibf_args);

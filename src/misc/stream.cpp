@@ -3,10 +3,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "misc/stream.hpp"
-#include <functional>
-#include <fstream>
-#include <filesystem>
+
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <functional>
 
 void read_binary(std::filesystem::path const & filename,
                  robin_hood::unordered_node_map<uint64_t, uint16_t> & hash_table)
@@ -59,8 +60,7 @@ void read_binary_start(minimiser_arguments & args,
         read_stream(fin, args.shape);
 }
 
-void iterate_minimiser_file(std::filesystem::path const & filename,
-                            std::function<void(uint64_t, uint16_t)> callback)
+void iterate_minimiser_file(std::filesystem::path const & filename, std::function<void(uint64_t, uint16_t)> callback)
 {
     std::ifstream fin{filename, std::ios::binary};
     if (!fin)
