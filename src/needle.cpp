@@ -424,10 +424,11 @@ int run_needle_ibf_min(sharg::parser & parser)
 {
     estimate_ibf_arguments ibf_args{};
     std::vector<std::filesystem::path> minimiser_files{};
-    size_t num_hash{1}; // Number of hash functions to use, default 1
+    size_t num_hash{1};
     std::filesystem::path expression_by_genome_file = "";
-    std::vector<double> fpr{}; // The fpr of one IBF, can be different for different expression levels
+    std::vector<double> fpr{};
     std::filesystem::path input_file{};
+    bool fast_layout{};
 
     parser.info.short_description = "Constructs the Needle index from the minimiser files created by needle minimiser.";
     parser.add_positional_option(minimiser_files,
@@ -457,6 +458,10 @@ int run_needle_ibf_min(sharg::parser & parser)
 
     initialise_arguments_ibf(parser, ibf_args, num_hash, fpr);
 
+    parser.add_flag(fast_layout,
+                    sharg::config{.short_id = '\0',
+                                  .long_id = "fast-layout",
+                                  .description = "Use fast layout algorithm."});
     parsing(parser, ibf_args);
     if (minimiser_files[0].extension() == ".lst")
     {
@@ -465,7 +470,7 @@ int run_needle_ibf_min(sharg::parser & parser)
         read_input_file_list(minimiser_files, input_file);
     }
 
-    ibf(minimiser_files, ibf_args, fpr, expression_by_genome_file, num_hash);
+    ibf(minimiser_files, ibf_args, fpr, expression_by_genome_file, num_hash, fast_layout);
 
     return 0;
 }
