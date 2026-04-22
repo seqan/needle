@@ -458,10 +458,9 @@ int run_needle_ibf_min(sharg::parser & parser)
 
     initialise_arguments_ibf(parser, ibf_args, num_hash, fpr);
 
-    parser.add_flag(fast_layout,
-                    sharg::config{.short_id = '\0',
-                                  .long_id = "fast-layout",
-                                  .description = "Use fast layout algorithm."});
+    parser.add_flag(
+        fast_layout,
+        sharg::config{.short_id = '\0', .long_id = "fast-layout", .description = "Use fast layout algorithm."});
     parsing(parser, ibf_args);
     if (minimiser_files[0].extension() == ".lst")
     {
