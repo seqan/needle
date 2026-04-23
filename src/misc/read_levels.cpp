@@ -4,59 +4,108 @@
 
 #include "misc/read_levels.hpp"
 
+#include <cassert>
+#include <charconv>
 #include <fstream>
+#include <string>
 
-#include <seqan3/io/views/detail/istreambuf_view.hpp>
-#include <seqan3/io/views/detail/take_until_view.hpp>
-#include <seqan3/utility/char_operations/predicate.hpp>
-
-template <typename float_or_int>
-float_or_int parse(std::string const & buffer)
-{
-    // std::from_chars would be better, but float version not available for every compiler
-    if constexpr (std::same_as<uint16_t, float_or_int>)
-        return std::stoi(buffer);
-    else
-        return std::stod(buffer);
-}
+#include "misc/charconv" // Can be dropped once clang-22 is released and clang-19 dropped.
+#include "misc/needle_matrix.hpp"
 
 // Reads the level file ibf creates
 template <typename float_or_int>
 void read_levels(std::vector<std::vector<float_or_int>> & expressions, std::filesystem::path const & filename)
 {
     std::ifstream fin{filename};
-    auto stream_view = seqan3::detail::istreambuf(fin);
-    auto stream_it = std::ranges::begin(stream_view);
-    size_t j{};
-    std::vector<float_or_int> empty_vector{};
-    std::string buffer{};
+    expressions.clear();
 
-    // Read line = expression levels
-    do
+    std::string line;
+    while (std::getline(fin, line))
     {
-        buffer.clear();
+        // Strict format: The only line starting with '/' is the terminator.
+        if (line.starts_with('/'))
+            break;
 
-        if (j == expressions.size())
-            expressions.push_back(empty_vector);
+        // After the last number, there is an extra space separator.
+        if (line.ends_with(' '))
+            line.pop_back();
 
-        std::ranges::copy(stream_view | seqan3::detail::take_until_or_throw(seqan3::is_char<' '>),
-                          std::back_inserter(buffer));
+        expressions.emplace_back();
+        auto & row = expressions.back();
 
-        expressions[j].push_back(parse<float_or_int>(buffer));
+        char const * ptr = line.data();
+        char const * end = ptr + line.size();
 
-        if (*stream_it != '/')
-            ++stream_it;
-
-        if (*stream_it == '\n')
+        while (ptr < end)
         {
-            ++stream_it;
-            j++;
+            // Strict format: We are either at the start of a number or a single space separator.
+            if (*ptr == ' ')
+                ++ptr;
+
+            float_or_int value{};
+            auto res = std::from_chars(ptr, end, value);
+
+            // Debug Mode: Verify parsing succeeded.
+            // Release Mode: Assume success (res.ec == std::errc()).
+            assert(res.ec == std::errc());
+
+            row.push_back(value);
+            ptr = res.ptr;
         }
     }
-    while (*stream_it != '/');
 }
 
 template void read_levels<uint16_t>(std::vector<std::vector<uint16_t>> & expressions,
                                     std::filesystem::path const & filename);
 template void read_levels<double>(std::vector<std::vector<double>> & expressions,
                                   std::filesystem::path const & filename);
+
+// Overload for needle_matrix
+template <typename float_or_int>
+void read_levels(needle_matrix<float_or_int> & expressions, std::filesystem::path const & filename)
+{
+    std::ifstream fin{filename};
+    std::vector<float_or_int> tmp;
+    size_t levels{};
+
+    std::string line;
+    while (std::getline(fin, line))
+    {
+        // Strict format: The only line starting with '/' is the terminator.
+        if (line.starts_with('/'))
+            break;
+
+        // After the last number, there is an extra space separator.
+        if (line.ends_with(' '))
+            line.pop_back();
+
+        char const * ptr = line.data();
+        char const * end = ptr + line.size();
+
+        while (ptr < end)
+        {
+            // Strict format: We are either at the start of a number or a single space separator.
+            if (*ptr == ' ')
+                ++ptr;
+
+            float_or_int value{};
+            auto res = std::from_chars(ptr, end, value);
+
+            // Debug Mode: Verify parsing succeeded.
+            // Release Mode: Assume success (res.ec == std::errc()).
+            assert(res.ec == std::errc());
+
+            tmp.push_back(value);
+            ptr = res.ptr;
+        }
+
+        ++levels;
+    }
+
+    size_t experiments = tmp.size() / levels;
+    assert(experiments * levels == tmp.size());
+    expressions = needle_matrix<float_or_int>{std::move(tmp), levels, experiments};
+}
+
+template void read_levels<uint16_t>(needle_matrix<uint16_t> & expressions, std::filesystem::path const & filename);
+template void read_levels<double>(needle_matrix<double> & expressions, std::filesystem::path const & filename);

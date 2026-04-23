@@ -29,19 +29,19 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
     // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
     // and afterwards discarded.
     robin_hood::unordered_node_map<uint64_t, uint8_t> cutoff_table;
-    size_t const file_iterator = std::reduce(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i);
+    size_t const file_offset = std::reduce(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i);
 
     bool const calculate_cutoffs = cutoffs.empty();
 
     if (calculate_cutoffs)
-        cutoff = calculate_cutoff(sequence_files[file_iterator], minimiser_args.samples[i]);
+        cutoff = calculate_cutoff(sequence_files[file_offset], minimiser_args.samples[i]);
     else
         cutoff = cutoffs[i];
 
     // Fill hash_table with minimisers.
-    for (size_t f = 0; f < minimiser_args.samples[i]; f++)
+    for (size_t f = 0; f < minimiser_args.samples[i]; ++f)
     {
-        sequence_file_t fin{sequence_files[file_iterator + f]};
+        sequence_file_t fin{sequence_files[file_offset + f]};
         if constexpr (parallel)
         {
             fill_hash_table_parallel(args,
@@ -68,7 +68,7 @@ void calculate_minimiser(std::vector<std::filesystem::path> const & sequence_fil
     cutoff_table.clear();
 
     // Write minimiser and their counts to binary
-    std::ofstream outfile{std::string{args.path_out} + std::string{sequence_files[file_iterator].stem()} + ".minimiser",
+    std::ofstream outfile{std::string{args.path_out} + std::string{sequence_files[file_offset].stem()} + ".minimiser",
                           std::ios::binary};
     auto hash_size = hash_table.size();
 
@@ -112,7 +112,7 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files,
     if (minimiser_args.ram_friendly)
     {
         seqan3::contrib::bgzf_thread_count = args.threads;
-        for (size_t i = 0; i < minimiser_args.samples.size(); i++)
+        for (size_t i = 0; i < minimiser_args.samples.size(); ++i)
         {
             calculate_minimiser<true>(sequence_files,
                                       include_set_table,
@@ -130,7 +130,7 @@ void minimiser(std::vector<std::filesystem::path> const & sequence_files,
         omp_set_num_threads(args.threads);
 
 #pragma omp parallel for schedule(dynamic, chunk_size)
-        for (size_t i = 0; i < minimiser_args.samples.size(); i++)
+        for (size_t i = 0; i < minimiser_args.samples.size(); ++i)
         {
             calculate_minimiser(sequence_files, include_set_table, exclude_set_table, args, minimiser_args, i, cutoffs);
         }

@@ -19,14 +19,14 @@ void delete_bin(std::vector<uint64_t> const & delete_files,
 
     std::vector<seqan::hibf::bin_index> bins_to_delete{};
     bins_to_delete.reserve(delete_files.size());
-    for (size_t i = 0; i < delete_files.size(); i++)
+    for (size_t i = 0; i < delete_files.size(); ++i)
         bins_to_delete.push_back(seqan::hibf::bin_index{delete_files[i]});
 
     omp_set_num_threads(ibf_args.threads);
 
 // Delete bins from ibfs
 #    pragma omp parallel
-    for (unsigned i = 0; i < ibf_args.number_expression_thresholds; i++)
+    for (unsigned i = 0; i < ibf_args.number_expression_thresholds; ++i)
     {
         std::filesystem::path filename = filenames::ibf(path_in, samplewise, i, ibf_args);
 
