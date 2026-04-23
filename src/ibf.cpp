@@ -418,16 +418,16 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
             bool emitted = false;
             iterate_minimiser_file(minimiser_files[file_index],
-                                   [&](uint64_t h, uint16_t c)
+                                   [&](uint64_t hash, uint16_t count)
                                    {
                                        // Determine level using upper_bound
-                                       auto p = std::ranges::upper_bound(thr, c);
+                                       auto p = std::ranges::upper_bound(thr, count);
                                        if (p == thr.begin())
                                            return; // below first threshold -> skip
                                        size_t level = static_cast<size_t>(std::ranges::distance(thr.begin(), p) - 1);
                                        if (level == target_level)
                                        {
-                                           it = h;
+                                           it = hash;
                                            emitted = true;
                                        }
                                    });

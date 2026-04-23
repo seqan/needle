@@ -81,8 +81,7 @@ void iterate_minimiser_file(std::filesystem::path const & filename, std::functio
     uint16_t minimiser_count{};
     while (read_stream(fin, minimiser))
     {
-        if (!read_stream(fin, minimiser_count))
-            break;
+        read_stream(fin, minimiser_count);
         callback(minimiser, minimiser_count);
     }
 }
