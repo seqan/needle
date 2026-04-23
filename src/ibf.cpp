@@ -476,15 +476,12 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         }
 
         store_fpr_information(hibf, num_files, ibf_args);
-
-        return;
     }
-
-    // Collect minimizer insertions from all threads (if !minimiser_files_given)
-    std::vector<std::vector<uint64_t>> user_bin_minimisers;
-
-    if constexpr (!minimiser_files_given)
+    // --- End Streaming approach
+    // --- Collect approach: Collect minimizer insertions from all threads (if !minimiser_files_given)
+    else
     {
+        std::vector<std::vector<uint64_t>> user_bin_minimisers;
         std::vector<std::vector<std::pair<uint64_t, std::vector<size_t>>>> file_insertions(num_files);
 
 #pragma omp parallel for schedule(dynamic, chunk_size)
@@ -595,10 +592,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         // the thresholds are bad if this happens.
         // We could probably add a similar check here.
         // If "sum of all files for an expression level == num_files", and re-enable the test in ibf_test.cpp
-    }
 
-    if constexpr (!minimiser_files_given)
-    {
         // HIBF input function
         auto hibf_input = [&](size_t const user_bin_id, seqan::hibf::insert_iterator it)
         {
@@ -648,6 +642,7 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
 
         store_fpr_information(hibf, num_files, ibf_args);
     }
+    // --- End Streaming approach
 }
 
 // Create ibfs
