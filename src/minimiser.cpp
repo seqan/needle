@@ -4,6 +4,7 @@
 
 #include "minimiser.hpp"
 
+#include <fstream>
 #include <numeric>
 #include <omp.h>
 

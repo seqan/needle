@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <iostream>
 
 #include <hibf/contrib/robin_hood.hpp>
@@ -42,3 +43,8 @@ void read_binary_start(minimiser_arguments & args,
                        std::filesystem::path const & filename,
                        uint64_t & num_of_minimisers,
                        uint8_t & cutoff);
+
+/*!\brief Iterate through a minimiser binary file and call callback(hash, count) for each entry.
+ */
+void iterate_minimiser_file(std::filesystem::path const & filename,
+                            std::function<void(uint64_t /*hash*/, uint16_t /*count*/)> callback);

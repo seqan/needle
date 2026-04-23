@@ -11,6 +11,12 @@
 #include <hibf/build/bin_size_in_bits.hpp>
 #include <hibf/config.hpp>
 #include <hibf/hierarchical_interleaved_bloom_filter.hpp>
+#include <hibf/layout/layout.hpp>
+#include <hibf/misc/iota_vector.hpp>
+#include <hibf/sketch/compute_sketches.hpp>
+#include <hibf/sketch/estimate_kmer_counts.hpp>
+
+#include <chopper/layout/execute.hpp>
 
 #include "misc/calculate_cutoff.hpp"
 #include "misc/check_cutoffs_samples.hpp"
@@ -20,6 +26,17 @@
 #include "misc/get_expression_thresholds.hpp"
 #include "misc/get_include_set_table.hpp"
 #include "misc/stream.hpp"
+
+namespace chopper::layout
+{
+// Foward declaration for linking. fast_layout is not declared in execute.hpp
+void fast_layout(chopper::configuration const & config,
+                 std::vector<size_t> const & positions,
+                 std::vector<size_t> const & cardinalities,
+                 std::vector<seqan::hibf::sketch::hyperloglog> const & sketches,
+                 std::vector<seqan::hibf::sketch::minhashes> const & minHash_sketches,
+                 seqan::hibf::layout::layout & hibf_layout);
+} // namespace chopper::layout
 
 // Check number of expression levels, sort expression levels
 void check_expression(std::vector<uint16_t> & expression_thresholds,
@@ -193,6 +210,47 @@ void store_fpr_information(seqan::hibf::hierarchical_interleaved_bloom_filter co
     outfile << "/\n";
 }
 
+// Full Chopper config with defaults:
+//  .partitioning_approach = chopper::partitioning_scheme::lsh_sim,
+//  .data_file = {},
+//  .debug = false,
+//  .output_filename = "layout.txt",
+//  .output_timings = {},
+//  .k = ibf_args.k,
+//  .window_size = static_cast<uint8_t>(ibf_args.w_size.get()),
+//  .precomputed_files = false,
+//  .sketch_directory = {},
+//  .disable_sketch_output = false,
+//  .determine_best_tmax = false,
+//  .force_all_binnings = false,
+//  .output_verbose_statistics = false,
+//  .hibf_config = hibf_config
+
+seqan::hibf::layout::layout compute_fast_layout(seqan::hibf::config const & hibf_config,
+                                                estimate_ibf_arguments const & ibf_args)
+{
+    seqan::hibf::layout::layout hibf_layout{};
+
+    chopper::configuration chopper_config{.data_file = {}, // Not initialised in cfg, so it must be here.
+                                          .k = ibf_args.k,
+                                          .window_size = static_cast<uint8_t>(ibf_args.w_size.get()),
+                                          .hibf_config = hibf_config};
+
+    std::vector<seqan::hibf::sketch::hyperloglog> sketches{};
+    std::vector<seqan::hibf::sketch::minhashes> minHash_sketches{};
+    std::vector<size_t> cardinalities;
+
+    seqan::hibf::sketch::compute_sketches(hibf_config, sketches, minHash_sketches);
+    seqan::hibf::sketch::estimate_kmer_counts(sketches, cardinalities);
+    chopper::layout::fast_layout(chopper_config,
+                                 seqan::hibf::iota_vector(sketches.size()),
+                                 cardinalities,
+                                 sketches,
+                                 minHash_sketches,
+                                 hibf_layout);
+    return hibf_layout;
+}
+
 // Actual ibf construction
 template <bool samplewise, bool minimiser_files_given = true>
 void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
@@ -201,7 +259,8 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                 std::vector<uint8_t> & cutoffs,
                 size_t num_hash = 1,
                 std::filesystem::path const & expression_by_genome_file = "",
-                minimiser_file_input_arguments const & minimiser_args = {})
+                minimiser_file_input_arguments const & minimiser_args = {},
+                bool const fast_layout = false)
 {
     size_t const num_files = [&]() constexpr
     {
@@ -327,25 +386,114 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
         }
     }
 
-    // Collect minimizer insertions from all threads
-    std::vector<std::vector<std::pair<uint64_t, std::vector<size_t>>>> file_insertions(num_files);
+    // --- Streaming approach: precompute per-file thresholds (if samplewise) and use a streaming input_fn ---
+    if constexpr (minimiser_files_given)
+    {
+        if constexpr (samplewise)
+        {
+            for (size_t i = 0; i < num_files; ++i)
+            {
+                // Build temporary hash table for this file
+                robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{};
+                read_binary(minimiser_files[i], hash_table);
+
+                std::vector<uint16_t> expression_thresholds;
+                get_expression_thresholds(ibf_args.number_expression_thresholds,
+                                          hash_table,
+                                          expression_thresholds,
+                                          sizes[i],
+                                          genome,
+                                          cutoffs[i],
+                                          expression_by_genome);
+                expressions[i] = expression_thresholds;
+            }
+        }
+        // Streaming input function: open minimiser file on demand and emit only hashes for that (file,level).
+        auto hibf_input = [&](size_t const user_bin_id, seqan::hibf::insert_iterator it)
+        {
+            size_t const file_index = user_bin_id % num_files;
+            size_t const target_level = user_bin_id / num_files;
+
+            auto const & thr = (samplewise ? expressions[file_index] : ibf_args.expression_thresholds);
+
+            bool emitted = false;
+            iterate_minimiser_file(minimiser_files[file_index],
+                                   [&](uint64_t hash, uint16_t count)
+                                   {
+                                       // Determine level using upper_bound
+                                       auto p = std::ranges::upper_bound(thr, count);
+                                       if (p == thr.begin())
+                                           return; // below first threshold -> skip
+                                       size_t level = static_cast<size_t>(std::ranges::distance(thr.begin(), p) - 1);
+                                       if (level == target_level)
+                                       {
+                                           it = hash;
+                                           emitted = true;
+                                       }
+                                   });
+
+            if (!emitted) // HIBF requires non-empty bins
+                it = 0;
+        };
+
+        // HIBF config using streaming input_fn
+        seqan::hibf::config hibf_config{.input_fn = hibf_input,
+                                        .number_of_user_bins = num_files * ibf_args.number_expression_thresholds,
+                                        .number_of_hash_functions = num_hash,
+                                        .maximum_fpr = fprs[0],
+                                        .threads = ibf_args.threads,
+                                        .track_occupancy = true};
+        hibf_config.validate_and_set_defaults();
+
+        // construct HIBF
+        auto hibf = [&]()
+        {
+            if (fast_layout)
+            {
+                seqan::hibf::layout::layout hibf_layout = compute_fast_layout(hibf_config, ibf_args);
+                return seqan::hibf::hierarchical_interleaved_bloom_filter{hibf_config, hibf_layout};
+            }
+            else
+            {
+                return seqan::hibf::hierarchical_interleaved_bloom_filter{hibf_config};
+            }
+        }();
+
+        // Store HIBF
+        std::filesystem::path const filename = filenames::ibf(ibf_args.path_out, samplewise, 0, ibf_args);
+        store_ibf(hibf, filename);
+
+        if constexpr (samplewise)
+        {
+            std::ofstream outfile{filenames::levels(ibf_args.path_out)};
+            for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
+            {
+                for (size_t i = 0; i < num_files; i++)
+                    outfile << expressions[i][j] << " ";
+                outfile << "\n";
+            }
+            outfile << "/\n";
+        }
+
+        store_fpr_information(hibf, num_files, ibf_args);
+    }
+    // --- End Streaming approach
+    // --- Collect approach: Collect minimizer insertions from all threads (if !minimiser_files_given)
+    else
+    {
+        std::vector<std::vector<uint64_t>> user_bin_minimisers;
+        std::vector<std::vector<std::pair<uint64_t, std::vector<size_t>>>> file_insertions(num_files);
 
 #pragma omp parallel for schedule(dynamic, chunk_size)
-    for (size_t i = 0; i < num_files; i++)
-    {
-        robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
-        // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
-        // and afterwards discarded.
-        robin_hood::unordered_node_map<uint64_t, uint8_t> cutoff_table;
-        std::vector<uint16_t> expression_thresholds;
+        for (size_t i = 0; i < num_files; i++)
+        {
+            robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
+            // Create a smaller cutoff table to save RAM, this cutoff table is only used for constructing the hash table
+            // and afterwards discarded.
+            robin_hood::unordered_node_map<uint64_t, uint8_t> cutoff_table;
+            std::vector<uint16_t> expression_thresholds;
 
-        // Fill hash table with minimisers.
-        if constexpr (minimiser_files_given)
-        {
-            read_binary(minimiser_files[i], hash_table);
-        }
-        else
-        {
+            // Fill hash table with minimisers
             size_t const file_iterator =
                 std::reduce(minimiser_args.samples.begin(), minimiser_args.samples.begin() + i);
             for (size_t f = 0; f < minimiser_args.samples[i]; f++)
@@ -371,118 +519,130 @@ void ibf_helper(std::vector<std::filesystem::path> const & minimiser_files,
                                     cutoffs[i]);
             }
             cutoff_table.clear();
-        }
 
-        // Handle samplewise expression thresholds
-        if constexpr (samplewise)
-        {
-            get_expression_thresholds(ibf_args.number_expression_thresholds,
-                                      hash_table,
-                                      expression_thresholds,
-                                      sizes[i],
-                                      genome,
-                                      cutoffs[i],
-                                      expression_by_genome);
-            expressions[i] = expression_thresholds;
-        }
-
-        // Collect insertions for this file
-        std::vector<std::pair<uint64_t, std::vector<size_t>>> local_insertions;
-
-        for (auto && [hash, occurrence] : hash_table)
-        {
-            std::vector<size_t> target_bins;
-            for (size_t const j : std::views::iota(0u, ibf_args.number_expression_thresholds) | std::views::reverse)
+            // Handle samplewise expression thresholds
+            if constexpr (samplewise)
             {
-                uint16_t const threshold = [&]()
-                {
-                    if constexpr (samplewise)
-                        return expressions[i][j];
-                    else
-                        return ibf_args.expression_thresholds[j];
-                }();
+                get_expression_thresholds(ibf_args.number_expression_thresholds,
+                                          hash_table,
+                                          expression_thresholds,
+                                          sizes[i],
+                                          genome,
+                                          cutoffs[i],
+                                          expression_by_genome);
+                expressions[i] = expression_thresholds;
+            }
 
-                if (occurrence >= threshold)
+            // Collect insertions for this file
+            std::vector<std::pair<uint64_t, std::vector<size_t>>> local_insertions;
+
+            for (auto && [hash, occurrence] : hash_table)
+            {
+                std::vector<size_t> target_bins;
+                for (size_t const j : std::views::iota(0u, ibf_args.number_expression_thresholds) | std::views::reverse)
                 {
-                    size_t bin_index = j * num_files + i;
-                    target_bins.push_back(bin_index);
-                    counts_per_level[i][j]++;
-                    break;
+                    uint16_t const threshold = [&]()
+                    {
+                        if constexpr (samplewise)
+                            return expressions[i][j];
+                        else
+                            return ibf_args.expression_thresholds[j];
+                    }();
+
+                    if (occurrence >= threshold)
+                    {
+                        size_t bin_index = j * num_files + i;
+                        target_bins.push_back(bin_index);
+                        counts_per_level[i][j]++;
+                        break;
+                    }
+                }
+                if (!target_bins.empty())
+                {
+                    local_insertions.emplace_back(hash, target_bins);
                 }
             }
-            if (!target_bins.empty())
+            file_insertions[i] = std::move(local_insertions);
+        }
+
+        // HIBF construction: populate user_bin_minimisers declared above
+        user_bin_minimisers.assign(num_files * ibf_args.number_expression_thresholds, {});
+        // Populate user bins from collected insertions
+        for (size_t i = 0; i < num_files; ++i)
+        {
+            for (auto const & [hash, bins] : file_insertions[i])
             {
-                local_insertions.emplace_back(hash, target_bins);
+                for (size_t bin_idx : bins)
+                {
+                    user_bin_minimisers[bin_idx].push_back(hash);
+                }
             }
         }
-        file_insertions[i] = std::move(local_insertions);
-    }
 
-    // HIBF construction
-    std::vector<std::vector<uint64_t>> user_bin_minimisers(num_files * ibf_args.number_expression_thresholds);
-
-    // Populate user bins from collected insertions
-    for (size_t i = 0; i < num_files; ++i)
-    {
-        for (auto const & [hash, bins] : file_insertions[i])
+        // !Workaround: Bins cannot be empty in HIBF
+        for (size_t i = 0; i < user_bin_minimisers.size(); ++i)
         {
-            for (size_t bin_idx : bins)
+            if (user_bin_minimisers[i].empty())
             {
-                user_bin_minimisers[bin_idx].push_back(hash);
+                user_bin_minimisers[i].push_back(0);
             }
         }
-    }
 
-    // !Workaround: Bins cannot be empty in HIBF
-    for (size_t i = 0; i < user_bin_minimisers.size(); ++i)
-    {
-        if (user_bin_minimisers[i].empty())
+        // Maybe Todo: Original needle checks `size == num_files` for each expression level, and throws if true becasue
+        // the thresholds are bad if this happens.
+        // We could probably add a similar check here.
+        // If "sum of all files for an expression level == num_files", and re-enable the test in ibf_test.cpp
+
+        // HIBF input function
+        auto hibf_input = [&](size_t const user_bin_id, seqan::hibf::insert_iterator it)
         {
-            user_bin_minimisers[i].push_back(0);
-        }
-    }
+            for (auto hash : user_bin_minimisers[user_bin_id])
+                it = hash;
+        };
 
-    // Maybe Todo: Original needle checks `size == num_files` for each expression level, and throws if true becasue
-    // the thresholds are bad if this happens.
-    // We could probably add a similar check here.
-    // If "sum of all files for an expression level == num_files", and re-enable the test in ibf_test.cpp
+        // HIBF config
+        seqan::hibf::config hibf_config{.input_fn = hibf_input,
+                                        .number_of_user_bins = user_bin_minimisers.size(),
+                                        .number_of_hash_functions = num_hash,
+                                        .maximum_fpr = fprs[0],
+                                        .threads = ibf_args.threads,
+                                        .track_occupancy = true};
+        hibf_config.validate_and_set_defaults();
 
-    // HIBF input function
-    auto hibf_input = [&](size_t const user_bin_id, seqan::hibf::insert_iterator it)
-    {
-        for (auto hash : user_bin_minimisers[user_bin_id])
-            it = hash;
-    };
-
-    // HIBF config
-    seqan::hibf::config hibf_config{.input_fn = hibf_input,
-                                    .number_of_user_bins = user_bin_minimisers.size(),
-                                    .number_of_hash_functions = num_hash,
-                                    .maximum_fpr = fprs[0],
-                                    .threads = ibf_args.threads,
-                                    .track_occupancy = true};
-
-    // Construct the HIBF
-    seqan::hibf::hierarchical_interleaved_bloom_filter hibf{hibf_config};
-
-    // Store the HIBF
-    std::filesystem::path const filename = filenames::ibf(ibf_args.path_out, samplewise, 0, ibf_args);
-    store_ibf(hibf, filename);
-
-    // Store all expression thresholds per level.
-    if constexpr (samplewise)
-    {
-        std::ofstream outfile{filenames::levels(ibf_args.path_out)};
-        for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
+        // Construct the HIBF — prefer the ctor that consumes a precomputed layout if provided.
+        auto hibf = [&]()
         {
-            for (size_t i = 0; i < num_files; i++)
-                outfile << expressions[i][j] << " ";
-            outfile << "\n";
-        }
-        outfile << "/\n";
-    }
+            if (fast_layout)
+            {
+                seqan::hibf::layout::layout hibf_layout = compute_fast_layout(hibf_config, ibf_args);
+                return seqan::hibf::hierarchical_interleaved_bloom_filter{hibf_config, hibf_layout};
+            }
+            else
+            {
+                return seqan::hibf::hierarchical_interleaved_bloom_filter{hibf_config};
+            }
+        }();
 
-    store_fpr_information(hibf, num_files, ibf_args);
+        // Store the HIBF
+        std::filesystem::path const filename = filenames::ibf(ibf_args.path_out, samplewise, 0, ibf_args);
+        store_ibf(hibf, filename);
+
+        // Store all expression thresholds per level.
+        if constexpr (samplewise)
+        {
+            std::ofstream outfile{filenames::levels(ibf_args.path_out)};
+            for (unsigned j = 0; j < ibf_args.number_expression_thresholds; j++)
+            {
+                for (size_t i = 0; i < num_files; i++)
+                    outfile << expressions[i][j] << " ";
+                outfile << "\n";
+            }
+            outfile << "/\n";
+        }
+
+        store_fpr_information(hibf, num_files, ibf_args);
+    }
+    // --- End Streaming approach
 }
 
 // Create ibfs
@@ -492,7 +652,8 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
                           std::vector<double> & fpr,
                           std::vector<uint8_t> & cutoffs,
                           std::filesystem::path const & expression_by_genome_file,
-                          size_t num_hash)
+                          size_t num_hash,
+                          bool const fast_layout)
 {
     // Declarations
     robin_hood::unordered_node_map<uint64_t, uint16_t> hash_table{}; // Storage for minimisers
@@ -522,7 +683,8 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
                                 cutoffs,
                                 num_hash,
                                 expression_by_genome_file,
-                                minimiser_args);
+                                minimiser_args,
+                                fast_layout);
     else
         ibf_helper<false, false>(sequence_files,
                                  fpr,
@@ -530,7 +692,8 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & sequence_fi
                                  cutoffs,
                                  num_hash,
                                  expression_by_genome_file,
-                                 minimiser_args);
+                                 minimiser_args,
+                                 fast_layout);
 
     store_args(ibf_args, filenames::data(ibf_args.path_out));
 
@@ -542,7 +705,8 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
                           estimate_ibf_arguments & ibf_args,
                           std::vector<double> & fpr,
                           std::filesystem::path const & expression_by_genome_file,
-                          size_t num_hash)
+                          size_t num_hash,
+                          bool const fast_layout)
 {
     check_expression(ibf_args.expression_thresholds, ibf_args.number_expression_thresholds, expression_by_genome_file);
     check_fpr(ibf_args.number_expression_thresholds, fpr);
@@ -551,9 +715,23 @@ std::vector<uint16_t> ibf(std::vector<std::filesystem::path> const & minimiser_f
 
     std::vector<uint8_t> cutoffs{};
     if (ibf_args.samplewise)
-        ibf_helper<true>(minimiser_files, fpr, ibf_args, cutoffs, num_hash, expression_by_genome_file);
+        ibf_helper<true>(minimiser_files,
+                         fpr,
+                         ibf_args,
+                         cutoffs,
+                         num_hash,
+                         expression_by_genome_file,
+                         minimiser_file_input_arguments{},
+                         fast_layout);
     else
-        ibf_helper<false>(minimiser_files, fpr, ibf_args, cutoffs, num_hash, expression_by_genome_file);
+        ibf_helper<false>(minimiser_files,
+                          fpr,
+                          ibf_args,
+                          cutoffs,
+                          num_hash,
+                          expression_by_genome_file,
+                          minimiser_file_input_arguments{},
+                          fast_layout);
 
     store_args(ibf_args, filenames::data(ibf_args.path_out));
 
