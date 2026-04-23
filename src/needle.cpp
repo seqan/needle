@@ -344,6 +344,11 @@ int run_needle_ibf(sharg::parser & parser)
                       .description = "Sequence file containing minimizers to determine expression thresholds.",
                       .validator = sharg::input_file_validator{}});
 
+    parser.add_flag(minimiser_args.ram_friendly,
+                    sharg::config{.short_id = '\0',
+                                  .long_id = "ram",
+                                  .description = "When multithreading, prioritize lower RAM usage over speed."});
+
     parser.add_flag(fast_layout,
                     sharg::config{.short_id = '\0', //
                                   .long_id = "fast-layout",
