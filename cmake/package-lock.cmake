@@ -8,7 +8,7 @@
 # cmake-format: off
 
 # hibf
-set (NEEDLE_HIBF_VERSION f8a4034717a3411931fc0de76c2a6d277aa8303a CACHE STRING "")
+set (NEEDLE_HIBF_VERSION 160a80994dd822fc70f01ae270bf3bde6f0ba458 CACHE STRING "")
 CPMDeclarePackage (hibf
                    NAME hibf
                    GIT_TAG ${NEEDLE_HIBF_VERSION} # main
@@ -43,7 +43,7 @@ CPMDeclarePackage (sharg
 )
 
 # googletest
-set (NEEDLE_GOOGLETEST_VERSION 1.17.0 CACHE STRING "")
+set (NEEDLE_GOOGLETEST_VERSION 1.18.0 CACHE STRING "")
 CPMDeclarePackage (googletest
                    NAME GTest
                    VERSION ${NEEDLE_GOOGLETEST_VERSION}
