@@ -5,18 +5,11 @@
 name: Coverage
 
 on:
-  push:
-    branches:
-      - 'main'
-      - 'hibf'
-  pull_request:
-    types:
-      - unlabeled
+  workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        required: false
   workflow_dispatch:
-
-concurrency:
-  group: coverage-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 env:
   SHARG_NO_VERSION_CHECK: 1
@@ -30,7 +23,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: ${{ matrix.compiler }}
-    if: github.repository_owner == 'seqan' || github.event_name == 'workflow_dispatch' || github.event.label.name == 'lint'
+    if: github.repository_owner == 'seqan' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
@@ -39,7 +32,7 @@ jobs:
       image: ghcr.io/seqan/${{ matrix.compiler }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -79,7 +72,7 @@ jobs:
                 --output ${GITHUB_WORKSPACE}/build/coverage_report.xml
 
       - name: Submit coverage build
-        uses: codecov/codecov-action@v6.0.0
+        uses: codecov/codecov-action@v7.1.1
         with:
           disable_search: true
           fail_ci_if_error: false
